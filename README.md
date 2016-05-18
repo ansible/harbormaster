@@ -1,26 +1,26 @@
 # Ansible Container
 
-Ansible Container is a tool to build Docker images and orchestrate containers 
+Ansible Container is a tool to build Docker images and orchestrate containers
 using only Ansible playbooks. It does this by building a container from which
 to execute Ansible and connects to your other containers via the Docker engine
 instead of SSH.
 
 ## Why? Why not just use standard Docker tools?
 
-1. `Dockerfile` does wrong many of the things Ansible does right. 
+1. `Dockerfile` does wrong many of the things Ansible does right.
 We're well past the point where we should be managing build processes
 with manually maintained series of shell scripts. That's why we wrote Ansible
 in the first place.
 2. Ansible Container permits orchestration even during the build process, whereas
 `docker build` does not. For example, in a Django project, your VCS may contain
-a bunch of sources for static assets that need to be compiled and then 
+a bunch of sources for static assets that need to be compiled and then
 collected. With Ansible Container, you can compile the static assets in your Django
 container and then collect them into your static file serving container.
 3. Many people use Docker for development environments only but then use
 Ansible playbooks to push out to staging or production. This allows you to use
 the same playbooks and roles in your Docker environment as in your production
 environments.
-4. Ansible Container does all of this without installing SSH, leaving Ansible 
+4. Ansible Container does all of this without installing SSH, leaving Ansible
 droppings on your built images, or having excess layers to the union filesystem.
 
 ## To Ansible-Container-ize your project
@@ -43,3 +43,10 @@ the base images.
 registry of your choice.
 
 Feel free to see the `test` or `test-v1` projects as an examples.
+
+### As a container
+
+If you want to run ansible-container as a container, a Dockerfile is provided
+to build a Fedora based container image.
+
+After building the container image a handy alias like ```docker run --rm -v `pwd`:/work:Z ansible-container``` will help... 
