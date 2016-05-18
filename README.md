@@ -49,4 +49,6 @@ Feel free to see the `test` or `test-v1` projects as an examples.
 If you want to run ansible-container as a container, a Dockerfile is provided
 to build a Fedora based container image.
 
-After building the container image a handy alias like ```docker run --rm -v `pwd`:/work:Z ansible-container``` will help... 
+After building the container image a handy alias like ```docker run --privileged -v `pwd`:/work:Z -v /var/run/docker.sock:/var/run/docker.sock:Z ansible-container build``` will help... 
+
+
