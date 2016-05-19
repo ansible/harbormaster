@@ -20,13 +20,13 @@
 
 DOCUMENTATION = '''
 
-module: k8s_service
+module: k8s_route
 
-short_description: Create or remove a service on a Kubernetes or OpenShift cluster.
+short_description: Create or remove a route on a Kubernetes or OpenShift cluster.
 
 description:
-  - Create or remove a service on a Kubernetes or OpenShift cluster by setting the C(state) to I(present) or I(absent).
-  - The module is idempotent and will not replace an existing service unless the C(reload) option is passed.
+  - Create or remove a route on a Kubernetes or OpenShift cluster by setting the C(state) to I(present) or I(absent).
+  - The module is idempotent and will not replace an existing route unless the C(reload) option is passed.
   - Supports check mode. Use check mode to view a list of actions the module will take.
 
 options:
@@ -42,10 +42,10 @@ import logging
 import logging.config
 
 from ansible.module_utils.basic import *
-from container.shipit.k8s_api import K8sApi
-from container.shipit.exceptions import ShipItException
+from ansible_container.shipit.k8s_api import K8sApi
+from ansible_container.shipit.exceptions import ShipItException
 
-logger = logging.getLogger('k8s_service')
+logger = logging.getLogger('k8s_route')
 
 LOGGING = (
     {
@@ -63,13 +63,13 @@ LOGGING = (
             }
         },
         'loggers': {
-            'k8s_service': {
+            'k8s_route': {
                 'handlers': ['file'],
-                'level': 'INFO',
+                'level': 'DEBUG',
             },
             'container': {
                 'handlers': ['file'],
-                'level': 'INFO',
+                'level': 'DEBUG',
             },
             'compose': {
                 'handlers': [],
@@ -84,33 +84,33 @@ LOGGING = (
 )
 
 
-class K8SServiceManager(AnsibleModule):
+class K8SRouteManager(AnsibleModule):
 
     def __init__(self):
 
         self.arg_spec = dict(
-            project_name=dict(type='str', aliases=['namespace'], required=True),
+            project_name=dict(type='str', aliases=['namespace']),
             state=dict(type='str', choices=['present', 'absent'], default='present'),
             labels=dict(type='dict'),
-            ports=dict(type='list', required=True),
-            service_name=dict(type='str', required=True),
-            loadbalancer=dict(type='bool', default=False),
+            route_name=dict(type='str'),
+            host=dict(type='str', required=True),
+            to_service=dict(type='str', required=True, aliases=['to']),
+            target_port=dict(type='str', required=True, aliases=['port']),
             replace=dict(type='bool', default=False),
-            selector=dict(type='dict', required=True),
             cli=dict(type='str', choices=['kubectl', 'oc'], default='oc'),
             debug=dict(type='bool', default=False)
         )
 
-        super(K8SServiceManager, self).__init__(self.arg_spec,
-                                                supports_check_mode=True)
+        super(K8SRouteManager, self).__init__(self.arg_spec,
+                                              supports_check_mode=True)
 
         self.project_name = None
         self.state = None
         self.labels = None
-        self.ports = None
-        self.service_name = None
-        self.loadbalancer = None
-        self.selector = None
+        self.route_name = None
+        self.host = None
+        self.to_service = None
+        self.target_port = None
         self.replace = None
         self.cli = None
         self.api = None
@@ -123,14 +123,14 @@ class K8SServiceManager(AnsibleModule):
 
         if self.debug:
             LOGGING['loggers']['container']['level'] = 'DEBUG'
-            LOGGING['loggers']['k8s_service']['level'] = 'DEBUG'
+            LOGGING['loggers']['k8s_route']['level'] = 'DEBUG'
         logging.config.dictConfig(LOGGING)
 
         self.api = K8sApi(target=self.cli)
 
         actions = []
         changed = False
-        services = dict()
+        routes = dict()
         results = dict()
 
         try:
@@ -147,89 +147,77 @@ class K8SServiceManager(AnsibleModule):
                     self.fail_json(msg=exc.message, stderr=exc.stderr, stdout=exc.stdout)
 
         if self.state == 'present':
-            service = self.api.get_resource('service', self.service_name)
-            if not service:
+            route = self.api.get_resource('route', self.route_name)
+            if not route:
                 template = self._create_template()
                 changed = True
-                actions.append("Create service %s" % self.service_name)
+                actions.append("Create route %s" % self.route_name)
                 if not self.check_mode:
                     self.api.create_from_template(template=template)
-            elif service and self.replace:
+            elif route and self.replace:
                 template = self._create_template()
                 changed = True
-                actions.append("Replace service %s" % self.service_name)
+                actions.append("Replace route %s" % self.route_name)
                 if not self.check_mode:
                     self.api.replace_from_template(template=template)
-            services[self.service_name.replace('-', '_') + '_service'] = self.api.get_resource('service', self.service_name)
+            routes[self.route_name.replace('-', '_') + '_route'] = self.api.get_resource('route', self.route_name)
         elif self.state == 'absent':
-            if self.api.get_resource('service', self.service_name):
+            if self.api.get_resource('route', self.route_name):
                 changed = True
-                actions.append("Delete service %s" % self.service_name)
+                actions.append("Delete route %s" % self.route_name)
                 if not self.check_mode:
-                    self.api.delete_resource('service', self.service_name)
+                    self.api.delete_resource('route', self.route_name)
 
         results['changed'] = changed
         if self.check_mode:
             results['actions'] = actions
-        if services:
-            results['ansible_facts'] = services
+        if routes:
+            results['ansible_facts'] = routes
         return results
 
     def _create_template(self):
         '''
         apiVersion: v1
+        kind: Route
+        metadata:
+          name: wordpress-wordpress
+          labels:
+            wordpress: wordpress
+        spec:
+          host: wordpress.local
+          to:
             kind: Service
-            metadata:
-              name: frontend
-              labels:
-                app: guestbook
-                tier: frontend
-            spec:
-              # if your cluster supports it, uncomment the following to automatically create
-              # an external load-balanced IP for the frontend service.
-              # type: LoadBalancer
-              ports:
-                # the port that this service should serve on
-              - port: 80
-              selector:
-                app: guestbook
-                tier: frontend
+            name: wordpress-wordpress
+          port:
+            targetPort: main
         '''
-
-        selector = self.selector if self.selector else self.service_name
-        self._update_ports()
 
         template = dict(
             apiVersion="v1",
-            kind="Service",
+            kind="Route",
             metadata=dict(
-                name=self.service_name
+                name=self.route_name,
             ),
             spec=dict(
-                selector=selector,
-                ports=self.ports
+                host=self.host,
+                to=dict(
+                    kind="Service",
+                    name=self.to_service
+                ),
+                port=dict(
+                    targetPort=self.target_port
+                )
             )
         )
 
         if self.labels:
             template['metadata']['labels'] = self.labels
 
-        if self.loadbalancer:
-            template['spec']['type'] = 'LoadBalancer'
-
         return template
 
-    def _update_ports(self):
-        count = 0
-        for port in self.ports:
-            if not port.get('name'):
-                port['name'] = "port%s" % count
-                count += 1
-            if not port.get('type'):
-                port['type'] = "TCP"
 
 def main():
-    manager = K8SServiceManager()
+    manager = K8SRouteManager()
     results = manager.exec_module()
     manager.exit_json(**results)
 
