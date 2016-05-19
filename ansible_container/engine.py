@@ -30,7 +30,7 @@ from .utils import (extract_hosts_from_docker_compose,
                     assert_initialized,
                     get_latest_image_for)
 
-from container.shipit.run import run_shipit
+from ansible_container.shipit.run import run_shipit
 
 
 def cmdrun_init(base_path, **kwargs):
