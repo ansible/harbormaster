@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 from collections import OrderedDict
-
+from container.exceptions import AnsibleContainerShipItException
 
 import logging
 
@@ -23,14 +23,14 @@ class Route(object):
 
     def _get_task_or_config(self, request_type="task", service_names=None):
         templates = []
-        for service in self.config.services:
-            if not service_names or service['name'] in service_names:
+        for name, service in self.config.get('services', {}).iteritems():
+            if not service_names or name in service_names:
                 if service.get('labels'):
                     for key, value in service['labels'].items():
-                        if key == 'oso_expose_as':
+                        if key == 'shipit_expose':
                             if request_type == "task":
                                 templates.append(self._create_task(service))
-                            elif request_type=="config":
+                            elif request_type == "config":
                                 templates.append(self._create_template(service))
 
         return templates
@@ -85,7 +85,7 @@ class Route(object):
         :return:
         '''
 
-        host = self._get_host(service)
+        service_port, target_hostname, target_port = self._get_port_mapping(service)
         labels = self._get_labels(service)
         name = "%s-route" % service['name']
 
@@ -94,21 +94,37 @@ class Route(object):
                 project_name=self.project_name,
                 route_name=name,
                 labels=labels,
-                host=host,
+                host=target_hostname,
                 to="%s-%s" % (self.project_name, service['name']),
-                target_port="port0"
+                target_port="port_%s" % service_port
             )
         )
+
+        if target_port:
+            template['oso_route']['port'] = int(target_port)
 
         return template
 
     @staticmethod
-    def _get_host(service):
-        host = None
+    def _get_port_mapping(service):
+        '''
+        Expect to find 'shipit_expose' key in the service labels. Value should be in the
+        format: service_port:target_hostname:[port]
+
+        :return: service_port, target_hostname, target_port
+        '''
+        service_port = None
+        target_hostname = None
+        target_port = None
         for key, value in service['labels'].items():
-            if key == 'oso_expose_as':
-                host = value
-        return host
+            if key == 'shipit_expose' and ':' in value:
+                service_port, target_hostname, target_port = value.split(':')
+
+        if not service_port or not target_hostname:
+            raise AnsibleContainerShipItException('Expected shipit_expose to have format '
+                                                  'service_port:target_hostname[:target_port]')
+
+        return service_port, target_hostname, target_port
 
     @staticmethod
     def _get_labels(service):
@@ -117,7 +133,7 @@ class Route(object):
         if service.get('labels'):
             labels = service['labels']
             for key, value in labels.items():
-                if 'oso_' not in key:
+                if 'shipit_' not in key:
                     result[key] = value
 
         for key, value in result.items():

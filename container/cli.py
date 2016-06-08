@@ -134,11 +134,14 @@ class LoadSubmoduleAction(argparse.Action):
         engine_obj.add_options(parser)
 
 def subcmd_shipit_parser(parser, subparser):
-    subparser.add_argument('--engine', action=LoadSubmoduleAction,
-                           help=(u'The shipit engine for the cloud provider you '
-                                 u'wish to ship to'),
-                           dest='engine', default='openshift')
+    default_engine = 'openshift'
+    subparser.add_argument('--shipit-engine', action=LoadSubmoduleAction,
+                           help=(u'Specify the shipit engine for your cloud provider. Default is %s.' % default_engine),
+                           dest='shipit_engine', default=default_engine)
 
+    subparser.add_argument('--save-config', action='store_true',
+                           help=(u'Save a copy of the cloud provider configuration to the file system.'),
+                           dest='save_config', default=False)
 
 def commandline():
     parser = argparse.ArgumentParser(description=u'Build, orchestrate, run, and '

@@ -11,23 +11,20 @@ class BaseShipItEngine(object):
     def __init__(self, base_path):
         self.base_path = base_path
 
-    def add_options(self, subparser):
+    def run(self, **kwargs):
         """
-        Given an argument subparser, add to it the arguments and options
-        this engine allows.
+        Generate an Ansible role and sample playbook to deploy to the target cloud.
 
-        https://docs.python.org/2/library/argparse.html#sub-commands
-
-        :param subparser: An argparse.ArgumentSubparser
-        :return: None
+        :param kwargs: Commandline options provided at runtime
+        :return:
         """
         raise NotImplementedError()
 
-    def run(self, **kwargs):
+    def save_config(self, kwargs):
         """
-        Actually generate the Ansible role to deploy to this target.
+        Called when --save-config option True. Generate configuration templates and write to filesystem.
 
-        :param kwargs: The commandline options provided at runtime
+        :param kwargs: Comandline options provided at runtime.
         :return:
         """
         raise NotImplementedError()

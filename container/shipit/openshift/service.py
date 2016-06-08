@@ -23,21 +23,14 @@ class Service(object):
 
     def _get_task_or_config(self, request_type="task", service_names=None):
         templates = []
-        for service in self.config.services:
-            if not service_names or service['name'] in service_names:
+
+        for name, service in self.config.get('services', {}).iteritems():
+            if not service_names or name in service_names:
                 if service.get('ports'):
                     if request_type == "task":
                         templates.append(self._create_task(service))
                     elif request_type=="config":
                         templates.append(self._create_template(service))
-                elif service.get('labels'):
-                    for key, value in service['labels'].items():
-                        if key == 'oso_publish_port':
-                            if request_type == "task":
-                                templates.append(self._create_task(service))
-                            elif request_type=="config":
-                                templates.append(self._create_template(service))
-
         return templates
 
     def _create_template(self, service):
@@ -64,13 +57,6 @@ class Service(object):
         labels = self._get_labels(service)
         ports = self._get_ports(service)
         name = "%s-%s" % (self.project_name, service['name'])
-
-        # Add port names. Otherwise, any routes mapped to the service won't work.
-        count = 0
-        for port in ports:
-            if not port.get('name'):
-                port['name'] = "port%s" % count
-                count += 1
 
         template = dict(
             apiVersion="v1",
@@ -149,19 +135,10 @@ class Service(object):
     def _get_ports(service):
         # TODO - handle port ranges
         ports = []
-        labels = service.get('labels')
-        if labels and labels.get('oso_publish_port'):
-            pub_port = labels['oso_publish_port']
-            if isinstance(pub_port, str) and ':' in pub_port:
-                parts = pub_port.split(':')
-                ports.append(dict(port=int(parts[0]), targetPort=int(parts[1])))
+        for port in service['ports']:
+            if isinstance(port, str) and ':' in port:
+                parts = port.split(':')
+                ports.append(dict(port=int(parts[0]), targetPort=int(parts[1]), name='port_%s' % parts[0]))
             else:
-                ports.append(dict(port=int(pub_port), targetPort=int(pub_port)))
-        else:
-            for port in service['ports']:
-                if isinstance(port, str) and ':' in port:
-                    parts = port.split(':')
-                    ports.append(dict(port=int(parts[0]), targetPort=int(parts[1])))
-                else:
-                    ports.append(dict(port=int(port), targetPort=int(port)))
+                ports.append(dict(port=int(port), targetPort=int(port)), name='port_%s' % port)
         return ports

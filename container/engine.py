@@ -9,9 +9,6 @@ import os
 import datetime
 import importlib
 
-from compose.config.config import load as config_load, find as config_find
-
-
 from .exceptions import AnsibleContainerAlreadyInitializedException
 from .utils import *
 
@@ -187,6 +184,9 @@ class BaseEngine(object):
         """
         raise NotImplementedError()
 
+    def get_config(self):
+        raise NotImplementedError()
+
 
 def cmdrun_init(base_path, **kwargs):
     container_dir = os.path.normpath(
@@ -264,22 +264,19 @@ def cmdrun_push(base_path, engine, username=None, password=None, email=None,
     logger.info('Done!')
 
 
-def cmdrun_shipit(base_path, engine='openshift', **kwargs):
+def cmdrun_shipit(base_path, engine, **kwargs):
+    shipit_engine = kwargs.pop('shipit_engine')
     try:
-        engine_module = importlib.import_module('container.shipit.%s.engine' % engine)
+        engine_module = importlib.import_module('container.shipit.%s.engine' % shipit_engine)
         engine_cls = getattr(engine_module, 'ShipItEngine')
     except ImportError:
-        raise ImportError('No shipit module for %s found.' % engine)
+        raise ImportError('No shipit module for %s found.' % shipit_engine)
     else:
-        engine_obj = engine_cls(base_path)
+        shipit_engine_obj = engine_cls(base_path)
 
-    logger.debug("Running shipit")
     project_name = os.path.basename(base_path).lower()
-    logger.debug('project_name is %s' % project_name)
-    config = config_load(config_find(base_path, None, dict()))
-    logger.debug('config loaded.')
-    #create_templates = kwargs.pop('save_config')
-    create_templates = False
-    logger.debug('create_templates: %s' % create_templates)
-    engine_obj.run(config=config, project_name=project_name,
-                   project_dir=base_path, create_templates=create_templates)
+    engine_obj = load_engine(engine, base_path)
+    config = engine_obj.get_config()
+    create_templates = kwargs.pop('save_config')
+    shipit_engine_obj.run(config=config, project_name=project_name,
+                          project_dir=base_path, create_templates=create_templates)

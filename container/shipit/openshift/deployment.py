@@ -46,10 +46,10 @@ class Deployment(object):
         #                 new_template = self._create_template(linked_containers)
         #             templates.append(new_template)
 
-        for service in self.config.services:
+        for name, service in self.config.get('services', {}).iteritems():
             # add any non-linked services
-            if not service_names or service['name'] in service_names:
-                if service['name'] not in resolved:
+            if not service_names or name in service_names:
+                if name not in resolved:
                     if request_type == 'task':
                         new_template = self._create_task([service['name']])
                     elif request_type == 'config':
@@ -139,9 +139,9 @@ class Deployment(object):
 
     def _services_to_containers(self, service_names, type="task"):
         results = []
-        for service in self.config.services:
-            if service['name'] in service_names:
-                container = OrderedDict(name=service['name'])
+        for name, service in self.config.get('services', {}).iteritems():
+            if name in service_names:
+                container = OrderedDict(name=name)
                 for key, value in service.items():
                     if key == 'ports' and type == 'config':
                         container['ports'] = self._get_config_ports(value)
@@ -157,14 +157,6 @@ class Deployment(object):
                             container['env'] = self._env_vars_to_task(expanded_vars)
                     else:
                         container[key] = value
-
-                if service.get('labels'):
-                    # check for oso_publish_port
-                    for key, value in service['labels'].items():
-                        if key == 'oso_publish_port':
-                            if not container.get('ports'):
-                                container['ports'] = []
-                            container['ports'].append(int(value))
 
                 results.append(container)
         return results
@@ -217,21 +209,15 @@ class Deployment(object):
 
     def _expand_env_vars(self, env_variables):
         '''
-        Turn containier environment attribute into kube env dictionary of name/value pairs.
+        Turn containier environment attribute into dictionary of name/value pairs.
 
         :param env_variables: container env attribute value
         :type env_variables: dict or list
         :return: dict
         '''
-        def f(x):
-            return re.sub('^oso_', '', x, flags=re.I)
-
-        def m(x):
-            return re.match('oso_', x, flags=re.I)
-
         def r(x, y):
-            if m(x):
-                return dict(name=f(x), value=self._resolve_resource(y))
+            if re.match('shipit_', x, flags=re.I):
+                return dict(name=re.sub('^shipit_', '', x, flags=re.I), value=self._resolve_resource(y))
             return dict(name=x, value=y)
 
         results = []
@@ -242,7 +228,7 @@ class Deployment(object):
             for envvar in env_variables:
                 parts = envvar.split('=')
                 if len(parts) == 1:
-                    results.append(dict(name=f(parts[0]), value=None))
+                    results.append(dict(name=re.sub('^shipit_', '', parts[0], flags=re.I), value=None))
                 elif len(parts) == 2:
                     results.append(r(parts[0], parts[1]))
         return results

@@ -367,8 +367,6 @@ class Engine(BaseEngine):
             else:
                 logger.debug(line)
 
-
-
     def get_client(self):
         if not self._client:
             # To ensure version compatibility, we have to generate the kwargs ourselves
@@ -376,4 +374,26 @@ class Engine(BaseEngine):
             self._client = docker.AutoVersionClient(**client_kwargs)
         return self._client
 
+    def get_config(self):
+        '''
+        Return the complete compose config less the ansible build host.
 
+        :return: dict of compose config
+        '''
+        compose_data = parse_compose_file(self.base_path)
+        version = compose_format_version(self.base_path, compose_data)
+        if version == 2:
+            services = compose_data.get('services', {})
+        else:
+            services = compose_data
+        # remove the ansible build host
+        if services.get(self.builder_container_img_name):
+            services.pop(self.builder_container_img_name)
+        # give each service a name attribute
+        for service in services:
+            services[service]['name'] = service
+        if version == 2:
+            config = compose_data.copy()
+        else:
+            config = dict(services=services.copy())
+        return config
