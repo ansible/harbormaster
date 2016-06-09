@@ -8,7 +8,7 @@ reqs = [str(ir.req) for ir in install_reqs]
 setup(
     name='ansible-container',
     version=container.__version__,
-    packages=find_packages(include='container'),
+    packages=find_packages(),
     include_package_data=True,
     url='https://github.com/ansible/ansible-container',
     license='LGPLv3 (See LICENSE file for terms)',
