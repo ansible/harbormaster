@@ -13,6 +13,7 @@ from .exceptions import AnsibleContainerAlreadyInitializedException, AnsibleCont
 from .utils import *
 
 from .shipit.constants import SHIPIT_PATH, SHIPIT_ROLES_DIR
+
 class BaseEngine(object):
     engine_name = None
     orchestrator_name = None

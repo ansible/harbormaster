@@ -9,7 +9,6 @@ import json
 from ..base_engine import BaseShipItEngine
 from .deployment import Deployment
 from .role import ShipItRole
-from .route import Route
 from .service import Service
 from ..utils import create_config_output_path
 
@@ -20,7 +19,7 @@ class ShipItEngine(BaseShipItEngine):
 
     def add_options(self, subparser):
         subparser.add_argument('--save-config', action='store_true',
-                               help=u'Generate and save the OpenShift configuration files.',
+                               help=u'Generate and save the Kubernetes configuration files.',
                                dest='save_config', default=False)
 
     def run(self, **kwargs):

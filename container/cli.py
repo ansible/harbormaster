@@ -27,7 +27,7 @@ LOGGING = {
             'container': {
                 'handlers': ['console'],
                 'level': 'INFO',
-                'propagate': False
+                'propagate': True
             },
             'compose': {
                 'handlers': ['console'],
@@ -125,6 +125,7 @@ class LoadSubmoduleAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         # Rudimentary input sanitation
         engine_name = values.split(' ', 1)[0].strip('.')
+        print "Import %s shipit engine" % engine_name
         try:
             engine_module = importlib.import_module(
                 'container.shipit.%s.engine' % engine_name)
@@ -145,12 +146,8 @@ class LoadSubmoduleAction(argparse.Action):
 def subcmd_shipit_parser(parser, subparser):
     default_engine = 'openshift'
     subparser.add_argument('--shipit-engine', action=LoadSubmoduleAction,
-                           help=(u'Specify the shipit engine for your cloud provider. Default is %s.' % default_engine),
+                           help=(u'Specify the shipit engine for your cloud provider. Defaults to %s.' % default_engine),
                            dest='shipit_engine', default=default_engine)
-
-    subparser.add_argument('--save-config', action='store_true',
-                           help=(u'Save a copy of the cloud provider configuration to the file system.'),
-                           dest='save_config', default=False)
 
 def commandline():
     parser = argparse.ArgumentParser(description=u'Build, orchestrate, run, and '
