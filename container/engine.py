@@ -284,7 +284,7 @@ def cmdrun_shipit(base_path, engine_name, **kwargs):
     shipit_engine_obj = kwargs.pop('shipit_engine')
 
     logger.info("shipit_engine type: %s" % type(shipit_engine_obj))
-    
+
     create_templates = kwargs.get('save_config', None)
     project_name = os.path.basename(base_path).lower()
 
