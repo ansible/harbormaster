@@ -2,12 +2,9 @@ version: "1"
 services:
   # Add your containers here, specifying the base image you want to build from
   # For example:
-  #
-  # web:
-  #   image: ubuntu:trusty
-  #   ports:
-  #     - "80:80"
-  #   command: ['/usr/sbin/dumb-init', '/usr/bin/apache2ctl', '-D', 'FOREGROUND']
-  #   dev_overrides:
-  #     environment:
-  #       - "DEBUG=1"
+  web:
+    image: nginx
+    ports:
+      - "80:80"
+    environment:
+      - NGINX_PORT=80
