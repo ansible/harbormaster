@@ -27,7 +27,7 @@ LOGGING = {
             'container': {
                 'handlers': ['console'],
                 'level': 'INFO',
-                'propagate': True
+                'propagate': False
             },
             'compose': {
                 'handlers': ['console'],
@@ -125,14 +125,12 @@ class LoadSubmoduleAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         # Rudimentary input sanitation
         engine_name = values.split(' ', 1)[0].strip('.')
-        print "Import %s shipit engine" % engine_name
         try:
             engine_module = importlib.import_module(
                 'container.shipit.%s.engine' % engine_name)
         except ImportError as exc:
             raise ImportError(
                 'No shipit module for %s found - %s' % (engine_name, str(exc)))
-
         try:
             engine_cls = getattr(engine_module, 'ShipItEngine')
         except Exception as exc:

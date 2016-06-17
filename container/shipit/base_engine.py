@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaseShipItEngine(object):
+    name = None
 
     def __init__(self, base_path):
         self.base_path = base_path
@@ -37,6 +38,6 @@ class BaseShipItEngine(object):
         Called when --save-config option True. Generate configuration templates and write to filesystem.
 
         :param kwargs: Comandline options provided at runtime.
-        :return:
+        :return: string: name of directory where config was saved
         """
         raise NotImplementedError()

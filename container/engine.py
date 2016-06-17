@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 import os
 import datetime
-import importlib
+import json
 
 from .exceptions import AnsibleContainerAlreadyInitializedException, AnsibleContainrRolesPathCreationException
 from .utils import *
@@ -281,21 +281,15 @@ def cmdrun_shipit(base_path, engine_name, **kwargs):
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
+    shipit_engine_obj = kwargs.pop('shipit_engine')
 
-    shipit_engine = kwargs.pop('shipit_engine')
-    try:
-        engine_module = importlib.import_module('container.shipit.%s.engine' % shipit_engine)
-        engine_cls = getattr(engine_module, 'ShipItEngine')
-    except ImportError:
-        raise ImportError('No shipit module for %s found.' % shipit_engine)
-    else:
-        shipit_engine_obj = engine_cls(base_path)
-
+    logger.info("shipit_engine type: %s" % type(shipit_engine_obj))
+    
+    create_templates = kwargs.get('save_config', None)
     project_name = os.path.basename(base_path).lower()
 
     # create the roles path
     roles_path = os.path.join(base_path, SHIPIT_PATH, SHIPIT_ROLES_DIR)
-    logger.info("Creating roles path %s" % roles_path)
     try:
         os.makedirs(roles_path)
     except OSError:
@@ -304,12 +298,11 @@ def cmdrun_shipit(base_path, engine_name, **kwargs):
     except Exception as exc:
         raise AnsibleContainrRolesPathCreationException("Error creating %s - %s" % (roles_path, str(exc)))
 
+    # Use the build container to Initialize the role
     context = dict(
         roles_path=roles_path,
-        role_name=project_name
+        role_name="%s_%s" % (project_name, shipit_engine_obj.name)
     )
-
-    # Use the build container to Initialize the role
     with make_temp_dir() as temp_dir:
         logger.info('Executing ansible-galaxy init %s' % project_name)
         engine_obj.orchestrate('galaxy', temp_dir, context=context)
@@ -320,12 +313,12 @@ def cmdrun_shipit(base_path, engine_name, **kwargs):
             engine_obj.remove_container_by_id(builder_container_id)
             return
 
-    logger.info('Role %s created.' % project_name)
-    config = engine_obj.get_config()
-    create_templates = kwargs.pop('save_config')
+    config = engine_obj.config
     shipit_engine_obj.run(config=config, project_name=project_name, project_dir=base_path)
+    logger.info('Role %s created.' % project_name)
     if create_templates:
-        shipit_engine_obj.save_config(config=config, project_name=project_name, project_dir=base_path)
+        config_path = shipit_engine_obj.save_config(config=config, project_name=project_name, project_dir=base_path)
+        logger.info('Saved configuration to %s' % config_path)
 
 
 def create_build_container(container_engine_obj, base_path):

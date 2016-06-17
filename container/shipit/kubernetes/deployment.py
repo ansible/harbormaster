@@ -26,24 +26,23 @@ class Deployment(object):
     def _get_template_or_task(self, request_type="task", service_names=None):
         templates = []
         for name, service in self.config.get('services', {}).items():
-            if not service_names or name in service_names:
-                if request_type == 'task':
-                    new_template = self._create_task(service['name'])
-                elif request_type == 'config':
-                    new_template = self._create_template(service['name'])
-                templates.append(new_template)
+            if request_type == 'task':
+                new_template = self._create_task(name, service)
+            elif request_type == 'config':
+                new_template = self._create_template(name, service)
+            templates.append(new_template)
         return templates
 
-    def _create_template(self, service_name):
+    def _create_template(self, name, service):
         '''
         Creates a deployment template from a set of services. Each service becomes a container
         defined within the replication controller.
         '''
-        name = "%s-%s" % (self.project_name, service_name)
-        containers = [self._service_to_container(service_name, type="config")]
+        name = "%s-%s" % (self.project_name, name)
+        containers = [self._service_to_container(name, service, type="config")]
         labels = dict(
             app=self.project_name,
-            service=service_name
+            service=name
         )
         template = dict(
             apiVersion="extensions/v1beta1",
@@ -55,14 +54,14 @@ class Deployment(object):
             spec=dict(
                 template=dict(
                     metadata=dict(
-                        labels=labels
+                        labels=labels.copy()
                     ),
                     spec=dict(
                         containers=containers
                     )
                 ),
                 replicas=1,
-                selector=labels,
+                selector=labels.copy(),
                 strategy=dict(
                     type='Rolling'
                 )
@@ -70,7 +69,7 @@ class Deployment(object):
         )
         return template
 
-    def _create_task(self, service_name):
+    def _create_task(self, name, service):
         '''
         Generates an Ansible playbook task.
 
@@ -78,31 +77,28 @@ class Deployment(object):
         :return:
         '''
 
-        containers = [self._service_to_container(service_name, type="task")]
-        name = "%s-%s" % (self.project_name, service_name)
+        containers = [self._service_to_container(name, service, type="task")]
+        name = "%s-%s" % (self.project_name, name)
         labels = dict(
             app=self.project_name,
-            service=service_name
+            service=name
         )
         template = dict(
-            k8s_deployment=OrderedDict(
-                project_name=self.project_name,
+            kube_deployment=OrderedDict(
                 deployment_name=name,
-                labels=labels,
+                labels=labels.copy(),
                 containers=containers,
-                selector=labels
+                selector=labels.copy()
             )
         )
-
         return template
 
-    def _service_to_container(self, service_name, type="task"):
-        service = self.confg.get(service_name)
-        container = OrderedDict(name=service_name)
+    def _service_to_container(self, name, service, type="task"):
+        container = OrderedDict(name=name)
         for key, value in service.items():
             if key == 'ports':
                 container['ports'] = self._get_ports(value, type)
-            elif key in ('labels', 'links'):
+            elif key in ('labels', 'links', 'options', 'dev_options'):
                 pass
             elif key == 'environment':
                 expanded_vars = self._expand_env_vars(value)

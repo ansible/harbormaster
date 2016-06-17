@@ -10,9 +10,8 @@ import subprocess
 import select
 import logging
 import glob
-import shutil
 
-from .constants import SHIPIT_PATH, SHIPIT_PLAYBOOK_NAME, SHIPIT_ROLES_DIR
+from .constants import SHIPIT_PATH, SHIPIT_PLAYBOOK_PREFIX, SHIPIT_ROLES_DIR
 from container.exceptions import AnsibleContainerShipItException
 from collections import OrderedDict
 
@@ -132,8 +131,8 @@ class BaseShipItRole(object):
         self.project_name = project_name
         self.project_dir = project_dir
         self.engine = engine
-
-        self.roles_path = os.path.join(self.project_dir, SHIPIT_PATH, SHIPIT_ROLES_DIR)
+        self.role_name =  "%s_%s" % (self.project_name, engine)
+        self.roles_path = os.path.join(self.project_dir, SHIPIT_PATH, SHIPIT_ROLES_DIR, self.role_name)
 
     def _create_path(self, path):
         try:
@@ -158,7 +157,7 @@ class BaseShipItRole(object):
         '''
         cls_dir = os.path.dirname(os.path.realpath(__file__))
         modules_dir = os.path.join(cls_dir, self.engine, 'modules')
-        library_path = os.path.join(self.roles_path, self.project_name, 'library')
+        library_path = os.path.join(self.roles_path, 'library')
         self._create_path(library_path)
 
         include_files = []
@@ -207,7 +206,7 @@ class BaseShipItRole(object):
                 when="playbook_debug"
             ))
         stream = yaml.safe_dump(output_tasks, default_flow_style=False)
-        with open(os.path.join(self.roles_path, self.project_name, 'tasks', 'main.yml'), 'w') as f:
+        with open(os.path.join(self.roles_path, 'tasks', 'main.yml'), 'w') as f:
             f.write(re.sub(r'^-', u'\n-', stream, flags=re.M))
 
         self._copy_modules()
@@ -219,7 +218,7 @@ class BaseShipItRole(object):
         :return: None
         '''
         play = OrderedDict()
-        play['name'] = "Deploy %s" % self.project_name
+        play['name'] = "Deploy %s to  %s" % (self.project_name, self.engine)
         play['hosts'] = 'localhost'
         play['gather_facts'] = False
         play['connection'] = 'local'
@@ -227,9 +226,10 @@ class BaseShipItRole(object):
             playbook_debug=False
         )
         play['roles'] = [dict(
-            role=self.project_name
+            role=self.role_name
         )]
-        playbook_path = os.path.join(self.project_dir, SHIPIT_PATH, SHIPIT_PLAYBOOK_NAME)
+        playbook_name = "%s_%s.yml" % (SHIPIT_PLAYBOOK_PREFIX, self.engine)
+        playbook_path = os.path.join(self.project_dir, SHIPIT_PATH, playbook_name)
         with open(playbook_path, 'w') as f:
             f.write(yaml.safe_dump([play], default_flow_style=False))
 

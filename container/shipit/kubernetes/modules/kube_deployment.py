@@ -7,12 +7,12 @@
 
 DOCUMENTATION = '''
 
-module: oso_deployment
+module: kube_deployment
 
-short_description: Start, cancel or retry a deployment on a Kubernetes or OpenShift cluster.
+short_description: Start, cancel or retry a deployment on a Kubernetes cluster.
 
 description:
-  - Start, cancel or retry a deployment on a Kubernetes or OpenShift cluster by setting the C(state) to I(present) or
+  - Start, cancel or retry a deployment on a Kubernetes cluster by setting the C(state) to I(present) or
     I(absent).
   - Supports check mode. Use check mode to view a list of actions the module will take.
 
@@ -30,7 +30,7 @@ import logging.config
 
 from ansible.module_utils.basic import *
 
-logger = logging.getLogger('oso_deployment')
+logger = logging.getLogger('kube_deployment')
 
 LOGGING = (
     {
@@ -84,7 +84,6 @@ class DeploymentManager(object):
             replicas=dict(type='int', default=1),
             containers=dict(type='list'),
             strategy=dict(type='str', default='Rolling', choices=['Recreate', 'Rolling']),
-            cli=dict(type='str', choices=['kubectl', 'oc'], default='oc'),
             debug=dict(type='bool', default=False)
         )
 
@@ -102,7 +101,6 @@ class DeploymentManager(object):
         self.containers = None
         self.strategy = None
         self.recreate = None
-        self.cli = None
         self.api = None
         self.debug = None
         self.check_mode = self.module.check_mode
@@ -117,7 +115,7 @@ class DeploymentManager(object):
             LOGGING['loggers']['k8s_deployment']['level'] = 'DEBUG'
         logging.config.dictConfig(LOGGING)
 
-        self.api = OriginAPI(self.module)
+        self.api = KubeAPI(self.module)
 
         actions = []
         changed = False
@@ -127,7 +125,7 @@ class DeploymentManager(object):
 
         try:
             project_switch = self.api.set_project(self.project_name)
-        except OriginAPIException as exc:
+        except KubeAPIException as exc:
             self.module.fail_json(msg=exc.message, stderr=exc.stderr, stdout=exc.stdout)
 
         if not project_switch:
@@ -135,7 +133,7 @@ class DeploymentManager(object):
             if not self.check_mode:
                 try:
                     self.api.create_project(self.project_name)
-                except OriginAPIException as exc:
+                except KubeAPIException as exc:
                     self.module.fail_json(msg=exc.message, stderr=exc.stderr, stdout=exc.stdout)
 
         if self.state == 'present':
@@ -147,7 +145,7 @@ class DeploymentManager(object):
                 if not self.check_mode:
                     try:
                         self.api.create_from_template(template=template)
-                    except OriginAPIException as exc:
+                    except KubeAPIException as exc:
                         self.module.fail_json(msg=exc.message, stderr=exc.stderr, stdout=exc.stdout)
             elif deployment and self.recreate:
                 actions.append("Delete deployment %s" % self.deployment_name)
@@ -157,7 +155,7 @@ class DeploymentManager(object):
                     try:
                         self.api.delete_resource('dc', self.deployment_name)
                         self.api.create_from_template(template=template)
-                    except OriginAPIException as exc:
+                    except KubeAPIException as exc:
                         self.module.fail_json(msg=exc.message, stderr=exc.stderr, stdout=exc.stdout)
             elif deployment and self.replace:
                 template = self._create_template()
@@ -171,7 +169,7 @@ class DeploymentManager(object):
                 if not self.check_mode:
                     try:
                         self.api.replace_from_template(template=template)
-                    except OriginAPIException as exc:
+                    except KubeAPIException as exc:
                         self.module.fail_json(msg=exc.message, stderr=exc.stderr, stdout=exc.stdout)
 
             deployments[self.deployment_name.replace('-', '_') + '_deployment'] = self.api.get_resource('dc', self.deployment_name)
@@ -182,7 +180,7 @@ class DeploymentManager(object):
                 if self.check_mode:
                     try:
                         self.api.delete_resource('deployment', self.deployment_name)
-                    except OriginAPIException as exc:
+                    except KubeAPIException as exc:
                         self.module.fail_json(msg=exc.message, stderr=exc.stderr, stdout=exc.stdout)
 
         results['changed'] = changed
@@ -249,7 +247,7 @@ class DeploymentManager(object):
         return result
 
 #The following will be included by `ansble-container shipit` when cloud modules are copied into the role library path.
-#include--> oso_api.py
+#include--> kube_api.py
 
 
 def main():

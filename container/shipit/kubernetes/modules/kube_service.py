@@ -9,10 +9,10 @@ DOCUMENTATION = '''
 
 module: oso_service
 
-short_description: Create or remove a service on a Kubernetes or OpenShift cluster.
+short_description: Create or remove a service on a Kubernetes cluster.
 
 description:
-  - Create or remove a service on a Kubernetes or OpenShift cluster by setting the C(state) to I(present) or I(absent).
+  - Create or remove a service on a Kubernetes cluster by setting the C(state) to I(present) or I(absent).
   - The module is idempotent and will not replace an existing service unless the C(reload) option is passed.
   - Supports check mode. Use check mode to view a list of actions the module will take.
 
@@ -74,7 +74,6 @@ class OSOServiceManager(object):
     def __init__(self):
 
         self.arg_spec = dict(
-            project_name=dict(type='str', aliases=['namespace'], required=True),
             state=dict(type='str', choices=['present', 'absent'], default='present'),
             labels=dict(type='dict'),
             ports=dict(type='list', required=True),
@@ -82,14 +81,12 @@ class OSOServiceManager(object):
             loadbalancer=dict(type='bool', default=False),
             replace=dict(type='bool', default=False),
             selector=dict(type='dict', required=True),
-            cli=dict(type='str', choices=['kubectl', 'oc'], default='oc'),
-            debug=dict(type='bool', default=False)
+            type=dict(type='str', choices=['LoadBalancer', 'NodeBalancer'], default='NodeBalancer'),
         )
 
         self.module = AnsibleModule(self.arg_spec,
                                     supports_check_mode=True)
 
-        self.project_name = None
         self.state = None
         self.labels = None
         self.ports = None
@@ -97,9 +94,8 @@ class OSOServiceManager(object):
         self.loadbalancer = None
         self.selector = None
         self.replace = None
-        self.cli = None
         self.api = None
-        self.debug = None
+        self.type = None
         self.check_mode = self.module.check_mode
 
     def exec_module(self):
@@ -109,29 +105,15 @@ class OSOServiceManager(object):
 
         if self.debug:
             LOGGING['loggers']['container']['level'] = 'DEBUG'
-            LOGGING['loggers']['oso_service']['level'] = 'DEBUG'
+            LOGGING['loggers']['kube_service']['level'] = 'DEBUG'
         logging.config.dictConfig(LOGGING)
 
-        self.api = OriginAPI(self.module)
+        self.api = KubeAPI(self.module)
 
         actions = []
         changed = False
         services = dict()
         results = dict()
-        project_switch = None
-
-        try:
-            project_switch = self.api.set_project(self.project_name)
-        except OriginAPIException as exc:
-            self.module.fail_json(msg=exc.message, stderr=exc.stderr, stdout=exc.stdout)
-
-        if not project_switch:
-            actions.append("Create project %s" % self.project_name)
-            if not self.check_mode:
-                try:
-                    self.api.create_project(self.project_name)
-                except OriginAPIException as exc:
-                    self.module.fail_json(msg=exc.message, stderr=exc.stderr, stdout=exc.stdout)
 
         if self.state == 'present':
             service = self.api.get_resource('service', self.service_name)
@@ -147,7 +129,8 @@ class OSOServiceManager(object):
                 actions.append("Replace service %s" % self.service_name)
                 if not self.check_mode:
                     self.api.replace_from_template(template=template)
-            services[self.service_name.replace('-', '_') + '_service'] = self.api.get_resource('service', self.service_name)
+            services[self.service_name.replace('-', '_') + '_service'] = \
+                self.api.get_resource('service', self.service_name)
         elif self.state == 'absent':
             if self.api.get_resource('service', self.service_name):
                 changed = True
@@ -210,16 +193,14 @@ class OSOServiceManager(object):
         return template
 
     def _update_ports(self):
-        count = 0
         for port in self.ports:
             if not port.get('name'):
-                port['name'] = "port%s" % count
-                count += 1
+                port['name'] = "port_%s" % port['port']
             if not port.get('type'):
                 port['type'] = "TCP"
 
 #The following will be included by `ansble-container shipit` when cloud modules are copied into the role library path.
-#include--> oso_api.py
+#include--> kube_api.py
 
 
 def main():
