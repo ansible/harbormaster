@@ -199,3 +199,4 @@ Vagrantfile
 roles/
 shipit_*/
 shipit*.yml
+tmp.yml

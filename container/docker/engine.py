@@ -186,6 +186,23 @@ class Engine(BaseEngine):
         exit_status = build_container_info['Status']
         return '(0)' in exit_status
 
+    def get_config_for_shipit(self):
+        '''
+        Retrieve the configuration needed to run the shipit command
+
+        :return: config dict object
+        '''
+        config = get_config(self.base_path)  # make sure the config has not been modified
+        compose_config = config_to_compose(config, shipit=True)
+        for service, service_config in compose_config.items():
+            service_config.update(
+                dict(
+                    image='%s-%s:latest' % (self.project_name, service)
+                )
+            )
+            self._fix_volumes(service, service_config)
+        return compose_config
+
     # Docker-compose uses docopt, which outputs things like the below
     # So I'm starting with the defaults and then updating them.
     # One structure for the global options and one for the command specific

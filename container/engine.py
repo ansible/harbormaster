@@ -206,6 +206,15 @@ class BaseEngine(object):
     def get_config(self):
         raise NotImplementedError()
 
+    def get_config_for_shipit(self):
+        '''
+        Get the compose configuration needed by cmdrun_shipit. Result should include
+        the *options* attribute for each service, as it may contain cluster directives.
+
+        :return: configuration dictionary
+        '''
+        raise NotImplementedError()
+
 
 def cmdrun_init(base_path, **kwargs):
     container_dir = os.path.normpath(
@@ -313,7 +322,8 @@ def cmdrun_shipit(base_path, engine_name, **kwargs):
             engine_obj.remove_container_by_id(builder_container_id)
             return
 
-    config = engine_obj.config
+    config = engine_obj.get_config_for_shipit()
+    logger.info(json.dumps(config, sort_keys=False, indent=4, separators=(',', ': ')))
     shipit_engine_obj.run(config=config, project_name=project_name, project_dir=base_path)
     logger.info('Role %s created.' % project_name)
     if create_templates:

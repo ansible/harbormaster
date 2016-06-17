@@ -30,7 +30,7 @@ import logging.config
 
 from ansible.module_utils.basic import *
 
-logger = logging.getLogger('oso_service')
+logger = logging.getLogger('kube_service')
 
 LOGGING = (
     {
@@ -48,7 +48,7 @@ LOGGING = (
             }
         },
         'loggers': {
-            'oso_service': {
+            'kube_service': {
                 'handlers': ['file'],
                 'level': 'INFO',
             },
@@ -69,7 +69,7 @@ LOGGING = (
 )
 
 
-class OSOServiceManager(object):
+class KubeServiceManager(object):
 
     def __init__(self):
 
@@ -81,7 +81,7 @@ class OSOServiceManager(object):
             loadbalancer=dict(type='bool', default=False),
             replace=dict(type='bool', default=False),
             selector=dict(type='dict', required=True),
-            type=dict(type='str', choices=['LoadBalancer', 'NodeBalancer'], default='NodeBalancer'),
+            type=dict(type='str', choices=['ClusterIP', 'LoadBalancer', 'NodePort'], default='NodePort'),
         )
 
         self.module = AnsibleModule(self.arg_spec,
@@ -97,6 +97,7 @@ class OSOServiceManager(object):
         self.api = None
         self.type = None
         self.check_mode = self.module.check_mode
+        self.debug = self.module._debug
 
     def exec_module(self):
 
@@ -122,13 +123,19 @@ class OSOServiceManager(object):
                 changed = True
                 actions.append("Create service %s" % self.service_name)
                 if not self.check_mode:
-                    self.api.create_from_template(template=template)
+                    try:
+                        self.api.create_from_template(template=template)
+                    except KubeAPIException as exc:
+                        self.module.fail_json(msg=str(exc), stderr=exc.stderr, stdout=exc.stdout)
             elif service and self.replace:
                 template = self._create_template()
                 changed = True
                 actions.append("Replace service %s" % self.service_name)
                 if not self.check_mode:
-                    self.api.replace_from_template(template=template)
+                    try:
+                        self.api.replace_from_template(template=template)
+                    except KubeAPIException as exc:
+                        self.module.fail_json(msg=str(exc), stderr=exc.stderr, stdout=exc.stdout)
             services[self.service_name.replace('-', '_') + '_service'] = \
                 self.api.get_resource('service', self.service_name)
         elif self.state == 'absent':
@@ -136,7 +143,10 @@ class OSOServiceManager(object):
                 changed = True
                 actions.append("Delete service %s" % self.service_name)
                 if not self.check_mode:
-                    self.api.delete_resource('service', self.service_name)
+                    try:
+                        self.api.delete_resource('service', self.service_name)
+                    except KubeAPIException as exc:
+                        self.module.fail_json(msg=str(exc), stderr=exc.stderr, stdout=exc.stdout)
 
         results['changed'] = changed
 
@@ -170,7 +180,7 @@ class OSOServiceManager(object):
         '''
 
         selector = self.selector if self.selector else self.service_name
-        self._update_ports()
+        self._update_ports(self.ports)
 
         template = dict(
             apiVersion="v1",
@@ -180,20 +190,19 @@ class OSOServiceManager(object):
             ),
             spec=dict(
                 selector=selector,
-                ports=self.ports
+                ports=self.ports,
+                type=self.type
             )
         )
 
         if self.labels:
             template['metadata']['labels'] = self.labels
 
-        if self.loadbalancer:
-            template['spec']['type'] = 'LoadBalancer'
-
         return template
 
-    def _update_ports(self):
-        for port in self.ports:
+    @staticmethod
+    def _update_ports(ports):
+        for port in ports:
             if not port.get('name'):
                 port['name'] = "port_%s" % port['port']
             if not port.get('type'):
@@ -204,7 +213,7 @@ class OSOServiceManager(object):
 
 
 def main():
-    manager = OSOServiceManager()
+    manager = KubeServiceManager()
     manager.exec_module()
 
 if __name__ == '__main__':

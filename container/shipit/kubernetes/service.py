@@ -107,7 +107,7 @@ class Service(object):
         for port in service['ports']:
             if isinstance(port, str) and ':' in port:
                 parts = port.split(':')
-                ports.append(dict(port=int(parts[0]), targetPort=int(parts[1]), name='port_%s' % parts[0]))
+                ports.append(dict(port=int(parts[0]), targetPort=int(parts[1]), name='port%s' % parts[0]))
             else:
-                ports.append(dict(port=int(port), targetPort=int(port), name='port_%s' % port))
+                ports.append(dict(port=int(port), targetPort=int(port), name='port%s' % port))
         return ports

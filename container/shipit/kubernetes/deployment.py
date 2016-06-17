@@ -6,6 +6,8 @@ from __future__ import absolute_import
 
 import logging
 import re
+import shlex
+
 from collections import OrderedDict
 
 logger = logging.getLogger(__name__)
@@ -100,6 +102,8 @@ class Deployment(object):
                 container['ports'] = self._get_ports(value, type)
             elif key in ('labels', 'links', 'options', 'dev_options'):
                 pass
+            elif key == 'command' and isinstance(value, basestring):
+                container['command'] = shlex.split(value)
             elif key == 'environment':
                 expanded_vars = self._expand_env_vars(value)
                 if type == 'config':
