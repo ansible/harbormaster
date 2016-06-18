@@ -123,19 +123,13 @@ class KubeServiceManager(object):
                 changed = True
                 actions.append("Create service %s" % self.service_name)
                 if not self.check_mode:
-                    try:
-                        self.api.create_from_template(template=template)
-                    except KubeAPIException as exc:
-                        self.module.fail_json(msg=str(exc), stderr=exc.stderr, stdout=exc.stdout)
+                    self.api.create_from_template(template=template)
             elif service and self.replace:
                 template = self._create_template()
                 changed = True
                 actions.append("Replace service %s" % self.service_name)
                 if not self.check_mode:
-                    try:
-                        self.api.replace_from_template(template=template)
-                    except KubeAPIException as exc:
-                        self.module.fail_json(msg=str(exc), stderr=exc.stderr, stdout=exc.stdout)
+                    self.api.replace_from_template(template=template)
             services[self.service_name.replace('-', '_') + '_service'] = \
                 self.api.get_resource('service', self.service_name)
         elif self.state == 'absent':
@@ -143,10 +137,7 @@ class KubeServiceManager(object):
                 changed = True
                 actions.append("Delete service %s" % self.service_name)
                 if not self.check_mode:
-                    try:
-                        self.api.delete_resource('service', self.service_name)
-                    except KubeAPIException as exc:
-                        self.module.fail_json(msg=str(exc), stderr=exc.stderr, stdout=exc.stdout)
+                    self.api.delete_resource('service', self.service_name)
 
         results['changed'] = changed
 

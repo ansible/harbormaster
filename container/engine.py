@@ -323,7 +323,7 @@ def cmdrun_shipit(base_path, engine_name, **kwargs):
             return
 
     config = engine_obj.get_config_for_shipit()
-    logger.info(json.dumps(config, sort_keys=False, indent=4, separators=(',', ': ')))
+    logger.info(json.dumps(config._config, sort_keys=False, indent=4, separators=(',', ': ')))
     shipit_engine_obj.run(config=config, project_name=project_name, project_dir=base_path)
     logger.info('Role %s created.' % project_name)
     if create_templates:

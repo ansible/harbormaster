@@ -192,16 +192,14 @@ class Engine(BaseEngine):
 
         :return: config dict object
         '''
-        config = get_config(self.base_path)  # make sure the config has not been modified
-        compose_config = config_to_compose(config, shipit=True)
-        for service, service_config in compose_config.items():
+        config = get_config(self.base_path)  # get the unmodified production config
+        for service, service_config in config.get('services', {}).items():
             service_config.update(
                 dict(
                     image='%s-%s:latest' % (self.project_name, service)
                 )
             )
-            self._fix_volumes(service, service_config)
-        return compose_config
+        return config
 
     # Docker-compose uses docopt, which outputs things like the below
     # So I'm starting with the defaults and then updating them.

@@ -34,11 +34,11 @@ services:
       - '/var/lib/pgsql'
   gulp:
     image: centos:7
-    user: 'node'
     links:
       - django
     command: /bin/false
     dev_overrides:
+      user: 'node'
       working_dir: '/node'
       command: ['/usr/bin/dumb-init', '/node_modules/.bin/gulp']
       ports:

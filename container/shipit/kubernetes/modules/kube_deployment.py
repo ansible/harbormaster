@@ -79,10 +79,10 @@ class DeploymentManager(object):
             deployment_name=dict(type='str'),
             recreate=dict(type='bool', default=False),
             replace=dict(type='bool', default=True),
-            selector=dict(type='dict'),
             replicas=dict(type='int', default=1),
             containers=dict(type='list'),
             strategy=dict(type='str', default='Rolling', choices=['Recreate', 'Rolling']),
+            volumes=dict(type='list')
         )
 
         self.module = AnsibleModule(self.arg_spec,
@@ -92,12 +92,12 @@ class DeploymentManager(object):
         self.labels = None
         self.ports = None
         self.deployment_name = None
-        self.selector = None
         self.replace = None
         self.replicas = None
         self.containers = None
         self.strategy = None
         self.recreate = None
+        self.volumes = None
         self.api = None
         self.debug = self.module._debug
         self.check_mode = self.module.check_mode
@@ -127,34 +127,25 @@ class DeploymentManager(object):
                 changed = True
                 actions.append("Create deployment %s" % self.deployment_name)
                 if not self.check_mode:
-                    try:
-                        self.api.create_from_template(template=template)
-                    except KubeAPIException as exc:
-                        self.module.fail_json(msg=exc.message, stderr=exc.stderr, stdout=exc.stdout)
+                    self.api.create_from_template(template=template)
             elif deployment and self.recreate:
                 actions.append("Delete deployment %s" % self.deployment_name)
                 changed = True
                 template = self._create_template()
                 if not self.check_mode:
-                    try:
-                        self.api.delete_resource('deployment', self.deployment_name)
-                        self.api.create_from_template(template=template)
-                    except KubeAPIException as exc:
-                        self.module.fail_json(msg=exc.message, stderr=exc.stderr, stdout=exc.stdout)
+                    self.api.delete_resource('deployment', self.deployment_name)
+                    self.api.create_from_template(template=template)
             elif deployment and self.replace:
                 template = self._create_template()
-                try:
-                    template['status'] = dict(latestVersion=deployment['status']['latestVersion'] + 1)
-                except Exception as exc:
-                    self.module.fail_json(msg="Failed to increment latestVersion for %s - %s" % (self.deployment_name,
-                                                                                          str(exc)))
+                # try:
+                #     template['status'] = dict(latestVersion=deployment['status']['latestVersion'] + 1)
+                # except Exception as exc:
+                #     self.module.fail_json(msg="Failed to increment latestVersion for %s - %s" % (self.deployment_name,
+                #                                                                           str(exc)))
                 changed = True
                 actions.append("Update deployment %s" % self.deployment_name)
                 if not self.check_mode:
-                    try:
-                        self.api.replace_from_template(template=template)
-                    except KubeAPIException as exc:
-                        self.module.fail_json(msg=exc.message, stderr=exc.stderr, stdout=exc.stdout)
+                    self.api.replace_from_template(template=template)
 
             deployments[self.deployment_name.replace('-', '_') + '_deployment'] = \
                 self.api.get_resource('deployment', self.deployment_name)
@@ -163,10 +154,7 @@ class DeploymentManager(object):
                 changed = True
                 actions.append("Delete deployment %s" % self.deployment_name)
                 if self.check_mode:
-                    try:
-                        self.api.delete_resource('deployment', self.deployment_name)
-                    except KubeAPIException as exc:
-                        self.module.fail_json(msg=exc.message, stderr=exc.stderr, stdout=exc.stdout)
+                    self.api.delete_resource('deployment', self.deployment_name)
 
         results['changed'] = changed
 
@@ -206,12 +194,12 @@ class DeploymentManager(object):
             )
         )
 
+        if self.volumes:
+            template['spec']['template']['spec']['volumes'] = self.volumes
+
         if self.labels:
             template['metadata']['labels'] = self.labels
             template['spec']['template']['metadata']['labels'] = self.labels
-
-        if self.selector:
-            template['spec']['selector'] = self.selector
 
         return template
 

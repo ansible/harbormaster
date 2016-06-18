@@ -9,6 +9,7 @@ import os
 from collections import Mapping
 
 from yaml import load as yaml_load
+from .exceptions import AnsibleContainerConfigException
 
 # TODO: Actually do some schema validation
 
@@ -22,8 +23,15 @@ class AnsibleContainerConfig(Mapping):
 
     def set_env(self, env):
         assert env in ['dev', 'prod']
-        ifs = open(os.path.join(self.base_path, 'ansible/container.yml'))
-        config = yaml_load(ifs)
+        config_path = os.path.join(self.base_path, 'ansible/container.yml')
+        try:
+            ifs = open(config_path, 'r')
+        except Exception:
+            raise AnsibleContainerConfigException("Failed to open %s. Are you in the correct directory?" % config_path)
+        try:
+            config = yaml_load(ifs)
+        except Exception as exc:
+            raise AnsibleContainerConfigException("Failed to parse container.yml - %s" % str(exc))
         ifs.close()
         for service, service_config in config['services'].items():
             dev_overrides = service_config.pop('dev_overrides', {})

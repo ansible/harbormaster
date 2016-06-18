@@ -24,6 +24,9 @@ class AnsibleContainerDockerConfigFileException(Exception):
 class AnsibleContainerDockerLoginException(Exception):
     pass
 
+class AnsibleContainerConfigException(Exception):
+    pass
+
 class AnsibleContainerShipItException(Exception):
 
     def __init__(self, msg, stdout=None, stderr=None):

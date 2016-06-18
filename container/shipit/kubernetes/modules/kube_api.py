@@ -4,7 +4,7 @@ import json
 
 class KubeAPI(object):
 
-    def __init__(self, module, target="oc"):
+    def __init__(self, module, target="kubectl"):
         self.target = target
         self.module = module
 
@@ -34,7 +34,7 @@ class KubeAPI(object):
         logger.debug(stderr)
 
         if check_rc and rc != 0:
-            raise KubeAPIException(error_msg, stderr=stderr, stdout=stdout)
+            self.module.fail_json(msg=error_msg, stderr=stderr, stdout=stdout)
 
         return rc, stdout, stderr
 
@@ -84,9 +84,12 @@ class KubeAPI(object):
         logger.debug("exec: %s" % cmd)
         rc, stdout, stderr = self.call_api(cmd)
         if rc == 0:
-            result = json.loads(stdout) 
+            try:
+                result = json.loads(str(stdout))
+            except Exception as exc:
+                self.module.fail_json("Error load json from kubectl output - %s" % str(exc))
         elif rc != 0 and not re.search('not found', stderr):
-            raise KubeAPIException("Error getting %s/%s" % (type, name), stderr=stderr, stdout=stdout)
+            self.module.fail_json(msg="Error getting %s/%s" % (type, name), stderr=stderr, stdout=stdout)
         return result
    
     def set_context(self, context_name):
@@ -104,7 +107,7 @@ class KubeAPI(object):
         if rc != 0:
             result = False
             if not re.search('does not exist', stderr):
-                raise KubeAPIException("Error switching to project %s" % project_name, stderr=stderr, stdout=stdout)
+                self.module.fail_json(msg="Error switching to project %s" % project_name, stderr=stderr, stdout=stdout)
         return result
 
     def create_project(self, project_name):
@@ -121,15 +124,6 @@ class KubeAPI(object):
         rc, stdout, stderr = self.call_api(cmd)
         if rc != 0:
             if not re.search('not found', stderr):
-                raise KubeAPIException("Error getting deployment state %s" % deployment_name, stderr=stderr,
-                                       stdout=stdout)
+                self.module.fail_json(msg="Error getting deployment state %s" % deployment_name, stderr=stderr,
+                                      stdout=stdout)
         return stdout
-
-
-class KubeAPIException(Exception):
-
-    def __init__(self, msg, stdout=None, stderr=None):
-        self.stderr = stderr
-        self.stdout = stdout
-
-        Exception.__init__(self, msg)

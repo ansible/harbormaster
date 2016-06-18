@@ -76,15 +76,13 @@ teed_stdout = TeedStdout
 def which_docker():
     return spawn.find_executable('docker')
 
-def config_to_compose(config, shipit=False):
+def config_to_compose(config):
     # This could probably be better done - include what keys are in compose vs
     # removing the ones that aren't.
     compose = config.get('services', {}).copy()
     for service, service_config in compose.items():
-        if 'options' in service_config and not shipit:
+        if 'options' in service_config:
             del service_config['options']
-        if 'dev_overrides' in service_config and shipit:
-            del service_config['dev_overrides']
     logger.debug('Compose derived from config:')
     logger.debug(unicode(compose))
     return compose
