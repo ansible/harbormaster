@@ -8,12 +8,12 @@ import os
 logger = logging.getLogger(__name__)
 
 
-from .constants import SHIPIT_CONFIG_PREFIX
+from .constants import SHIPIT_PATH, SHIPIT_CONFIG_PATH
 from ..exceptions import AnsibleContainerShipItException
 
 
 def create_config_output_path(base_dir, engine_name):
-    dest_path = os.path.join(base_dir, SHIPIT_CONFIG_PREFIX, engine_name)
+    dest_path = os.path.join(base_dir, SHIPIT_PATH, SHIPIT_CONFIG_PATH, engine_name)
     try:
         os.makedirs(dest_path)
     except OSError:
