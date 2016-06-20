@@ -8,10 +8,10 @@ logger = logging.getLogger(__name__)
 import os
 import sys
 import argparse
-import importlib
 
 from . import engine
 from . import exceptions
+from .utils import load_shipit_engine, AVAILABLE_SHIPIT_ENGINES
 
 from logging import config
 LOGGING = {
@@ -117,33 +117,10 @@ def subcmd_push_parser(parser, subparser):
                            dest='repository', default=None)
 
 def subcmd_shipit_parser(parser, subparser):
-    AVAILABLE_SHIPIT_ENGINES = [
-        { 'name': 'kube',
-          'help': 'Generate a role that deploys to Kubernetes.',
-          'cls': 'kubernetes'
-          },
-        {
-          'name': 'openshift',
-          'help': 'Generate a role that deploys to OpenShift Origin.',
-          'cls': 'openshift'
-          }
-    ]
     se_subparser = subparser.add_subparsers(title='shipit-engine', dest='shipit_engine')
-    for engine in AVAILABLE_SHIPIT_ENGINES:
-        engine_parser = se_subparser.add_parser(engine['name'], help=engine['help'])
-        try:
-            engine_module = importlib.import_module(
-                'container.shipit.%s.engine' % engine['cls'])
-        except ImportError as exc:
-            raise ImportError(
-                'No shipit module for %s found - %s' % (engine['name'], str(exc)))
-        try:
-            engine_cls = getattr(engine_module, 'ShipItEngine')
-        except Exception as exc:
-            raise ImportError('Error getting ShipItEngine for %s - %s' % (
-            engine['name'], str(exc)))
-
-        engine_obj = engine_cls(os.getcwd())
+    for engine_name, engine in AVAILABLE_SHIPIT_ENGINES.items():
+        engine_parser = se_subparser.add_parser(engine_name, help=engine['help'])
+        engine_obj = load_shipit_engine(engine_class=engine['cls'], base_path=os.getcwd())
         engine_obj.add_options(engine_parser)
 
 

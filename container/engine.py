@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 import os
 import datetime
-import json
 
 from .exceptions import AnsibleContainerAlreadyInitializedException, AnsibleContainrRolesPathCreationException
 from .utils import *
@@ -290,11 +289,10 @@ def cmdrun_shipit(base_path, engine_name, **kwargs):
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
-    shipit_engine_obj = kwargs.pop('shipit_engine')
-
-    logger.info("shipit_engine type: %s" % type(shipit_engine_obj))
-
-    create_templates = kwargs.get('save_config', None)
+    shipit_engine_name = kwargs.pop('shipit_engine')
+    shipit_engine_obj = load_shipit_engine(engine_class=AVAILABLE_SHIPIT_ENGINES[shipit_engine_name]['cls'],
+                                           base_path=base_path)
+    save_config = kwargs.get('save_config', None)
     project_name = os.path.basename(base_path).lower()
 
     # create the roles path
@@ -323,10 +321,10 @@ def cmdrun_shipit(base_path, engine_name, **kwargs):
             return
 
     config = engine_obj.get_config_for_shipit()
-    logger.info(json.dumps(config._config, sort_keys=False, indent=4, separators=(',', ': ')))
     shipit_engine_obj.run(config=config, project_name=project_name, project_dir=base_path)
     logger.info('Role %s created.' % project_name)
-    if create_templates:
+
+    if save_config:
         config_path = shipit_engine_obj.save_config(config=config, project_name=project_name, project_dir=base_path)
         logger.info('Saved configuration to %s' % config_path)
 
