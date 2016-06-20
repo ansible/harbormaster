@@ -81,7 +81,7 @@ class DeploymentManager(object):
             replace=dict(type='bool', default=True),
             replicas=dict(type='int', default=1),
             containers=dict(type='list'),
-            strategy=dict(type='str', default='Rolling', choices=['Recreate', 'Rolling']),
+            strategy=dict(type='str', default='RollingUpdate', choices=['Recreate', 'RollingUpdate']),
             volumes=dict(type='list')
         )
 

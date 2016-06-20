@@ -66,7 +66,7 @@ class Deployment(object):
                 ),
                 replicas=1,
                 strategy=dict(
-                    type='Rolling'
+                    type='RollingUpdate'
                 )
             )
         )
