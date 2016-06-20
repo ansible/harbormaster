@@ -116,35 +116,36 @@ def subcmd_push_parser(parser, subparser):
                                  u'registry URL. Defaults to the registry username.'),
                            dest='repository', default=None)
 
-class LoadSubmoduleAction(argparse.Action):
-    def __init__(self, option_strings, dest, nargs=None, **kwargs):
-        if nargs is not None:
-            raise ValueError("nargs not allowed")
-        super(LoadSubmoduleAction, self).__init__(option_strings, dest, **kwargs)
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        # Rudimentary input sanitation
-        engine_name = values.split(' ', 1)[0].strip('.')
+def subcmd_shipit_parser(parser, subparser):
+    AVAILABLE_SHIPIT_ENGINES = [
+        { 'name': 'kube',
+          'help': 'Generate a role that deploys to Kubernetes.',
+          'cls': 'kubernetes'
+          },
+        {
+          'name': 'openshift',
+          'help': 'Generate a role that deploys to OpenShift Origin.',
+          'cls': 'openshift'
+          }
+    ]
+    se_subparser = subparser.add_subparsers(title='shipit-engine', dest='shipit_engine')
+    for engine in AVAILABLE_SHIPIT_ENGINES:
+        engine_parser = se_subparser.add_parser(engine['name'], help=engine['help'])
         try:
             engine_module = importlib.import_module(
-                'container.shipit.%s.engine' % engine_name)
+                'container.shipit.%s.engine' % engine['cls'])
         except ImportError as exc:
             raise ImportError(
-                'No shipit module for %s found - %s' % (engine_name, str(exc)))
+                'No shipit module for %s found - %s' % (engine['name'], str(exc)))
         try:
             engine_cls = getattr(engine_module, 'ShipItEngine')
         except Exception as exc:
             raise ImportError('Error getting ShipItEngine for %s - %s' % (
-            engine_name, str(exc)))
+            engine['name'], str(exc)))
 
         engine_obj = engine_cls(os.getcwd())
-        setattr(namespace, self.dest, engine_obj)
-        engine_obj.add_options(parser)
+        engine_obj.add_options(engine_parser)
 
-def subcmd_shipit_parser(parser, subparser):
-    subparser.add_argument('shipit_engine', action=LoadSubmoduleAction,
-                           help=u'Specify the shipit engine for your cloud provider.',
-                           metavar='shipit-engine')
 
 def commandline():
     parser = argparse.ArgumentParser(description=u'Build, orchestrate, run, and '
