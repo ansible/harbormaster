@@ -37,8 +37,8 @@ services:
     links:
       - django
     command: /bin/false
+    user: 'node'
     dev_overrides:
-      user: 'node'
       working_dir: '/node'
       command: ['/usr/bin/dumb-init', '/node_modules/.bin/gulp']
       ports:
