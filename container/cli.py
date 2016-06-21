@@ -94,33 +94,36 @@ def subcmd_help_parser(parser, subparser):
 
 def subcmd_push_parser(parser, subparser):
     subparser.add_argument('--username', action='store',
-                           help=(u'Username to log into registry. If not provided, '
-                                 u'it is expected that your ~/.docker/config.json '
-                                 u'contains your login information.'),
+                           help=u'If authentication with the registry is required, provide a valid username.',
                            dest='username', default=None)
     subparser.add_argument('--email', action='store',
-                           help=(u'Email to log into the registry. If not provided, '
-                                 u'it is expected that your ~/.docker/config.json '
-                                 u'contains your login information.'),
+                           help=(u'If authentication with the registry requires an email address, provide a '
+                                 u'valid email address'),
                            dest='email', default=None)
     subparser.add_argument('--password', action='store',
-                           help=(u'Password to log into registry. If not provided, '
-                                 u'you will be prompted for it.'),
+                           help=u'If authentication with the registry is required, provide a valid password.',
                            dest='password', default=None)
     subparser.add_argument('--url', action='store',
-                           help=(u'Base URL for your registry. If not provided, '
-                                 u'Docker Hub will be used.'),
+                           help=(u'When authenticating with a registry, provide the registry URL. Otherwise, the ',
+                                 u'default URL for the selected container engine will be used.'),
                            dest='url', default=None)
-    subparser.add_argument('--repository', action='store',
-                           help=(u'Path of the repository to tag and push the image into. Will be appended to '
-                                 u'registry URL. Defaults to the registry username.'),
-                           dest='repository', default=None)
+    subparser.add_argument('--namespace', action='store',
+                           help=(u'An optional organization or project name to append to the registry URL. Defaults '
+                                 u'to the username.'),
+                           dest='namespace', default=None)
+    subparser.add_argument('--registry-name', action='store',
+                           help=(u'Name to associate with the registry in container.yml. If not provided, '
+                                 u'will attempt to use the default registry name for the selected container engine.'),
+                           dest='registry_name', default=None)
+    subparser.add_argument('--push-to', action='store',
+                           help=u'Name of a registry defined in container.yml to which images should be pushed.',
+                           dest='push_to', default=None)
 
 def subcmd_shipit_parser(parser, subparser):
     se_subparser = subparser.add_subparsers(title='shipit-engine', dest='shipit_engine')
     for engine_name, engine in AVAILABLE_SHIPIT_ENGINES.items():
         engine_parser = se_subparser.add_parser(engine_name, help=engine['help'])
-        engine_obj = load_shipit_engine(engine_class=engine['cls'], base_path=os.getcwd())
+        engine_obj = load_shipit_engine(engine['cls'], base_path=os.getcwd())
         engine_obj.add_options(engine_parser)
 
 

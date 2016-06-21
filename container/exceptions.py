@@ -27,6 +27,12 @@ class AnsibleContainerDockerLoginException(Exception):
 class AnsibleContainerConfigException(Exception):
     pass
 
+class AnsibleContainerRegistryNotFound(Exception):
+    pass
+
+class AnsibleContainerMissingRegistryName(Exception):
+    pass
+
 class AnsibleContainerShipItException(Exception):
 
     def __init__(self, msg, stdout=None, stderr=None):

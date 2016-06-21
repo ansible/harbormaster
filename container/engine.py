@@ -7,9 +7,13 @@ logger = logging.getLogger(__name__)
 
 import os
 import datetime
+import re
 
-from .exceptions import AnsibleContainerAlreadyInitializedException, AnsibleContainrRolesPathCreationException
+from .exceptions import (AnsibleContainerAlreadyInitializedException,
+                         AnsibleContainerMissingRegistryName,
+                         AnsibleContainerRegistryNotFound)
 from .utils import *
+from .shipit.utils import create_path
 
 from .shipit.constants import SHIPIT_PATH, SHIPIT_ROLES_DIR
 
@@ -17,6 +21,7 @@ class BaseEngine(object):
     engine_name = None
     orchestrator_name = None
     default_registry_url = ''
+    default_registry_name = ''
 
     def __init__(self, base_path, project_name, params={}):
         self.base_path = base_path
@@ -192,12 +197,12 @@ class BaseEngine(object):
         """
         raise NotImplementedError()
 
-    def push_latest_image(self, host, username, **kwargs):
+    def push_latest_image(self, host, registry=None):
         """
         Push the latest built image for a host to a registry
 
         :param host: The host in the container.yml to push
-        :param username: The username to own the pushed image
+        :param registry_name: Dict pulled from registries list in containery.yml
         :return: None
         """
         raise NotImplementedError()
@@ -270,18 +275,39 @@ def cmdrun_run(base_path, engine_name, service=[], production=False, **kwargs):
 
 
 def cmdrun_push(base_path, engine_name, username=None, password=None, email=None,
-                url=None, **kwargs):
+                url=None, namespace=None, registry_name=None, push_to=None, **kwargs):
     assert_initialized(base_path)
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
+    config = get_config(base_path)
 
-    username = engine_obj.registry_login(username=username, password=password,
-                                         email=email, url=url)
+    if not push_to:
+        # Attempt to login and update config
+        username = engine_obj.registry_login(username=username, password=password,
+                                             email=email, url=url)
+        if not url:
+            url = engine_obj.default_registry_url
 
-    logger.info('Pushing to repository for user %s', username)
+        if not registry_name:
+            if url == engine_obj.default_registry_url:
+                registry_name = engine_obj.default_registry_name
+            else:
+                raise AnsibleContainerMissingRegistryName("Please provide a valid registry name so that the registry "
+                                                          "can be addded to container.yml.")
+        if not namespace:
+            namespace = username
+        registry = config.update_registries(registry_name=registry_name, url=url, namespace=namespace)
+    else:
+        if not config.get('registries', {}).get(push_to):
+            raise AnsibleContainerRegistryNotFound("Registry %s not found in container.yml. Try logging in by "
+                                                   "providing a username, password, url and registry name.")
+        registry = config['registries'][push_to]
+        registry_name = push_to
+
+    logger.info('Pushing to %s/%s' % (re.sub(r'/$', '', registry['url']), registry['namespace']))
     for host in engine_obj.hosts_touched_by_playbook():
-        engine_obj.push_latest_image(host, username, url, **kwargs)
+        engine_obj.push_latest_image(host, registry=registry)
     logger.info('Done!')
 
 
@@ -289,21 +315,19 @@ def cmdrun_shipit(base_path, engine_name, **kwargs):
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
+
     shipit_engine_name = kwargs.pop('shipit_engine')
-    shipit_engine_obj = load_shipit_engine(engine_class=AVAILABLE_SHIPIT_ENGINES[shipit_engine_name]['cls'],
-                                           base_path=base_path)
-    save_config = kwargs.get('save_config', None)
+    pull_from = kwargs.get('pull_from')
     project_name = os.path.basename(base_path).lower()
+    config = engine_obj.get_config_for_shipit(pull_from=pull_from)
+    shipit_engine_obj = load_shipit_engine(AVAILABLE_SHIPIT_ENGINES[shipit_engine_name]['cls'],
+                                           config=config,
+                                           base_path=base_path,
+                                           project_name=project_name)
 
     # create the roles path
     roles_path = os.path.join(base_path, SHIPIT_PATH, SHIPIT_ROLES_DIR)
-    try:
-        os.makedirs(roles_path)
-    except OSError:
-        # ignore if path already exists
-        pass
-    except Exception as exc:
-        raise AnsibleContainrRolesPathCreationException("Error creating %s - %s" % (roles_path, str(exc)))
+    create_path(roles_path)
 
     # Use the build container to Initialize the role
     context = dict(
@@ -320,12 +344,13 @@ def cmdrun_shipit(base_path, engine_name, **kwargs):
             engine_obj.remove_container_by_id(builder_container_id)
             return
 
-    config = engine_obj.get_config_for_shipit()
-    shipit_engine_obj.run(config=config, project_name=project_name, project_dir=base_path)
+    # create the role and sample playbook
+    shipit_engine_obj.run()
     logger.info('Role %s created.' % project_name)
 
-    if save_config:
-        config_path = shipit_engine_obj.save_config(config=config, project_name=project_name, project_dir=base_path)
+    if kwargs.get('save_config'):
+        # generate and save the configuration templates
+        config_path = shipit_engine_obj.save_config()
         logger.info('Saved configuration to %s' % config_path)
 
 

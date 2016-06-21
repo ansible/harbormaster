@@ -8,10 +8,9 @@ import json
 
 from ..base_engine import BaseShipItEngine
 from .deployment import Deployment
-from .role import ShipItRole
 from .route import Route
 from .service import Service
-from ..utils import create_config_output_path
+from ..utils import create_path
 
 logger = logging.getLogger(__name__)
 
@@ -20,37 +19,33 @@ class ShipItEngine(BaseShipItEngine):
     name = 'openshift'
 
     def add_options(self, subparser):
-        subparser.add_argument('--save-config', action='store_true',
-                               help=u'Generate and save the OpenShift configuration files.',
-                               dest='save_config', default=False)
+        super(ShipItEngine, self).add_options(subparser)
 
-    def run(self, **kwargs):
-        config = kwargs.pop('config')
-        project_name = kwargs.pop('project_name')
-        project_dir = kwargs.pop('project_dir')
-        role = ShipItRole(config=config, project_name=project_name, project_dir=project_dir, engine=self.name)
-        role.create_role()
-        role.create_playbook()
+    def run(self):
+        tasks = []
+        tasks += Service(config=self.config, project_name=self.project_name).get_task()
+        tasks += Route(config=self.config, project_name=self.project_name).get_task()
+        tasks += Deployment(config=self.config, project_name=self.project_name).get_task()
+        self.create_role(tasks)
+        self.create_playbook()
 
-    def save_config(self, **kwargs):
-        config = kwargs.pop('config')
-        project_name = kwargs.pop('project_name')
-        project_dir = kwargs.pop('project_dir')
-        dest_path = create_config_output_path(project_dir, self.name)
+    def save_config(self):
+        dest_path = os.path.join(self.base_path, SHIPIT_PATH, SHIPIT_CONFIG_PATH, self.name)
+        create_path(dest_path)
 
-        templates = Service(config=config, project_name=project_name).get_template()
+        templates = Service(config=self.config, project_name=self.project_name).get_template()
         for template in templates:
             name = "%s-service.json" % template['metadata']['name']
             with open(os.path.join(dest_path, name), 'w') as f:
                 f.write(json.dumps(template, indent=4))
 
-        templates = Route(config=config, project_name=project_name).get_template()
+        templates = Route(config=self.config, project_name=self.project_name).get_template()
         for template in templates:
             name = "%s.json" % template['metadata']['name']
             with open(os.path.join(dest_path, name), 'w') as f:
                 f.write(json.dumps(template, indent=4))
 
-        templates = Deployment(config=config, project_name=project_name).get_template()
+        templates = Deployment(config=self.config, project_name=self.project_name).get_template()
         for template in templates:
             name = "%s-deployment.json" % template['metadata']['name']
             with open(os.path.join(dest_path, name), 'w') as f:

@@ -107,7 +107,7 @@ class Deployment(object):
         :return: (container, volumes)
         '''
 
-        #TODO add ability to influence pod configuration (i.e. return a pod dict)
+        #TODO: add ability to influence pod configuration (i.e. return a pod dict)
 
         container = OrderedDict(
             name=name,
@@ -127,7 +127,7 @@ class Deployment(object):
             'depends_on',
             'dns',
             'dns_search',
-            'env_file',        # TODO build support for this?
+            'env_file',        # TODO: build support for this?
             'user',            # needs to map to securityContext.runAsUser, which requires a UID
             'extends',
             'extrenal_links',
@@ -135,7 +135,7 @@ class Deployment(object):
             'ipv4_address',
             'ipv6_address'
             'labels',
-            'links',           # TODO Add env vars?
+            'links',           # TODO: Add env vars?
             'logging',
             'log_driver',
             'lop_opt',
@@ -160,7 +160,7 @@ class Deployment(object):
             'tmpfs',
             'options',
             'volume_driver',
-            'volumes_from',   #TODO figure out how to map?
+            'volumes_from',   #TODO: figure out how to map?
         ]
 
         DOCKER_TO_KUBE_CAPABILITY_MAPPING=dict(

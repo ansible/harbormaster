@@ -15,13 +15,13 @@ class Service(object):
         self.project_name = project_name
         self.config = config
 
-    def get_template(self, service_names=None):
-        return self._get_task_or_config(request_type="config", service_names=service_names)
+    def get_template(self):
+        return self._get_task_or_config(request_type="config")
 
-    def get_task(self, service_names=None):
-        return self._get_task_or_config(request_type="task", service_names=service_names)
+    def get_task(self):
+        return self._get_task_or_config(request_type="task")
 
-    def _get_task_or_config(self, request_type="task", service_names=None):
+    def _get_task_or_config(self, request_type="task"):
         templates = []
 
         for name, service in self.config.get('services', {}).items():

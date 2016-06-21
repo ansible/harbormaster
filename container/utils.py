@@ -9,8 +9,8 @@ import os
 import tempfile
 import shutil
 import importlib
+import yaml
 from jinja2 import Environment, FileSystemLoader
-from yaml import load as yaml_load
 
 from .exceptions import AnsibleContainerNotInitializedException
 from .config import AnsibleContainerConfig
@@ -28,12 +28,13 @@ __all__ = ['make_temp_dir',
 
 
 AVAILABLE_SHIPIT_ENGINES = {
-    'kube': { 'help': 'Generate a role that deploys to Kubernetes.',
-              'cls': 'kubernetes'
+    'kube': {
+        'help': 'Generate a role that deploys to Kubernetes.',
+        'cls': 'kubernetes'
     },
     'openshift': {
-            'help': 'Generate a role that deploys to OpenShift Origin.',
-            'cls': 'openshift'
+        'help': 'Generate a role that deploys to OpenShift Origin.',
+        'cls': 'openshift'
     }
 }
 
@@ -117,12 +118,12 @@ def load_engine(engine_name='', base_path='', **kwargs):
     return mod.Engine(base_path, project_name, kwargs)
 
 
-def load_shipit_engine(engine_class='', base_path=''):
+def load_shipit_engine(engine_class, **kwargs):
     '''
-    Dynamically load a shipit engine given a class name.
+    Given a class name, dynamically load a shipit engine.
 
     :param engine_class: name of the shipit engine class
-    :param base_path: the directory to start from
+    :param kwargs: key/value args to pass to the new shipit engine obj.
     :return: shipit engine object
     '''
     try:
@@ -136,4 +137,4 @@ def load_shipit_engine(engine_class='', base_path=''):
     except Exception as exc:
         raise ImportError('Error getting ShipItEngine for %s - %s' % (engine_class, str(exc)))
 
-    return engine_cls(base_path)
+    return engine_cls(**kwargs)

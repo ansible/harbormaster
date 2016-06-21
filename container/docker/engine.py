@@ -6,6 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 import os
+import re
 import tarfile
 import getpass
 import json
@@ -21,11 +22,14 @@ from yaml import dump as yaml_dump
 from ..exceptions import (AnsibleContainerNotInitializedException,
                           AnsibleContainerNoAuthenticationProvided,
                           AnsibleContainerDockerConfigFileException,
-                          AnsibleContainerDockerLoginException)
+                          AnsibleContainerDockerLoginException,
+                          AnsibleContainerRegistryNotFound)
 
 from ..engine import BaseEngine
 from ..utils import *
 from .utils import *
+
+REMOVE_HTTP = re.compile('^https?://')
 
 class Engine(BaseEngine):
 
@@ -34,6 +38,7 @@ class Engine(BaseEngine):
     builder_container_img_name = 'ansible-container'
     builder_container_img_tag = 'ansible-container-builder'
     default_registry_url = 'https://index.docker.io/v1/'
+    default_registry_name = 'dockerhub'
     _client = None
     api_version = ''
     temp_dir = None
@@ -186,17 +191,33 @@ class Engine(BaseEngine):
         exit_status = build_container_info['Status']
         return '(0)' in exit_status
 
-    def get_config_for_shipit(self):
+    def get_config_for_shipit(self, pull_from=None):
         '''
         Retrieve the configuration needed to run the shipit command
 
+        :param pull_from: registry name defined in container.yml
         :return: config dict object
         '''
-        config = get_config(self.base_path)  # get the unmodified production config
-        for service, service_config in config.get('services', {}).items():
+        config = get_config(self.base_path)
+        client = self.get_client()
+
+        if not pull_from:
+            pull_from = self.default_registry_name
+
+        if not config.get('registries', {}).get(pull_from):
+            raise AnsibleContainerRegistryNotFound("Registry %s not found container.yml" % pull_from)
+
+        registry = config['registries'][pull_from]
+        image_path = registry['namespace']
+        if registry['url'] != self.default_registry_url:
+            url = REMOVE_HTTP.sub('', registry['url'])
+            image_path = "%s/%s" % (re.sub(r'/$', '', url), image_path)
+
+        for host, service_config in config.get('services', {}).items():
+            image_id, image_buildstamp = get_latest_image_for(self.project_name, host, client)
             service_config.update(
                 dict(
-                    image='%s-%s:latest' % (self.project_name, service)
+                    image='%s/%s-%s:%s' % (image_path, self.project_name, host, image_buildstamp)
                 )
             )
         return config
@@ -557,30 +578,25 @@ class Engine(BaseEngine):
             raise AnsibleContainerDockerConfigFileException("Failed to write docker registry config to %s - %s" %
                                                             (path, str(exc)))
 
-    def push_latest_image(self, host, username, url, **kwargs):
-        """
-        Push the latest built image for a host to a registry
-
+    def push_latest_image(self, host, registry=None):
+        '''
         :param host: The host in the container.yml to push
-        :param username: The username to own the pushed image
+        :param registry_name: Dict pulled from registries list in containery.yml
         :return: None
-        """
+        '''
         client = self.get_client()
         image_id, image_buildstamp = get_latest_image_for(self.project_name,
                                                           host, client)
-        repository = username
-        if kwargs.get('repository'):
-            repository = kwargs.pop('repository')
+        repository = "%s/%s-%s" % (registry.get('namespace'), self.project_name, host)
+        if registry['url'] != self.default_registry_url:
+            url = REMOVE_HTTP.sub('', registry['url'])
+            repository = "%s/%s" % (re.sub('/$', '', url), repository)
 
-        if url:
-            repository = "%s/%s" % (url, repository)
+        logger.info('Tagging %s' % repository)
+        client.tag(image_id, repository, tag=image_buildstamp)
 
-        logger.info('Tagging %s/%s-%s' % (repository, self.project_name, host))
-        client.tag(image_id,
-                   '%s/%s-%s' % (repository, self.project_name, host),
-                   tag=image_buildstamp)
-        logger.info('Pushing %s-%s:%s...', self.project_name, host, image_buildstamp)
-        status = client.push('%s/%s-%s' % (repository, self.project_name, host),
+        logger.info('Pushing %s:%s...' % (repository, image_buildstamp))
+        status = client.push(repository,
                              tag=image_buildstamp,
                              stream=True)
         last_status = None

@@ -1,48 +1,78 @@
-version: "1"
+version: '1'
 services:
   django:
-    image: centos:7
-    ports:
-      - "8080"
-    working_dir: '/django'
-    links:
-      - postgresql
-    user: 'django'
-    command: ['/usr/bin/dumb-init', '/venv/bin/gunicorn', '-w', '2', '-b', '0.0.0.0:8080', 'example.wsgi:application']
+    command:
+    - /usr/bin/dumb-init
+    - /venv/bin/gunicorn
+    - -w
+    - '2'
+    - -b
+    - 0.0.0.0:8080
+    - example.wsgi:application
     dev_overrides:
-      command: ['/usr/bin/dumb-init', '/venv/bin/python', 'manage.py', 'runserver', '0.0.0.0:8080']
+      command:
+      - /usr/bin/dumb-init
+      - /venv/bin/python
+      - manage.py
+      - runserver
+      - 0.0.0.0:8080
       volumes:
-        - "$PWD:/django"
-  static:
+      - $PWD:/django
     image: centos:7
-    ports:
-      - "80:8080"
-    user: 'nginx'
     links:
-      - django
-    command: ['/usr/bin/dumb-init', 'nginx', '-c', '/etc/nginx/nginx.conf']
-    dev_overrides:
-      ports: []
-      command: /bin/false
-  postgresql:
-    image: centos:7
+    - postgresql
     ports:
-      - "5432"
-    user: 'postgres'
-    command: ['/usr/bin/dumb-init', "postgres", "-h", "0.0.0.0", "-D", "/var/lib/pgsql/data"]
-    volumes:
-      - '/var/lib/pgsql'
+    - '8080'
+    user: django
+    working_dir: /django
   gulp:
+    command: /bin/false
+    dev_overrides:
+      command:
+      - /usr/bin/dumb-init
+      - /node_modules/.bin/gulp
+      ports:
+      - 80:8080
+      volumes:
+      - $PWD:/node
+      working_dir: /node
     image: centos:7
     links:
-      - django
-    command: /bin/false
-    user: 'node'
+    - django
+    user: node
+  postgresql:
+    command:
+    - /usr/bin/dumb-init
+    - postgres
+    - -h
+    - 0.0.0.0
+    - -D
+    - /var/lib/pgsql/data
+    image: centos:7
+    ports:
+    - '5432'
+    user: postgres
+    volumes:
+    - /var/lib/pgsql
+  static:
+    command:
+    - /usr/bin/dumb-init
+    - nginx
+    - -c
+    - /etc/nginx/nginx.conf
     dev_overrides:
-      working_dir: '/node'
-      command: ['/usr/bin/dumb-init', '/node_modules/.bin/gulp']
-      ports:
-        - "80:8080"
-      volumes:
-        - "$PWD:/node"
-
+      command: /bin/false
+      ports: []
+    image: centos:7
+    links:
+    - django
+    ports:
+    - 80:8080
+    user: nginx
+registries:
+  dockerhub:
+    namespace: chouseknecht
+    url: https://index.docker.io/v1/
+  google:
+    namespace: e-context-129918
+    url: https://gcr.io
