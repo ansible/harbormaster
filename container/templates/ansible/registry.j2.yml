@@ -1,0 +1,10 @@
+# registry.yml
+#
+# This is a set  of registries maintained by ansible-container. As you log into and push images to registries
+# from your project, this file will be automatically updated. Registries are stored here for convenience, enabling
+# the --push-to and --pull-from command line options.
+#
+# NOTE: No credentials are stored in this file. Credentials are stored elsewhwere by the container engine.
+#
+---
+registries:

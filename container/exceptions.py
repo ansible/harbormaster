@@ -12,7 +12,7 @@ class AnsibleContainerNotInitializedException(Exception):
 class AnsibleContainerAlreadyInitializedException(Exception):
     pass
 
-class AnsibleContainerNoAuthenticationProvided(Exception):
+class AnsibleContainerNoAuthenticationProvidedException(Exception):
     pass
 
 class AnsibleContainrRolesPathCreationException(Exception):
@@ -27,7 +27,10 @@ class AnsibleContainerDockerLoginException(Exception):
 class AnsibleContainerConfigException(Exception):
     pass
 
-class AnsibleContainerRegistryNotFound(Exception):
+class AnsibleContainerRegistryFileException(Exception):
+    pass
+
+class AnsibleContainerRegistryNotFoundException(Exception):
     pass
 
 class AnsibleContainerMissingRegistryName(Exception):

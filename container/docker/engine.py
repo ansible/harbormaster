@@ -20,10 +20,10 @@ from compose.cli import main
 from yaml import dump as yaml_dump
 
 from ..exceptions import (AnsibleContainerNotInitializedException,
-                          AnsibleContainerNoAuthenticationProvided,
+                          AnsibleContainerNoAuthenticationProvidedException,
                           AnsibleContainerDockerConfigFileException,
                           AnsibleContainerDockerLoginException,
-                          AnsibleContainerRegistryNotFound)
+                          AnsibleContainerRegistryNotFoundException)
 
 from ..engine import BaseEngine
 from ..utils import *
@@ -205,7 +205,7 @@ class Engine(BaseEngine):
             pull_from = self.default_registry_name
 
         if not config.get('registries', {}).get(pull_from):
-            raise AnsibleContainerRegistryNotFound("Registry %s not found container.yml" % pull_from)
+            raise AnsibleContainerRegistryNotFoundException("Registry %s not found container.yml" % pull_from)
 
         registry = config['registries'][pull_from]
         image_path = registry['namespace']
@@ -488,7 +488,7 @@ class Engine(BaseEngine):
 
         username, email = self.currently_logged_in_registry_user(url)
         if not username:
-            raise AnsibleContainerNoAuthenticationProvided(
+            raise AnsibleContainerNoAuthenticationProvidedException(
                 u'Please provide login '
                 u'credentials for this registry.')
         return username

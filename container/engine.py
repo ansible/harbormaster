@@ -11,7 +11,7 @@ import re
 
 from .exceptions import (AnsibleContainerAlreadyInitializedException,
                          AnsibleContainerMissingRegistryName,
-                         AnsibleContainerRegistryNotFound)
+                         AnsibleContainerRegistryNotFoundException)
 from .utils import *
 from .shipit.utils import create_path
 
@@ -300,7 +300,7 @@ def cmdrun_push(base_path, engine_name, username=None, password=None, email=None
         registry = config.update_registries(registry_name=registry_name, url=url, namespace=namespace)
     else:
         if not config.get('registries', {}).get(push_to):
-            raise AnsibleContainerRegistryNotFound("Registry %s not found in container.yml. Try logging in by "
+            raise AnsibleContainerRegistryNotFoundException("Registry %s not found in container.yml. Try logging in by "
                                                    "providing a username, password, url and registry name.")
         registry = config['registries'][push_to]
         registry_name = push_to

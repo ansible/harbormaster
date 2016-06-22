@@ -162,7 +162,7 @@ def commandline():
         logger.error('No Ansible Container project data found - do you need to '
                      'run "ansible-container init"?')
         sys.exit(1)
-    except exceptions.AnsibleContainerNoAuthenticationProvided, e:
+    except exceptions.AnsibleContainerNoAuthenticationProvidedException, e:
         logger.error(unicode(e))
         sys.exit(1)
     except Exception, e:
