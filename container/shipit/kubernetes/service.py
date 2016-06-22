@@ -38,7 +38,6 @@ class Service(object):
         '''
 
         ports = self._get_ports(service)
-        name = "%s-%s" % (self.project_name, name)
         labels = dict(
             app=self.project_name,
             service=name
@@ -73,7 +72,6 @@ class Service(object):
         '''
 
         ports = self._get_ports(service)
-        name = "%s-%s" % (self.project_name, name)
         labels = dict(
             app=self.project_name,
             service=name

@@ -82,7 +82,7 @@ class DeploymentManager(object):
             replicas=dict(type='int', default=1),
             containers=dict(type='list'),
             strategy=dict(type='str', default='RollingUpdate', choices=['Recreate', 'RollingUpdate']),
-            volumes=dict(type='list')
+            volumes=dict(type='list'),
         )
 
         self.module = AnsibleModule(self.arg_spec,
@@ -120,7 +120,7 @@ class DeploymentManager(object):
         results = dict()
         project_switch = None
 
-        if self.state == 'present':
+        if self.state in 'present':
             deployment = self.api.get_resource('deployment', self.deployment_name)
             if not deployment:
                 template = self._create_template()
@@ -153,7 +153,7 @@ class DeploymentManager(object):
             if self.api.get_resource('deployment', self.deployment_name):
                 changed = True
                 actions.append("Delete deployment %s" % self.deployment_name)
-                if self.check_mode:
+                if not self.check_mode:
                     self.api.delete_resource('deployment', self.deployment_name)
 
         results['changed'] = changed
@@ -184,7 +184,7 @@ class DeploymentManager(object):
                 template=dict(
                     metadata=dict(),
                     spec=dict(
-                        containers=self.containers
+                        containers=self.containers,
                     )
                 ),
                 replicas=self.replicas,
@@ -218,6 +218,7 @@ class DeploymentManager(object):
         for port in ports:
             result.append(dict(containerPort=port))
         return result
+
 
 #The following will be included by `ansble-container shipit` when cloud modules are copied into the role library path.
 #include--> kube_api.py

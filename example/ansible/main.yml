@@ -5,7 +5,7 @@
 - hosts: django
   tasks:
     - name: Install python deps
-      yum: name=postgresql-devel,python-devel,gcc,python-virtualenv state=latest update_cache=yes
+      yum: name=postgresql-devel,python-devel,gcc,python-virtualenv,bind-utils state=latest update_cache=yes
     - name: Make Django user
       user: name=django state=present createhome=yes home=/django
     - name: Make virtualenv dir
@@ -24,7 +24,9 @@
 - hosts: postgresql
   tasks:
     - name: Install PostgreSQL
-      yum: name=postgresql-server,python-psycopg2 state=latest update_cache=yes
+      yum: name=postgresql-server,python-psycopg2,bind-utils state=latest update_cache=yes
+    #- name: Create /var/lib/pgsql
+    #  file: path=/var/lib/pgsql state=directory owner=postgres mode=0755 
     - name: Init PostgreSQL db
       command: initdb -D /var/lib/pgsql/data creates=/var/lib/pgsql/data/postgresql.conf
       remote_user: postgres
@@ -60,7 +62,7 @@
       remote_user: postgres
 - hosts: gulp
   tasks:
-    #- name: Install EPEL
+    # - name: Install EPEL
     #  yum: name=epel-release state=latest update_cache=yes
     - name: Make node user
       user: name=node state=present createhome=yes home=/node
@@ -94,7 +96,7 @@
     - name: Install EPEL
       yum: name=epel-release state=latest update_cache=yes
     - name: Install nginx
-      yum: name=nginx state=latest
+      yum: name=nginx,bind-utils state=latest
     - name: Put nginx config
       copy: src=nginx.conf dest=/etc/nginx/nginx.conf
     - name: Make static dir

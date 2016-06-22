@@ -14,11 +14,13 @@ from jinja2 import Environment, FileSystemLoader
 
 from .exceptions import AnsibleContainerNotInitializedException
 from .config import AnsibleContainerConfig
+from .registry import AnsibleContainerRegistry
 
 __all__ = ['make_temp_dir',
            'jinja_template_path',
            'jinja_render_to_temp',
            'get_config',
+           'get_registry',
            'config_format_version',
            'assert_initialized',
            'get_latest_image_for',
@@ -75,6 +77,9 @@ def jinja_render_to_temp(template_file, temp_dir, dest_file, **context):
 
 def get_config(base_path):
     return AnsibleContainerConfig(base_path)
+
+def get_registry(base_path):
+    return AnsibleContainerRegistry(base_path)
 
 def config_format_version(base_path, config_data=None):
     if not config_data:
@@ -138,31 +143,3 @@ def load_shipit_engine(engine_class, **kwargs):
         raise ImportError('Error getting ShipItEngine for %s - %s' % (engine_class, str(exc)))
 
     return engine_cls(**kwargs)
-
-
-def represent_odict(dump, tag, mapping, flow_style=None):
-    '''
-    https://gist.github.com/miracle2k/3184458
-    Like BaseRepresenter.represent_mapping, but does not issue the sort().
-    '''
-    value = []
-    node = yaml.MappingNode(tag, value, flow_style=flow_style)
-    if dump.alias_key is not None:
-        dump.represented_objects[dump.alias_key] = node
-    best_style = True
-    if hasattr(mapping, 'items'):
-        mapping = mapping.items()
-    for item_key, item_value in mapping:
-        node_key = dump.represent_data(item_key)
-        node_value = dump.represent_data(item_value)
-        if not (isinstance(node_key, yaml.ScalarNode) and not node_key.style):
-            best_style = False
-        if not (isinstance(node_value, yaml.ScalarNode) and not node_value.style):
-            best_style = False
-        value.append((node_key, node_value))
-    if flow_style is None:
-        if dump.default_flow_style is not None:
-            node.flow_style = dump.default_flow_style
-        else:
-            node.flow_style = best_style
-    return node

@@ -7,4 +7,4 @@
 # NOTE: No credentials are stored in this file. Credentials are stored elsewhwere by the container engine.
 #
 ---
-registries:
+registries: {}

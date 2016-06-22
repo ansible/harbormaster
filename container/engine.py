@@ -280,7 +280,7 @@ def cmdrun_push(base_path, engine_name, username=None, password=None, email=None
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
-    config = get_config(base_path)
+    registry = get_registry(base_path)
 
     if not push_to:
         # Attempt to login and update config
@@ -297,12 +297,12 @@ def cmdrun_push(base_path, engine_name, username=None, password=None, email=None
                                                           "can be addded to container.yml.")
         if not namespace:
             namespace = username
-        registry = config.update_registries(registry_name=registry_name, url=url, namespace=namespace)
+        registry = registry.update(registry_name=registry_name, url=url, namespace=namespace)
     else:
-        if not config.get('registries', {}).get(push_to):
+        if not registry.get(push_to):
             raise AnsibleContainerRegistryNotFoundException("Registry %s not found in container.yml. Try logging in by "
-                                                   "providing a username, password, url and registry name.")
-        registry = config['registries'][push_to]
+                                                            "providing a username, password, url and registry name.")
+        registry = registry[push_to]
         registry_name = push_to
 
     logger.info('Pushing to %s/%s' % (re.sub(r'/$', '', registry['url']), registry['namespace']))
@@ -315,11 +315,19 @@ def cmdrun_shipit(base_path, engine_name, **kwargs):
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
-
     shipit_engine_name = kwargs.pop('shipit_engine')
-    pull_from = kwargs.get('pull_from')
     project_name = os.path.basename(base_path).lower()
-    config = engine_obj.get_config_for_shipit(pull_from=pull_from)
+
+    pull_from = kwargs.get('pull_from')
+    registry = get_registry(base_path)
+    if not pull_from:
+        pull_from = engine_obj.default_registry_name
+    if not registry.get(pull_from):
+        raise AnsibleContainerRegistryNotFoundException("Registry %s not found in registry.yml. "
+                                                        "Use the push command to authenticate and add the registry."
+                                                        % pull_from)
+    pull_from_registry = registry[pull_from]
+    config = engine_obj.get_config_for_shipit(registry=pull_from_registry)
     shipit_engine_obj = load_shipit_engine(AVAILABLE_SHIPIT_ENGINES[shipit_engine_name]['cls'],
                                            config=config,
                                            base_path=base_path,

@@ -196,8 +196,8 @@ class KubeServiceManager(object):
         for port in ports:
             if not port.get('name'):
                 port['name'] = "port_%s" % port['port']
-            if not port.get('type'):
-                port['type'] = "TCP"
+            if not port.get('protocol'):
+                port['protocol'] = "TCP"
 
 #The following will be included by `ansble-container shipit` when cloud modules are copied into the role library path.
 #include--> kube_api.py

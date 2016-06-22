@@ -191,23 +191,16 @@ class Engine(BaseEngine):
         exit_status = build_container_info['Status']
         return '(0)' in exit_status
 
-    def get_config_for_shipit(self, pull_from=None):
+    def get_config_for_shipit(self, registry=None):
         '''
         Retrieve the configuration needed to run the shipit command
 
-        :param pull_from: registry name defined in container.yml
+        :param registry: registry dict from registry.yml
         :return: config dict object
         '''
         config = get_config(self.base_path)
         client = self.get_client()
 
-        if not pull_from:
-            pull_from = self.default_registry_name
-
-        if not config.get('registries', {}).get(pull_from):
-            raise AnsibleContainerRegistryNotFoundException("Registry %s not found container.yml" % pull_from)
-
-        registry = config['registries'][pull_from]
         image_path = registry['namespace']
         if registry['url'] != self.default_registry_url:
             url = REMOVE_HTTP.sub('', registry['url'])
@@ -581,7 +574,7 @@ class Engine(BaseEngine):
     def push_latest_image(self, host, registry=None):
         '''
         :param host: The host in the container.yml to push
-        :param registry_name: Dict pulled from registries list in containery.yml
+        :param registry: registry dict from registry.yml
         :return: None
         '''
         client = self.get_client()

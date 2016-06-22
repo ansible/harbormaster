@@ -9,10 +9,9 @@ import yaml
 import re
 import glob
 
-from ..config import represent_odict
 from .constants import SHIPIT_PATH, SHIPIT_PLAYBOOK_PREFIX, SHIPIT_ROLES_DIR
 from collections import OrderedDict
-from .utils import create_path
+from .utils import create_path, represent_odict
 
 
 class BaseShipItEngine(object):

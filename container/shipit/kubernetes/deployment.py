@@ -33,7 +33,8 @@ class Deployment(object):
                 new_template = self._create_task(name, service)
             elif request_type == 'config':
                 new_template = self._create_template(name, service)
-            templates.append(new_template)
+            if new_template:
+                templates.append(new_template)
         return templates
 
     def _create_template(self, name, service):
@@ -41,8 +42,15 @@ class Deployment(object):
         Creates a deployment template from a set of services. Each service becomes a container
         defined within the replication controller.
         '''
-        name = "%s-%s" % (self.project_name, name)
-        container, volumes = self._service_to_container(name, service, type="config")
+
+        container, volumes, pod = self._service_to_container(name, service, type="config")
+
+        if pod.get('state'):
+            if pod['state'] == 'absent':
+                return
+            else:
+                pod.pop('state')
+
         labels = dict(
             app=self.project_name,
             service=name
@@ -61,7 +69,6 @@ class Deployment(object):
                     ),
                     spec=dict(
                         containers=[container],
-                        volumes=volumes
                     )
                 ),
                 replicas=1,
@@ -70,6 +77,12 @@ class Deployment(object):
                 )
             )
         )
+        if volumes:
+            template['spec']['template']['spec']['volumes'] = volumes
+        if pod:
+            for key, value in pod.items():
+                if key == 'replicas':
+                    template['spec'][key] = value
         return template
 
     def _create_task(self, name, service):
@@ -80,8 +93,7 @@ class Deployment(object):
         :return:
         '''
 
-        container, volumes = self._service_to_container(name, service, type="task")
-        name = "%s-%s" % (self.project_name, name)
+        container, volumes, pod = self._service_to_container(name, service, type="task")
         labels = dict(
             app=self.project_name,
             service=name
@@ -90,10 +102,15 @@ class Deployment(object):
             kube_deployment=OrderedDict(
                 deployment_name=name,
                 labels=labels.copy(),
+                replace=True,
                 containers=[container],
-                volumes=volumes
             )
         )
+        if volumes:
+            template['kube_deployment']['volumes'] = volumes
+        if pod:
+            template['kube_deployment'].update(pod)
+
         return template
 
     def _service_to_container(self, name, service, type="task"):
@@ -104,16 +121,15 @@ class Deployment(object):
         :param name:str: Name of the service
         :param service:dict: Configuration
         :param type: task or config
-        :return: (container, volumes)
+        :return: (container, volumes, pod)
         '''
-
-        #TODO: add ability to influence pod configuration (i.e. return a pod dict)
 
         container = OrderedDict(
             name=name,
             securityContext=dict()
         )
         volumes = []
+        pod = {}
 
         IGNORE_DIRECTIVES = [
             'aliases',
@@ -259,13 +275,17 @@ class Deployment(object):
         if service.get('options'):
             for key, value in service['options'].items():
                 if key == 'kube_seLinuxOptions':
-                    container['SecurityOptions']['seLinuxOptions'] = value
+                    container['securityContext']['seLinuxOptions'] = value
                 elif key == 'kube_runAsNonRoot':
-                    container['SecurityOptions']['runAsNonRoot'] = value
+                    container['securityContext']['runAsNonRoot'] = value
                 elif key == 'kube_runAsUser':
-                    container['SecurityOptions']['runAsUser'] = value
+                    container['securityContext']['runAsUser'] = value
+                elif key == 'kube_replicas':
+                    pod['replicas'] = value
+                elif key == 'kube_state':
+                    pod['state'] = value
 
-        return container, volumes
+        return container, volumes, pod
 
     @staticmethod
     def _get_ports(ports, type):
