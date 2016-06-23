@@ -2,10 +2,12 @@ Command Reference
 =================
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    init
    build
    run
    push
    shipit
+      shipit/kube
+      shipit/openshift
