@@ -194,3 +194,9 @@ venv/
 Vagrantfile
 
 .v8flags*
+
+# shipit output
+roles/
+shipit_*/
+shipit*.yml
+tmp.yml

@@ -13,6 +13,8 @@ services:
       command: ['/usr/bin/dumb-init', '/venv/bin/python', 'manage.py', 'runserver', '0.0.0.0:8080']
       volumes:
         - "$PWD:/django"
+    options:
+      kube_runAsUser: 1000
   static:
     image: centos:7
     ports:
@@ -24,14 +26,17 @@ services:
     dev_overrides:
       ports: []
       command: /bin/false
+    options:
+      kube_runAsUser: 997
   postgresql:
     image: centos:7
     ports:
       - "5432"
     user: 'postgres'
     command: ['/usr/bin/dumb-init', "postgres", "-h", "0.0.0.0", "-D", "/var/lib/pgsql/data"]
-    volumes:
-      - '/var/lib/pgsql'
+    # command: ['/usr/bin/sleep', '600']
+    options:
+      kube_runAsUser: 26
   gulp:
     image: centos:7
     user: 'node'
@@ -45,4 +50,9 @@ services:
         - "80:8080"
       volumes:
         - "$PWD:/node"
+    options:
+      kube_runAsUser: 1000
+      kube_state: absent
+
+registries: {}
 

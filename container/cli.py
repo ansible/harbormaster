@@ -8,10 +8,10 @@ logger = logging.getLogger(__name__)
 import os
 import sys
 import argparse
-import importlib
 
 from . import engine
 from . import exceptions
+from .utils import load_shipit_engine, AVAILABLE_SHIPIT_ENGINES
 
 from logging import config
 LOGGING = {
@@ -94,63 +94,34 @@ def subcmd_help_parser(parser, subparser):
 
 def subcmd_push_parser(parser, subparser):
     subparser.add_argument('--username', action='store',
-                           help=(u'Username to log into registry. If not provided, '
-                                 u'it is expected that your ~/.docker/config.json '
-                                 u'contains your login information.'),
+                           help=u'If authentication with the registry is required, provide a valid username.',
                            dest='username', default=None)
     subparser.add_argument('--email', action='store',
-                           help=(u'Email to log into the registry. If not provided, '
-                                 u'it is expected that your ~/.docker/config.json '
-                                 u'contains your login information.'),
+                           help=(u'If authentication with the registry requires an email address, provide a '
+                                 u'valid email address'),
                            dest='email', default=None)
     subparser.add_argument('--password', action='store',
-                           help=(u'Password to log into registry. If not provided, '
-                                 u'you will be prompted for it.'),
+                           help=u'If authentication with the registry is required, provide a valid password.',
                            dest='password', default=None)
     subparser.add_argument('--url', action='store',
-                           help=(u'Base URL for your registry. If not provided, '
-                                 u'Docker Hub will be used.'),
+                           help=(u'When authenticating with a registry, provide the registry URL. Otherwise, the '
+                                 u'default URL for the selected container engine will be used.'),
                            dest='url', default=None)
-    subparser.add_argument('--repository', action='store',
-                           help=(u'Path of the repository to tag and push the image into. Will be appended to '
-                                 u'registry URL. Defaults to the registry username.'),
-                           dest='repository', default=None)
-
-class LoadSubmoduleAction(argparse.Action):
-    def __init__(self, option_strings, dest, nargs=None, **kwargs):
-        if nargs is not None:
-            raise ValueError("nargs not allowed")
-        super(LoadSubmoduleAction, self).__init__(option_strings, dest, **kwargs)
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        # Rudimentary input sanitation
-        engine_name = values.split(' ', 1)[0].strip('.')
-        try:
-            engine_module = importlib.import_module(
-                'container.shipit.%s.engine' % engine_name)
-        except ImportError as exc:
-            raise ImportError(
-                'No shipit module for %s found - %s' % (engine_name, str(exc)))
-
-        try:
-            engine_cls = getattr(engine_module, 'ShipItEngine')
-        except Exception as exc:
-            raise ImportError('Error getting ShipItEngine for %s - %s' % (
-            engine_name, str(exc)))
-
-        engine_obj = engine_cls(os.getcwd())
-        setattr(namespace, self.dest, engine_obj)
-        engine_obj.add_options(parser)
+    subparser.add_argument('--namespace', action='store',
+                           help=(u'An optional organization or project name to append to the registry URL. Defaults '
+                                 u'to the username.'),
+                           dest='namespace', default=None)
+    subparser.add_argument('--push-to', action='store',
+                           help=u'Name of a registry defined in container.yml to which images should be pushed.',
+                           dest='push_to', default=None)
 
 def subcmd_shipit_parser(parser, subparser):
-    default_engine = 'openshift'
-    subparser.add_argument('--shipit-engine', action=LoadSubmoduleAction,
-                           help=(u'Specify the shipit engine for your cloud provider. Default is %s.' % default_engine),
-                           dest='shipit_engine', default=default_engine)
+    se_subparser = subparser.add_subparsers(title='shipit-engine', dest='shipit_engine')
+    for engine_name, engine in AVAILABLE_SHIPIT_ENGINES.items():
+        engine_parser = se_subparser.add_parser(engine_name, help=engine['help'])
+        engine_obj = load_shipit_engine(engine['cls'], base_path=os.getcwd())
+        engine_obj.add_options(engine_parser)
 
-    subparser.add_argument('--save-config', action='store_true',
-                           help=(u'Save a copy of the cloud provider configuration to the file system.'),
-                           dest='save_config', default=False)
 
 def commandline():
     parser = argparse.ArgumentParser(description=u'Build, orchestrate, run, and '
@@ -187,7 +158,7 @@ def commandline():
         logger.error('No Ansible Container project data found - do you need to '
                      'run "ansible-container init"?')
         sys.exit(1)
-    except exceptions.AnsibleContainerNoAuthenticationProvided, e:
+    except exceptions.AnsibleContainerNoAuthenticationProvidedException, e:
         logger.error(unicode(e))
         sys.exit(1)
     except Exception, e:

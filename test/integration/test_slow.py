@@ -25,7 +25,6 @@ def test_run_minimal_docker_container():
 
 def test_shipit_minimal_docker_container():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'shipit', cwd=project_dir('minimal'), expect_error=True)
+    result = env.run('ansible-container', 'shipit', 'kube', cwd=project_dir('minimal'), expect_error=True)
     assert result.returncode == 1
-    assert "minimal was created successfully" in result.stdout
     assert "Role minimal created" in result.stderr

@@ -25,6 +25,7 @@ deployment.
 
    installation
    tour
+   deploy_kubernetes
    example
    reference/index
 

@@ -2,7 +2,6 @@
 
 from __future__ import absolute_import
 from collections import OrderedDict
-from container.exceptions import AnsibleContainerShipItException
 
 import logging
 
@@ -15,128 +14,105 @@ class Route(object):
         self.project_name = project_name
         self.config = config
 
-    def get_template(self, service_names=None):
-        return self._get_task_or_config(request_type="config", service_names=service_names)
+    def get_template(self):
+        return self._get_task_or_config(request_type="config")
 
-    def get_task(self, service_names=None):
-        return self._get_task_or_config(request_type="task", service_names=service_names)
+    def get_task(self):
+        return self._get_task_or_config(request_type="task")
 
-    def _get_task_or_config(self, request_type="task", service_names=None):
+    def _get_task_or_config(self, request_type="task"):
         templates = []
-        for name, service in self.config.get('services', {}).iteritems():
-            if not service_names or name in service_names:
-                if service.get('labels'):
-                    for key, value in service['labels'].items():
-                        if key == 'shipit_expose':
-                            if request_type == "task":
-                                templates.append(self._create_task(service))
-                            elif request_type == "config":
-                                templates.append(self._create_template(service))
-
+        for name, service in self.config.get('services', {}).items():
+            if service.get('ports') and self._route_hostname(service):
+                # If the service has a port and options.openshift.route_hostname,
+                # then it gets a route, exposting it to the outside world.
+                if request_type == "task":
+                    templates.append(self._create_task(name, service))
+                elif request_type == "config":
+                    templates.append(self._create_template(name, service))
         return templates
 
-    def _create_template(self, service):
+    def _create_template(self, name, service):
         '''
-        apiVersion: v1
-        kind: Route
-        metadata:
-          name: wordpress-wordpress
-          labels:
-            wordpress: wordpress
-        spec:
-          host: wordpress.local
-          to:
-            kind: Service
-            name: wordpress-wordpress
-          port:
-            targetPort: main
+        Generate an OpenShift route configuration
         '''
 
-        service_port, target_hostname, target_port = self._get_port_mapping(service)
-        labels = self._get_labels(service)
-        name = "%s-route" % service['name']
+        service_port = self._get_exposed_port(service)
+        hostname = self._route_hostname(service)
+        name = "%s-route" % name
+        labels = dict(
+            app=self.project_name,
+            service=name
+        )
 
         template = dict(
             apiVersion="v1",
             kind="Route",
             metadata=dict(
                 name=name,
-                labels=labels
+                labels=labels.copy()
             ),
             spec=dict(
-                host=target_hostname,
+                host=hostname,
                 to=dict(
                     kind='Service',
-                    name="%s-%s" % (self.project_name, service['name']),
+                    name="%s-%s" % (self.project_name, name),
                 ),
                 port=dict(
                     targetPort="port_%s" % service_port
                 )
             )
         )
-
         return template
 
-    def _create_task(self, service):
+    def _create_task(self, name, service):
         '''
         Generates an Ansible playbook task.
 
         :param service:
         :return:
         '''
-
-        service_port, target_hostname, target_port = self._get_port_mapping(service)
-        labels = self._get_labels(service)
-        name = "%s-route" % service['name']
-
+        service_port = self._get_exposed_port(service)
+        hostname = self._route_hostname(service)
+        name = "%s-route" % name
+        labels = dict(
+            app=self.project_name,
+            service=name
+        )
         template = dict(
             oso_route=OrderedDict(
                 project_name=self.project_name,
                 route_name=name,
-                labels=labels,
-                host=target_hostname,
-                to="%s-%s" % (self.project_name, service['name']),
+                labels=labels.copy(),
+                host=hostname,
+                to="%s-%s" % (self.project_name, name),
                 target_port="port_%s" % service_port
             )
         )
-
-        # if target_port:
-        #     template['oso_route']['port'] = int(target_port)
-
         return template
 
-    @staticmethod
-    def _get_port_mapping(service):
+    def _get_exposed_port(self, service):
         '''
-        Expect to find 'shipit_expose' key in the service labels. Value should be in the
-        format: service_port:target_hostname:[port]
+        Returns first port in the list of ports. If the port is a mapping,
+        returns the first port of the mapping.
 
-        :return: service_port, target_hostname, target_port
+        :param service: dict of service attributes
+        :return: port
         '''
-        service_port = None
-        target_hostname = None
-        target_port = None
-        for key, value in service['labels'].items():
-            if key == 'shipit_expose' and ':' in value:
-                service_port, target_hostname, target_port = value.split(':')
-
-        if not service_port or not target_hostname:
-            raise AnsibleContainerShipItException('Expected shipit_expose to have format '
-                                                  'service_port:target_hostname[:target_port]')
-
-        return service_port, target_hostname, target_port
+        port = service['ports'][0]
+        if isinstance(port, basestring):
+            if ':' in port:
+                parts = port.split(':')
+                return parts[0]
+        return port
 
     @staticmethod
-    def _get_labels(service):
-        result = dict()
-        result[service['name']] = service['name']
-        if service.get('labels'):
-            labels = service['labels']
-            for key, value in labels.items():
-                if 'shipit_' not in key:
-                    result[key] = value
+    def _route_hostname(service):
+        if 'options' in service:
+            options = service['options']
+            if 'openshift' in options:
+                options = options['openshift']
+                if 'route_hostname' in options:
+                    return options['route_hostname']
+        return False
 
-        for key, value in result.items():
-            if not isinstance(value, str):
-                result[key] = str(value)
-        return result

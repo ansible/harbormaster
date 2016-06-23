@@ -7,16 +7,21 @@ logger = logging.getLogger(__name__)
 
 import os
 import datetime
-import importlib
+import re
 
-from .exceptions import AnsibleContainerAlreadyInitializedException, AnsibleContainrRolesPathCreationException
+from .exceptions import (AnsibleContainerAlreadyInitializedException,
+                         AnsibleContainerRegistryNotFoundException,
+                         AnsibleContainerRegistryAttributeException)
 from .utils import *
+from .shipit.utils import create_path
 
 from .shipit.constants import SHIPIT_PATH, SHIPIT_ROLES_DIR
+
 class BaseEngine(object):
     engine_name = None
     orchestrator_name = None
     default_registry_url = ''
+    default_registry_name = ''
 
     def __init__(self, base_path, project_name, params={}):
         self.base_path = base_path
@@ -192,17 +197,30 @@ class BaseEngine(object):
         """
         raise NotImplementedError()
 
-    def push_latest_image(self, host, username, **kwargs):
+    def push_latest_image(self, host, url=None, namespace=None):
         """
         Push the latest built image for a host to a registry
 
         :param host: The host in the container.yml to push
-        :param username: The username to own the pushed image
+        :param url: The url of the registry.
+        :param namespace: The username or organization that owns the image repo
         :return: None
         """
         raise NotImplementedError()
 
     def get_config(self):
+        raise NotImplementedError()
+
+    def get_config_for_shipit(self, url=None, namespace=None):
+        '''
+        Get the configuration needed by cmdrun_shipit. Result should include
+        the *options* attribute for each service, as it may contain cluster
+        directives.
+
+        :param url: URL to the registry.
+        :param namepace: a namespace withing the registry. Typically a username or organization.
+        :return: configuration dictionary
+        '''
         raise NotImplementedError()
 
 
@@ -261,54 +279,50 @@ def cmdrun_run(base_path, engine_name, service=[], production=False, **kwargs):
 
 
 def cmdrun_push(base_path, engine_name, username=None, password=None, email=None,
-                url=None, **kwargs):
+                url=None, namespace=None, push_to=None, **kwargs):
     assert_initialized(base_path)
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
 
-    username = engine_obj.registry_login(username=username, password=password,
-                                         email=email, url=url)
+    url, namespace = get_registry_url_and_namespace(engine_obj, registry_name=push_to, username=username, password=password,
+                                                    email=email, url=url, namespace=namespace)
 
-    logger.info('Pushing to repository for user %s', username)
+    logger.info('Pushing to "%s/%s' % (re.sub(r'/$', '', url), namespace))
+
     for host in engine_obj.hosts_touched_by_playbook():
-        engine_obj.push_latest_image(host, username, url, **kwargs)
+        engine_obj.push_latest_image(host, url=url, namespace=namespace)
     logger.info('Done!')
 
 
-def cmdrun_shipit(base_path, engine_name, **kwargs):
+def cmdrun_shipit(base_path, engine_name, username=None, password=None, email=None,
+                  url=None, namespace=None, pull_from=None, **kwargs):
+    assert_initialized(base_path)
+
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
-
-    shipit_engine = kwargs.pop('shipit_engine')
-    try:
-        engine_module = importlib.import_module('container.shipit.%s.engine' % shipit_engine)
-        engine_cls = getattr(engine_module, 'ShipItEngine')
-    except ImportError:
-        raise ImportError('No shipit module for %s found.' % shipit_engine)
-    else:
-        shipit_engine_obj = engine_cls(base_path)
-
+    shipit_engine_name = kwargs.pop('shipit_engine')
     project_name = os.path.basename(base_path).lower()
+    pull_from = kwargs.get('pull_from')
+
+    url, namespace = get_registry_url_and_namespace(engine_obj, registry_name=pull_from, username=username,
+                                                    password=password, email=email, url=url, namespace=namespace)
+    config = engine_obj.get_config_for_shipit(url=url, namespace=namespace)
+    shipit_engine_obj = load_shipit_engine(AVAILABLE_SHIPIT_ENGINES[shipit_engine_name]['cls'],
+                                           config=config,
+                                           base_path=base_path,
+                                           project_name=project_name)
 
     # create the roles path
     roles_path = os.path.join(base_path, SHIPIT_PATH, SHIPIT_ROLES_DIR)
-    logger.info("Creating roles path %s" % roles_path)
-    try:
-        os.makedirs(roles_path)
-    except OSError:
-        # ignore if path already exists
-        pass
-    except Exception as exc:
-        raise AnsibleContainrRolesPathCreationException("Error creating %s - %s" % (roles_path, str(exc)))
-
-    context = dict(
-        roles_path=roles_path,
-        role_name=project_name
-    )
+    create_path(roles_path)
 
     # Use the build container to Initialize the role
+    context = dict(
+        roles_path=roles_path,
+        role_name="%s_%s" % (project_name, shipit_engine_obj.name)
+    )
     with make_temp_dir() as temp_dir:
         logger.info('Executing ansible-galaxy init %s' % project_name)
         engine_obj.orchestrate('galaxy', temp_dir, context=context)
@@ -319,12 +333,14 @@ def cmdrun_shipit(base_path, engine_name, **kwargs):
             engine_obj.remove_container_by_id(builder_container_id)
             return
 
+    # create the role and sample playbook
+    shipit_engine_obj.run()
     logger.info('Role %s created.' % project_name)
-    config = engine_obj.get_config()
-    create_templates = kwargs.pop('save_config')
-    shipit_engine_obj.run(config=config, project_name=project_name, project_dir=base_path)
-    if create_templates:
-        shipit_engine_obj.save_config(config=config, project_name=project_name, project_dir=base_path)
+
+    if kwargs.get('save_config'):
+        # generate and save the configuration templates
+        config_path = shipit_engine_obj.save_config()
+        logger.info('Saved configuration to %s' % config_path)
 
 
 def create_build_container(container_engine_obj, base_path):
@@ -336,3 +352,48 @@ def create_build_container(container_engine_obj, base_path):
     builder_img_id = container_engine_obj.get_builder_image_id()
     logger.info('Ansible Container image has ID %s', builder_img_id)
     return builder_img_id
+
+
+def get_registry_url_and_namespace(engine_obj, registry_name=None, username=None, password=None, email=None,
+                                   url=None, namespace=None):
+    '''
+    Given the login options, returns the url and namespace to use for image push and pull.
+
+    Verifies user can authenticate when username is present (in which case login will prompt for missing password).
+    If already authenticated and the auth data exists in the container's local config, then determines the username.
+
+    Using what is provided + what is returned by login + container engine defaults, determine the correct url and
+    namespace.
+
+    :param engine_obj: container engine
+    :param registry_name: optional registry key found in container.yml
+    :param username: optional username for authentication
+    :param password: optional password for authentication
+    :param email: optional email for authentication
+    :param url: optional url to the registry. if not provided, defaults to engine_obj.default_registry_url
+    :param namespace: optional namespace. if not provided, defaults to username.
+    :return: (url, namespace)
+    '''
+    config = engine_obj.config
+    if registry_name:
+        # expect to find push-to defined in container.yml with url and namespace attributes
+        if not config.get('registries', {}).get(registry_name):
+            raise AnsibleContainerRegistryNotFoundException("Registry %s not found in container.yml. Did you add it to "
+                                                            "the registry key?")
+        url = config['registries'][registry_name].get('url')
+        if not url:
+            raise AnsibleContainerRegistryAttributeException("Registry %s missing required attribute 'url'.")
+
+        namespace = config['registries'][registry_name].get('namespace')
+
+    if not url:
+        url = engine_obj.default_registry_url
+
+    # Check that we can authenticate to the registry and get the username
+    username = engine_obj.registry_login(username=username, password=password,
+                                         email=email, url=url)
+    if not namespace:
+        namespace = username
+
+    return url, namespace
+
