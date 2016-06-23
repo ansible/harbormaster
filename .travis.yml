@@ -13,7 +13,6 @@ before_install:
 
 install:
   - pip install -r requirements.txt -r test/requirements.txt
-  - echo {"auths": {"https://index.docker.io/v1/": { "auth": "ZGNvcHBlbmhhZ2FuOkFwYXNzd29yZDEyMyE=" } } } >~/.docker/config.json
 
 script:
   - python setup.py develop
