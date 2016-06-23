@@ -9,5 +9,5 @@ Command Reference
    run
    push
    shipit
-      shipit/kube
-      shipit/openshift
+   shipit/kube
+   shipit/openshift
