@@ -30,7 +30,7 @@ The email address associated with your username in the registry.
 
 The password used to authenticate your user with the registry.
 
-.. opton:: --namespace <namespace>
+.. option:: --namespace <namespace>
 
 A namespace within the registry. The namespace is prepended to the name of image. By default this is the username.
 
