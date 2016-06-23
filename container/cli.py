@@ -104,7 +104,7 @@ def subcmd_push_parser(parser, subparser):
                            help=u'If authentication with the registry is required, provide a valid password.',
                            dest='password', default=None)
     subparser.add_argument('--url', action='store',
-                           help=(u'When authenticating with a registry, provide the registry URL. Otherwise, the ',
+                           help=(u'When authenticating with a registry, provide the registry URL. Otherwise, the '
                                  u'default URL for the selected container engine will be used.'),
                            dest='url', default=None)
     subparser.add_argument('--namespace', action='store',

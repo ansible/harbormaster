@@ -46,6 +46,10 @@ def test_help_option_shows_help_for_shipit_command():
     result = env.run('ansible-container', 'shipit', '--help')
     assert "usage: ansible-container shipit" in result.stdout
 
+def test_help_option_shows_help_for_shipit_engine_command():
+    env = ScriptTestEnvironment()
+    result = env.run('ansible-container', 'shipit', 'kube', '--help')
+    assert "usage: ansible-container shipit kube" in result.stdout
 
 def test_help_option_shows_help_for_init_command():
     env = ScriptTestEnvironment()
@@ -75,10 +79,10 @@ def test_run_in_uninitialized_directory_fails():
 
 def test_shipit_in_uninitialized_directory_fails():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'shipit', expect_error=True)
+    result = env.run('ansible-container', 'shipit', 'kube', expect_error=True)
     assert result.returncode == 1
     assert result.stdout == ''
-    assert "No such file or directory" in result.stderr
+    assert "No Ansible Container project data found" in result.stderr
 
 
 def test_init_empty_directory():

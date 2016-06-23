@@ -297,6 +297,8 @@ def cmdrun_push(base_path, engine_name, username=None, password=None, email=None
 
 def cmdrun_shipit(base_path, engine_name, username=None, password=None, email=None,
                   url=None, namespace=None, pull_from=None, **kwargs):
+    assert_initialized(base_path)
+
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
