@@ -191,19 +191,20 @@ class Engine(BaseEngine):
         exit_status = build_container_info['Status']
         return '(0)' in exit_status
 
-    def get_config_for_shipit(self, registry=None):
+    def get_config_for_shipit(self, url=None, namespace=None):
         '''
         Retrieve the configuration needed to run the shipit command
 
-        :param registry: registry dict from registry.yml
-        :return: config dict object
+        :param url: registry url
+        :param namespace: image namespace within the registry
+        :return: config dict
         '''
         config = get_config(self.base_path)
         client = self.get_client()
 
-        image_path = registry['namespace']
-        if registry['url'] != self.default_registry_url:
-            url = REMOVE_HTTP.sub('', registry['url'])
+        image_path = namespace
+        if url != self.default_registry_url:
+            url = REMOVE_HTTP.sub('', url)
             image_path = "%s/%s" % (re.sub(r'/$', '', url), image_path)
 
         for host, service_config in config.get('services', {}).items():
@@ -571,7 +572,7 @@ class Engine(BaseEngine):
             raise AnsibleContainerDockerConfigFileException("Failed to write docker registry config to %s - %s" %
                                                             (path, str(exc)))
 
-    def push_latest_image(self, host, registry=None):
+    def push_latest_image(self, host, url=None, namespace=None):
         '''
         :param host: The host in the container.yml to push
         :param registry: registry dict from registry.yml
@@ -580,9 +581,10 @@ class Engine(BaseEngine):
         client = self.get_client()
         image_id, image_buildstamp = get_latest_image_for(self.project_name,
                                                           host, client)
-        repository = "%s/%s-%s" % (registry.get('namespace'), self.project_name, host)
-        if registry['url'] != self.default_registry_url:
-            url = REMOVE_HTTP.sub('', registry['url'])
+
+        repository = "%s/%s-%s" % (namespace, self.project_name, host)
+        if url != self.default_registry_url:
+            url = REMOVE_HTTP.sub('', url)
             repository = "%s/%s" % (re.sub('/$', '', url), repository)
 
         logger.info('Tagging %s' % repository)

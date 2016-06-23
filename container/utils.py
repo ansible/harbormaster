@@ -9,18 +9,15 @@ import os
 import tempfile
 import shutil
 import importlib
-import yaml
 from jinja2 import Environment, FileSystemLoader
 
 from .exceptions import AnsibleContainerNotInitializedException
 from .config import AnsibleContainerConfig
-from .registry import AnsibleContainerRegistry
 
 __all__ = ['make_temp_dir',
            'jinja_template_path',
            'jinja_render_to_temp',
            'get_config',
-           'get_registry',
            'config_format_version',
            'assert_initialized',
            'get_latest_image_for',
@@ -77,9 +74,6 @@ def jinja_render_to_temp(template_file, temp_dir, dest_file, **context):
 
 def get_config(base_path):
     return AnsibleContainerConfig(base_path)
-
-def get_registry(base_path):
-    return AnsibleContainerRegistry(base_path)
 
 def config_format_version(base_path, config_data=None):
     if not config_data:

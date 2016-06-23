@@ -27,10 +27,10 @@ class AnsibleContainerDockerLoginException(Exception):
 class AnsibleContainerConfigException(Exception):
     pass
 
-class AnsibleContainerRegistryFileException(Exception):
+class AnsibleContainerRegistryNotFoundException(Exception):
     pass
 
-class AnsibleContainerRegistryNotFoundException(Exception):
+class AnsibleContainerRegistryAttributeException(Exception):
     pass
 
 class AnsibleContainerMissingRegistryName(Exception):

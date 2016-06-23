@@ -53,3 +53,5 @@ services:
     options:
       kube_runAsUser: 1000
       kube_state: absent
+
+registries: {}

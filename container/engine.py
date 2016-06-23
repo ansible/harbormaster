@@ -10,8 +10,8 @@ import datetime
 import re
 
 from .exceptions import (AnsibleContainerAlreadyInitializedException,
-                         AnsibleContainerMissingRegistryName,
-                         AnsibleContainerRegistryNotFoundException)
+                         AnsibleContainerRegistryNotFoundException,
+                         AnsibleContainerRegistryAttributeException)
 from .utils import *
 from .shipit.utils import create_path
 
@@ -197,12 +197,13 @@ class BaseEngine(object):
         """
         raise NotImplementedError()
 
-    def push_latest_image(self, host, registry=None):
+    def push_latest_image(self, host, url=None, namespace=None):
         """
         Push the latest built image for a host to a registry
 
         :param host: The host in the container.yml to push
-        :param registry_name: Dict pulled from registries list in containery.yml
+        :param url: The url of the registry.
+        :param namespace: The username or organization that owns the image repo
         :return: None
         """
         raise NotImplementedError()
@@ -210,11 +211,14 @@ class BaseEngine(object):
     def get_config(self):
         raise NotImplementedError()
 
-    def get_config_for_shipit(self):
+    def get_config_for_shipit(self, url=None, namespace=None):
         '''
-        Get the compose configuration needed by cmdrun_shipit. Result should include
-        the *options* attribute for each service, as it may contain cluster directives.
+        Get the configuration needed by cmdrun_shipit. Result should include
+        the *options* attribute for each service, as it may contain cluster
+        directives.
 
+        :param url: URL to the registry.
+        :param namepace: a namespace withing the registry. Typically a username or organization.
         :return: configuration dictionary
         '''
         raise NotImplementedError()
@@ -275,39 +279,19 @@ def cmdrun_run(base_path, engine_name, service=[], production=False, **kwargs):
 
 
 def cmdrun_push(base_path, engine_name, username=None, password=None, email=None,
-                url=None, namespace=None, registry_name=None, push_to=None, **kwargs):
+                url=None, namespace=None, push_to=None, **kwargs):
     assert_initialized(base_path)
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
-    registry = get_registry(base_path)
 
-    if not push_to:
-        # Attempt to login and update config
-        username = engine_obj.registry_login(username=username, password=password,
-                                             email=email, url=url)
-        if not url:
-            url = engine_obj.default_registry_url
+    url, namespace = get_registry_url_and_namespace(engine_obj, registry_name=push_to, username=username, password=password,
+                                                    email=email, url=url, namespace=namespace)
 
-        if not registry_name:
-            if url == engine_obj.default_registry_url:
-                registry_name = engine_obj.default_registry_name
-            else:
-                raise AnsibleContainerMissingRegistryName("Please provide a valid registry name so that the registry "
-                                                          "can be addded to container.yml.")
-        if not namespace:
-            namespace = username
-        registry = registry.update(registry_name=registry_name, url=url, namespace=namespace)
-    else:
-        if not registry.get(push_to):
-            raise AnsibleContainerRegistryNotFoundException("Registry %s not found in container.yml. Try logging in by "
-                                                            "providing a username, password, url and registry name.")
-        registry = registry[push_to]
-        registry_name = push_to
+    logger.info('Pushing to "%s/%s' % (re.sub(r'/$', '', url), namespace))
 
-    logger.info('Pushing to %s/%s' % (re.sub(r'/$', '', registry['url']), registry['namespace']))
     for host in engine_obj.hosts_touched_by_playbook():
-        engine_obj.push_latest_image(host, registry=registry)
+        engine_obj.push_latest_image(host, url=url, namespace=namespace)
     logger.info('Done!')
 
 
@@ -317,17 +301,12 @@ def cmdrun_shipit(base_path, engine_name, **kwargs):
     engine_obj = load_engine(**engine_args)
     shipit_engine_name = kwargs.pop('shipit_engine')
     project_name = os.path.basename(base_path).lower()
-
     pull_from = kwargs.get('pull_from')
-    registry = get_registry(base_path)
-    if not pull_from:
-        pull_from = engine_obj.default_registry_name
-    if not registry.get(pull_from):
-        raise AnsibleContainerRegistryNotFoundException("Registry %s not found in registry.yml. "
-                                                        "Use the push command to authenticate and add the registry."
-                                                        % pull_from)
-    pull_from_registry = registry[pull_from]
-    config = engine_obj.get_config_for_shipit(registry=pull_from_registry)
+
+    url, namespace = get_registry_url_and_namespace(engine_obj, registry_name=pull_from)
+
+    config = engine_obj.get_config_for_shipit(url=url, namespace=namespace)
+
     shipit_engine_obj = load_shipit_engine(AVAILABLE_SHIPIT_ENGINES[shipit_engine_name]['cls'],
                                            config=config,
                                            base_path=base_path,
@@ -371,3 +350,48 @@ def create_build_container(container_engine_obj, base_path):
     builder_img_id = container_engine_obj.get_builder_image_id()
     logger.info('Ansible Container image has ID %s', builder_img_id)
     return builder_img_id
+
+
+def get_registry_url_and_namespace(engine_obj, registry_name=None, username=None, password=None, email=None,
+                                   url=None, namespace=None):
+    '''
+    Given the login options, returns the url and namespace to use for image push and pull.
+
+    Verifies user can authenticate when username is present (in which case login will prompt for missing password).
+    If already authenticated and the auth data exists in the container's local config, then determines the username.
+
+    Using what is provided + what is returned by login + container engine defaults, determine the correct url and
+    namespace.
+
+    :param engine_obj: container engine
+    :param registry_name: optional registry key found in container.yml
+    :param username: optional username for authentication
+    :param password: optional password for authentication
+    :param email: optional email for authentication
+    :param url: optional url to the registry. if not provided, defaults to engine_obj.default_registry_url
+    :param namespace: optional namespace. if not provided, defaults to username.
+    :return: (url, namespace)
+    '''
+    config = engine_obj.config
+    if registry_name:
+        # expect to find push-to defined in container.yml with url and namespace attributes
+        if not config.get('registries', {}).get(registry_name):
+            raise AnsibleContainerRegistryNotFoundException("Registry %s not found in container.yml. Did you add it to "
+                                                            "the registry key?")
+        url = config['registries'][registry_name].get('url')
+        if not url:
+            raise AnsibleContainerRegistryAttributeException("Registry %s missing required attribute 'url'.")
+
+        namespace = config['registries'][registry_name].get('namespace')
+
+    if not url:
+        url = engine_obj.default_registry_url
+
+    # Check that we can authenticate to the registry and get the username
+    username = engine_obj.registry_login(username=username, password=password,
+                                         email=email, url=url)
+    if not namespace:
+        namespace = username
+
+    return url, namespace
+
