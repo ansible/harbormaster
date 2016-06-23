@@ -23,19 +23,19 @@ with the Kubernetes cluster to create services and deployments. Communication wt
 *kubectl* client. To run the role, the *kubectl* client must be installed.
 
 See the `Google Cloud SDK - Getting Started <https://cloud.google.com/sdk/docs/>`_ for instructions on installing the
-SDK and *kubectl*. There is also an Ansible role, `ansible/role-install-gcloud <https://github.com/ansible/role-install-gcloud>`_
+SDK and *kubectl*. There is also an Ansible role, `ansible.install-gcloud <https://galaxy.ansible.com/ansible/install-gcloud/>`_
 to help automate the installation.
 
 To complete the deployment you will need a Kubernetes cluster hosted at `Google Compute Engine <https://cloud.google.com/compute/>`_.
 If you don't have an account, create a free account. You will receive a $300 credit, which is way more than you will need for this example.
-Once you sign in, folow the `Quickstart Guide <https://cloud.google.com/container-engine/docs/quickstart>`_ to create a project and a
+Once you sign in, follow the `Quickstart Guide <https://cloud.google.com/container-engine/docs/quickstart>`_ to create a project and a
 Google Container Engine cluster.
 
 Assumptions
 '''''''''''
 
-For the purposes of this example, Kubernetes will refer to `Google's Container Engine <https://cloud.google.com/container-engine/>`_.
-The private registry used in the examples is `Google's Container Registry <https://cloud.google.com/container-engine/>`_. A project
+For the purposes of this example, Kubernetes will refer to `Google Container Engine <https://cloud.google.com/container-engine/>`_.
+The private registry used in the examples is `Google Container Registry <https://cloud.google.com/container-engine/>`_. A project
 is a project created on `Google Compute Engine <https://cloud.google.com/compute/>`_, and a cluster is a cluster created in the project
 using Google Container Engine.
 
@@ -47,7 +47,7 @@ To authenticate with Kubernetes (Google Contaner Engine), you can manually run `
 can be easily automated is to create a `service account <https://cloud.google.com/compute/docs/access/create-enable-service-accounts-for-instances>`_
 and use the associated JSON key file.
 
-Once you have your service account, download the aJSON key file. This is a private key for accessing the cluster. Ssecure it just as you would
+Once you have your service account, download the JSON key file. This is a private key for accessing the cluster. Secure it just as you would
 an SSH private key file.
 
 Use the following command, changing the path and name of the key file, to authenticate with the cluster:
@@ -82,8 +82,8 @@ To change the active account:
 
 Deployment
 ''''''''''
-In this walk through we'll demonstrate deploying the example application found in the ansible-container repo. Here's the workflow
-we'll follow to deploy the application on a Kubernetes cluster using Ansible Container:
+In this walk through we'll demonstrate deploying `the example application <https://github.com/ansible/ansible-container/tree/master/example>`_
+found in the ansible-container repo. Here's the workflow we'll follow to deploy the application on a Kubernetes cluster using Ansible Container:
 
 + Build the images with ``ansible-container build``.
 + Push the new images to the cloud with ``ansible-container push``.
@@ -120,8 +120,8 @@ Use `docker images` to view the available images:
 Pushing Images to the Cloud
 ---------------------------
 
-To deploy to Kubernetes, the cluster will need access to the new images, which requires pushing them into a registry
-that the cluster can pull from. This can be done using the ``ansible-contianer push`` comand.
+For the deployment to work, the cluster will need access to the new images. This requires pushing them into a registry
+that the cluster can pull from. The push can be done using the ``ansible-contianer push`` command.
 
 If you're using a secure registry, you will first need to authenticate with the registry. You can authenticate using ``docker login``,
 or pass your credentials to ``ansible-cotainer push``. If you used a service account with a JSON key file, you can use
@@ -131,17 +131,16 @@ the JSON key file to authenticate with Google Container Registry. For example:
 
     $ ansible-container push --username _json_key --password "$(cat ~/path/to/Keyfile_XXXXXXXX.json)" --url https://gcr.io --namespace my-project-id-XXXX
 
-Set the uername to *_json_key* literally.
+Using a key file requires setting the username to *_json_key*. For container engine images must be namespaced by the project ID.
+The --namespace option in the above statement sets the namespace for each images to the project ID. If a namespace is not provided, the username is
+used as the namespace, which will not work. Make sure to use the correct ID for your project.
 
-In the above example, --namespace is used to set the namespace to the ID of the project. If a namespace is not provided, the username is
-used as the namespace. To use Google Container Registry you must set the namespace to your project ID.
-
-After authenticating for the first time, Docker will update your ~/.docker/config.json file with the registry and your credentials. This is true whether
+After authenticating for the first time, Docker will update your ~/.docker/config.json file with the registry url and your credentials. This is true whether
 you used ``docker login`` or ``ansible-container push`` to authenticate. Going forward you will no longer need to provide your credentials to push images
 to https://gcr.io.
 
 For convenience, you can add an entry to the *registries* key in your container.yml file to enable --push-to and --pull-from command line
-options. You can use those options in place of --url and --namespace. For example, if you add the following to container.yml:
+options. You can use those options in place of --url and --namespace. For example, adding the following to container.yml:
 
 .. code-block:: bash
 
@@ -150,7 +149,7 @@ options. You can use those options in place of --url and --namespace. For exampl
             url: https://gcr.io
             namespace: fab-project-xxxxx
 
-If you add the registy in container.yml as pictured above, then for future image pushes to Google Container Registry you can simply do the following:
+enables use of the *--push-to* option:
 
 .. code-block:: bash
 
@@ -161,14 +160,14 @@ Shipit - Build the Deployment Role
 ----------------------------------
 
 Next, run the *shipit* command to generate the role and playbook. If you created an entry in container.yml for google, as described above, you
-can use the --pull-from command line option.
+can use the *--pull-from* command line option.
 
 .. code-block:: bash
 
    $ ansible-container shipit --pull-from google
 
-The *--pull-from* option tells the shipit command how to reference the images needed to build containers on the Kubernetes cluster. Without *--pull-from*
-the cluseter will attempt to pull images from Docker Hub.
+The *--pull-from* option tells the shipit command how to reference the images needed to build containers on the cluster. Without *--pull-from*
+the cluseter will attempt to pull images from Docker Hub namespaced with your username.
 
 Run the Role
 ------------
@@ -268,7 +267,7 @@ static service definition found in container.yml:
     options:
       kube_runAsUser: 997
 
-The ports list inclues *80:8080*, which indicates that port 8080 from the container should be exposed as port 80 on the
+The ports list includes *80:8080*, which indicates that port 8080 from the container should be exposed as port 80 on the
 host. The *shipit* command interprets this as port 80 should be exposed to the outside, as it would be when the application
 is launched locally.
 
@@ -285,7 +284,7 @@ Now take a look at the deployments:
 
 
 A deployment is a way to create resource controllers, pods and containers in a single step. It also comes with the ability
-to automatically perform rolling updates during subsequent deployments, potentially eliminiating any downtime for the
+to automatically perform rolling updates during subsequent deployments, potentially eliminating any downtime for the
 application.
 
 Next, take a look at the pods created by the deployments:
@@ -299,7 +298,7 @@ Next, take a look at the pods created by the deployments:
     postgresql-2580868339-2qk2k   1/1       Running   0          1m
     static-3768509799-r3zbl       1/1       Running   0          1m
 
-And finally, take at the details for one of the pods:
+And finally, view the details for one of the pods:
 
 .. code-block:: bash
 
@@ -346,7 +345,7 @@ And finally, take at the details for one of the pods:
     SecretName:	default-token-728nf
 
 The above reveals some of the details of the configuration used to create the pod and container. Notice the image value in the
-example is *gcr.io/e-context-129918/example-django:20160622155105*. This is result of passing the *--pull-from* option to the *shipit*
+example is *gcr.io/e-context-129918/example-django:20160622155105*. This is the result of passing the *--pull-from* option to the *shipit*
 command. To see the full configuration template run ``kubectl get pods/<name of the pod> -o json``.
 
 
@@ -362,7 +361,7 @@ Or, create an inventory file with a single line:
 
     $ echo localhost >inventory
 
-In subsequent playbook runs, include the -i option:
+In subsequent playbook runs, include the *-i* option:
 
 .. code-block:: bash
 
