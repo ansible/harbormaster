@@ -22,8 +22,7 @@ from yaml import dump as yaml_dump
 from ..exceptions import (AnsibleContainerNotInitializedException,
                           AnsibleContainerNoAuthenticationProvidedException,
                           AnsibleContainerDockerConfigFileException,
-                          AnsibleContainerDockerLoginException,
-                          AnsibleContainerRegistryNotFoundException)
+                          AnsibleContainerDockerLoginException)
 
 from ..engine import BaseEngine
 from ..utils import *

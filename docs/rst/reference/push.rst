@@ -31,6 +31,15 @@ The email address associated with your username in the registry.
 
 The password used to authenticate your user with the registry.
 
+.. opton:: --namespace <namespace>
+
+A namespace within the registry. The namespace is prepended to the name of image. Defaults to username.
+
+.. option:: --push-to <registry name>
+
+A name defined in the *registries* key within container.yml. Use in place of --namespace and --url.
+
+
 
 
 

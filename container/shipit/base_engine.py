@@ -35,13 +35,37 @@ class BaseShipItEngine(object):
         :return: None
         """
         subparser.add_argument('--save-config', action='store_true',
-                               help=u'Generate and save the %s configuration files.' % self.name,
+                               help=(u'Generate and save the %s configuration files in '
+                                     u'ansible/shipit_config/kubernetes.' % self.name),
                                dest='save_config', default=False)
 
         subparser.add_argument('--pull-from', action='store',
                                help=u'Name of a registry defined in container.yml from which %s should '
-                                    u'pull images' % self.name,
+                                    u'pull images. Use in place of --namespace and --url.' % self.name,
                                dest='pull_from', default=None)
+
+        subparser.add_argument('--username', action='store',
+                               help=u'If authentication with the registry is required, provide a valid username.',
+                               dest='username', default=None)
+
+        subparser.add_argument('--email', action='store',
+                               help=(u'If authentication with the registry requires an email address, provide a '
+                                     u'valid email address'),
+                               dest='email', default=None)
+
+        subparser.add_argument('--password', action='store',
+                               help=u'If authentication with the registry is required, provide a valid password.',
+                               dest='password', default=None)
+
+        subparser.add_argument('--url', action='store',
+                               help=(u'Provide the URL of the registry from which the cluster should pull images. '
+                                     u'Defaults to Docker Hub'),
+                               dest='url', default=None)
+
+        subparser.add_argument('--namespace', action='store',
+                               help=(u'An optional organization or project name to prepend to the image name. '
+                                     u'Defaults to the username.'),
+                               dest='namespace', default=None)
 
     def run(self):
         """

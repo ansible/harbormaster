@@ -111,10 +111,6 @@ def subcmd_push_parser(parser, subparser):
                            help=(u'An optional organization or project name to append to the registry URL. Defaults '
                                  u'to the username.'),
                            dest='namespace', default=None)
-    subparser.add_argument('--registry-name', action='store',
-                           help=(u'Name to associate with the registry in container.yml. If not provided, '
-                                 u'will attempt to use the default registry name for the selected container engine.'),
-                           dest='registry_name', default=None)
     subparser.add_argument('--push-to', action='store',
                            help=u'Name of a registry defined in container.yml to which images should be pushed.',
                            dest='push_to', default=None)

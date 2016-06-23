@@ -295,7 +295,8 @@ def cmdrun_push(base_path, engine_name, username=None, password=None, email=None
     logger.info('Done!')
 
 
-def cmdrun_shipit(base_path, engine_name, **kwargs):
+def cmdrun_shipit(base_path, engine_name, username=None, password=None, email=None,
+                  url=None, namespace=None, pull_from=None, **kwargs):
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
@@ -303,10 +304,9 @@ def cmdrun_shipit(base_path, engine_name, **kwargs):
     project_name = os.path.basename(base_path).lower()
     pull_from = kwargs.get('pull_from')
 
-    url, namespace = get_registry_url_and_namespace(engine_obj, registry_name=pull_from)
-
+    url, namespace = get_registry_url_and_namespace(engine_obj, registry_name=pull_from, username=username,
+                                                    password=password, email=email, url=url, namespace=namespace)
     config = engine_obj.get_config_for_shipit(url=url, namespace=namespace)
-
     shipit_engine_obj = load_shipit_engine(AVAILABLE_SHIPIT_ENGINES[shipit_engine_name]['cls'],
                                            config=config,
                                            base_path=base_path,
