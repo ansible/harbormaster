@@ -1,5 +1,5 @@
-Openshift
-=========
+shipit openshift
+================
 
 .. program:: ansible-container shipit openshift
 

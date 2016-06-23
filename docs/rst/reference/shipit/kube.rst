@@ -1,5 +1,5 @@
-Kube (Kubernetes)
-=================
+shipit kube
+===========
 
 .. program:: ansible-container shipit kube
 
