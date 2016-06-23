@@ -3,7 +3,7 @@
 source_root=$(python -c "from os import path; print(path.abspath(path.join(path.dirname('$0'), '../../..')))")
 test_dir="${source_root}/test/reports/integration"
 
-if [ ! -d "$DIRECTORY" ]; then
+if [ ! -d ~/.docker ]; then
     mkdir ~/.docker
 fi
 echo '{"auths": {"https://index.docker.io/v1/": { "auth": "ZGNvcHBlbmhhZ2FuOkFwYXNzd29yZDEyMyE=" } } }' >~/.docker/config.json
