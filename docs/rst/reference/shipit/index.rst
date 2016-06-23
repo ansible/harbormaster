@@ -1,4 +1,4 @@
-Shipit Engines
+shipit engines
 ==============
 
 .. toctree::
