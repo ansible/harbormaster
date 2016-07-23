@@ -14,7 +14,8 @@ Ansible Container is undergoing rapid development. For now, Ansible Container ca
 
 The `ansible-container init` command creates a directory `ansible` with files to get you started. Read the comments and edit to suit your needs.
 
-The `ansible-container build` command creates images from the Ansible playbooks in the `ansible` directory.
+The `ansible-container build [playbook-name]` command creates images from the Ansible playbooks in the `ansible` directory.
+`main` is used as default playbook-name.
 
 The `ansible-container run` command launches the containers specified in `container.yml`. The format is nearly identical to `docker-compose`.
 
