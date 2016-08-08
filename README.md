@@ -26,3 +26,12 @@ The `ansible-container shipit` command will export the necessary playbooks and r
 
 For examples and a tour of ansible-container 
 [visit our docs site](http://docs.ansible.com/ansible-container/).
+
+## Get Involved
+
+   * Read [Community Information](http://docs.ansible.com/community.html) for all kinds of ways to contribute to and interact with the project, including mailing list information and how to submit bug reports and code to Ansible.  
+   * All code submissions are done through pull requests.  Take care to make sure no merge commits are in the submission, and use `git rebase` vs `git merge` for this reason.  If submitting a large code change (other than modules), it's probably a good idea to join ansible-devel and talk about what you would like to do or add first and to avoid duplicate efforts.  This not only helps everyone know what's going on, it also helps save time and effort if we decide some changes are needed.
+   * Users list: [ansible-project](http://groups.google.com/group/ansible-project)
+   * Development list: [ansible-devel](http://groups.google.com/group/ansible-devel)
+   * Announcement list: [ansible-announce](http://groups.google.com/group/ansible-announce) - read only
+   * irc.freenode.net: #ansible-container
