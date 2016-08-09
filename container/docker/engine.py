@@ -274,6 +274,11 @@ class Engine(BaseEngine):
         u'SERVICE': []
     }
 
+    DEFAULT_COMPOSE_RESTART_OPTIONS = {
+        u'--timeout': None,
+        u'SERVICE': []
+    }
+
     def orchestrate(self, operation, temp_dir, hosts=[], context={}):
         """
         Execute the compose engine.
@@ -409,6 +414,51 @@ class Engine(BaseEngine):
         command = main.TopLevelCommand(project)
         command.stop(command_options)
 
+    def restart(self, operation, temp_dir, hosts=[]):
+        self.temp_dir = temp_dir
+        extra_options = getattr(self, 'restart_%s_extra_args' % operation)()
+        config = getattr(self, 'get_config_for_%s' % operation)()
+        logger.debug('%s' % (config,))
+        config_yaml = yaml_dump(config)
+        logger.debug('Config YAML is')
+        logger.debug(config_yaml)
+        jinja_render_to_temp('%s-docker-compose.j2.yml' % (operation,),
+                             temp_dir,
+                             'docker-compose.yml',
+                             hosts=self.all_hosts_in_orchestration(),
+                             project_name=self.project_name,
+                             base_path=self.base_path,
+                             params=self.params,
+                             api_version=self.api_version,
+                             config=config_yaml,
+                             env=os.environ)
+        options = self.DEFAULT_COMPOSE_OPTIONS.copy()
+        options.update({
+            u'--verbose': self.params['debug'],
+            u'--file': [
+                os.path.join(temp_dir,
+                             'docker-compose.yml')],
+            u'COMMAND': 'restart',
+            u'--project-name': 'ansible'
+        })
+        command_options = self.DEFAULT_COMPOSE_RESTART_OPTIONS.copy()
+        command_options[u'SERVICE'] = hosts
+        command_options.update(extra_options)
+        project = project_from_options(self.base_path, options)
+        command = main.TopLevelCommand(project)
+        command.restart(command_options)
+
+    def restart_restart_extra_args(self):
+        """
+        Provide extra arguments to provide the orchestrator during restart.
+
+        :return: dictionary
+        """
+        return {}
+
+    def get_config_for_restart(self):
+        compose_config = config_to_compose(self.config)
+        return compose_config
 
     def _fix_volumes(self, service_name, service_config):
         # If there are volumes defined for this host, we need to create the

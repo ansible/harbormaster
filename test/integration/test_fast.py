@@ -41,6 +41,12 @@ def test_help_option_shows_help_for_stop_command():
     assert "usage: ansible-container stop" in result.stdout
 
 
+def test_help_option_shows_help_for_restart_command():
+    env = ScriptTestEnvironment()
+    result = env.run('ansible-container', 'restart', '--help')
+    assert "usage: ansible-container restart" in result.stdout
+
+
 def test_help_option_shows_help_for_help_command():
     env = ScriptTestEnvironment()
     result = env.run('ansible-container', 'help', '--help')

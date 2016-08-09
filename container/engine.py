@@ -179,6 +179,24 @@ class BaseEngine(object):
         """
         return NotImplementedError
 
+    def restart(self, operation, temp_dir, hosts=[]):
+        """
+        Restart containers deployed by `orchestrate`, deploys if not deployed
+
+        :param operation: 'restart'
+        :param temp_dir: A temporary directory usable as workspace
+        :param hosts: (optional) A list of hosts to limit orchestration to
+        """
+
+        return NotImplementedError
+
+    def restart_restart_extra_args(self):
+        """
+        Provide extra arguments to provide the orchestrator during restart.
+
+        :return: dictionary
+        """
+        return NotImplementedError
 
     def post_build(self, host, version, flatten=True, purge_last=True):
         """
@@ -330,6 +348,16 @@ def cmdrun_stop(base_path, engine_name, service=[], **kwargs):
     with make_temp_dir() as temp_dir:
         hosts = service or (engine_obj.all_hosts_in_orchestration())
         engine_obj.terminate('stop', temp_dir, hosts=hosts)
+
+
+def cmdrun_restart(base_path, engine_name, service=[], **kwargs):
+    assert_initialized(base_path)
+    engine_args = kwargs.copy()
+    engine_args.update(locals())
+    engine_obj = load_engine(**engine_args)
+    with make_temp_dir() as temp_dir:
+        hosts = service or (engine_obj.all_hosts_in_orchestration())
+        engine_obj.restart('restart', temp_dir, hosts=hosts)
 
 
 def cmdrun_push(base_path, engine_name, username=None, password=None, email=None, push_to=None, **kwargs):

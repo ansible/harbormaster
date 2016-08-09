@@ -73,6 +73,24 @@ def test_stop_service_minimal_docker_container():
     assert "Stopping ansible_minimal2_1 ... done" not in result.stderr
 
 
+def test_restart_minimal_docker_container():
+    env = ScriptTestEnvironment()
+    env.run('ansible-container', 'run', '--detached', cwd=project_dir('minimal_sleep'), expect_stderr=True)
+    result = env.run('ansible-container', 'restart', cwd=project_dir('minimal_sleep'), expect_stderr=True)
+    assert "Restarting ansible_minimal1_1 ... done" in result.stderr
+    assert "Restarting ansible_minimal2_1 ... done" in result.stderr
+    env.run('ansible-container', 'stop', cwd=project_dir('minimal_sleep'),
+            expect_stderr=True)
+
+
+def test_restart_service_minimal_docker_container():
+    env = ScriptTestEnvironment()
+    env.run('ansible-container', 'run', '--detached', cwd=project_dir('minimal_sleep'), expect_stderr=True)
+    result = env.run('ansible-container', 'restart', 'minimal1', cwd=project_dir('minimal_sleep'), expect_stderr=True)
+    assert "Restarting ansible_minimal1_1 ... done" in result.stderr
+    assert "Restarting ansible_minimal2_1 ... done" not in result.stderr
+
+
 #def test_shipit_minimal_docker_container():
 #    env = ScriptTestEnvironment()
 #    result = env.run('ansible-container', 'shipit', 'kube', cwd=project_dir('minimal'), expect_error=True)
