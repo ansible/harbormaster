@@ -179,6 +179,24 @@ class BaseEngine(object):
         """
         return NotImplementedError
 
+    def restart(self, operation, temp_dir, hosts=[]):
+        """
+        Restart containers deployed by `orchestrate`, deploys if not deployed
+
+        :param operation: 'restart'
+        :param temp_dir: A temporary directory usable as workspace
+        :param hosts: (optional) A list of hosts to limit orchestration to
+        """
+
+        return NotImplementedError
+
+    def restart_restart_extra_args(self):
+        """
+        Provide extra arguments to provide the orchestrator during restart.
+
+        :return: dictionary
+        """
+        return NotImplementedError
 
     def post_build(self, host, version, flatten=True, purge_last=True):
         """
@@ -266,6 +284,7 @@ def cmdrun_init(base_path, **kwargs):
 
 def cmdrun_build(base_path, engine_name, flatten=True, purge_last=True, local_builder=False,
                  rebuild=False, ansible_options='', **kwargs):
+    save_build_container = kwargs.pop('save_build_container')
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
@@ -279,21 +298,35 @@ def cmdrun_build(base_path, engine_name, flatten=True, purge_last=True, local_bu
         logger.info('Starting %s engine to build your images...'
                     % engine_obj.orchestrator_name)
         touched_hosts = engine_obj.hosts_touched_by_playbook()
-        engine_obj.orchestrate('build', temp_dir, context=dict(rebuild=rebuild))
+        with_volumes = []
+        if kwargs.get('with_volumes'):
+            for vol in kwargs.pop('with_volumes'):
+                with_volumes += vol
+            logger.debug("volumes: %s" % ','.join(with_volumes))
+        with_variables = []
+        if kwargs.get('with_variables'):
+            for env_var in kwargs.pop('with_variables'):
+                with_variables += env_var
+            logger.debug("env variables: %s" % ','.join(with_variables))
+        engine_obj.orchestrate('build', temp_dir, context=dict(rebuild=rebuild,
+                                                               with_volumes=with_volumes,
+                                                               with_variables=with_variables))
         if not engine_obj.build_was_successful():
             logger.error('Ansible playbook run failed.')
-            logger.info('Cleaning up Ansible Container builder...')
-            builder_container_id = engine_obj.get_builder_container_id()
-            engine_obj.remove_container_by_id(builder_container_id)
+            if not save_build_container:
+                logger.info('Cleaning up Ansible Container builder...')
+                builder_container_id = engine_obj.get_builder_container_id()
+                engine_obj.remove_container_by_id(builder_container_id)
             raise RuntimeError(u'Ansible build failed')
         # Cool - now export those containers as images
         version = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
         logger.info('Exporting built containers as images...')
         for host in touched_hosts:
             engine_obj.post_build(host, version, flatten=flatten, purge_last=purge_last)
-        logger.info('Cleaning up Ansible Container builder...')
-        builder_container_id = engine_obj.get_builder_container_id()
-        engine_obj.remove_container_by_id(builder_container_id)
+        if not save_build_container:
+            logger.info('Cleaning up Ansible Container builder...')
+            builder_container_id = engine_obj.get_builder_container_id()
+            engine_obj.remove_container_by_id(builder_container_id)
 
 
 def cmdrun_run(base_path, engine_name, service=[], production=False, **kwargs):
@@ -315,6 +348,16 @@ def cmdrun_stop(base_path, engine_name, service=[], **kwargs):
     with make_temp_dir() as temp_dir:
         hosts = service or (engine_obj.all_hosts_in_orchestration())
         engine_obj.terminate('stop', temp_dir, hosts=hosts)
+
+
+def cmdrun_restart(base_path, engine_name, service=[], **kwargs):
+    assert_initialized(base_path)
+    engine_args = kwargs.copy()
+    engine_args.update(locals())
+    engine_obj = load_engine(**engine_args)
+    with make_temp_dir() as temp_dir:
+        hosts = service or (engine_obj.all_hosts_in_orchestration())
+        engine_obj.restart('restart', temp_dir, hosts=hosts)
 
 
 def cmdrun_push(base_path, engine_name, username=None, password=None, email=None, push_to=None, **kwargs):

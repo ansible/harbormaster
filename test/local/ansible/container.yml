@@ -1,0 +1,14 @@
+version: "1"
+services:
+  test:
+    image: python:2.7
+    volumes:
+       - "${ANSIBLE_CONTAINER_PATH}:${ANSIBLE_CONTAINER_PATH}" 
+       - /var/run/docker.sock:/var/run/docker.sock
+    working_dir: "${ANSIBLE_CONTAINER_PATH}" 
+    environment:
+      VIRTUAL_ENV: /usr/local  
+    command:
+      - ./test/utils/run_tests.sh
+
+registries: {}

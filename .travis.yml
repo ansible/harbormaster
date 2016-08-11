@@ -9,7 +9,7 @@ before_install:
   - sudo apt-add-repository 'deb http://archive.ubuntu.com/ubuntu trusty-backports universe'
   - sudo apt-get update -qq
   - sudo apt-get install -y shellcheck
-  - sudo apt-get install -y -o Dpkg::Options::="--force-confold" docker-engine
+  - sudo apt-get install -y -o Dpkg::Options::="--force-confold" --force-yes docker-engine=1.11.2-0~trusty
 
 install:
   - pip install -r requirements.txt -r test/requirements.txt
@@ -18,7 +18,8 @@ script:
   - python setup.py develop
   - docker version
   - docker-compose version
-  - test/utils/run_tests.sh
+  - docker info
+  - test/run.sh  
 
 after_success:
   - bash <(curl -s https://codecov.io/bash) -F unit        -f test/reports/unit/coverage.xml

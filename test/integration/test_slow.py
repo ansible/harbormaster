@@ -16,6 +16,30 @@ def test_build_minimal_docker_container():
     assert "Aborting on container exit" in result.stdout
     assert "Exported minimal-minimal with image ID " in result.stderr
 
+def test_build_with_variables():
+    env = ScriptTestEnvironment()
+    result = env.run('ansible-container', 'build', '--save-build-container', '--with-variables', 'foo=bar',
+                     'bar=baz', cwd=project_dir('minimal'), expect_stderr=True)
+    assert "Aborting on container exit" in result.stdout
+    assert "Exported minimal-minimal with image ID " in result.stderr
+
+    result = env.run('docker', 'inspect', '--format="{{ .Config.Env }}"', 'ansible_ansible-container_1',
+                     expect_stderr=True)
+    assert "foo=bar" in result.stdout
+    assert "bar=baz" in result.stdout
+
+def test_build_with_volumes():
+    env = ScriptTestEnvironment()
+    volume_string = "{0}:{1}:{2}".format(os.getcwd(), '/projectdir', 'ro')
+    result = env.run('ansible-container', 'build', '--save-build-container', '--with-volumes', volume_string,
+                     cwd=project_dir('minimal'), expect_stderr=True)
+    assert "Aborting on container exit" in result.stdout
+    assert "Exported minimal-minimal with image ID " in result.stderr
+    result = env.run('docker', 'inspect',
+                     '--format="{{range .Mounts}}{{ .Source }}:{{ .Destination }}:{{ .Mode}} {{ end }}"',
+                     'ansible_ansible-container_1', expect_stderr=True)
+    volumes = result.stdout.split(' ')
+    assert volume_string in volumes
 
 def test_run_minimal_docker_container():
     env = ScriptTestEnvironment()
@@ -47,6 +71,24 @@ def test_stop_service_minimal_docker_container():
                      cwd=project_dir('minimal_sleep'), expect_stderr=True)
     assert "Stopping ansible_minimal1_1 ... done" in result.stderr
     assert "Stopping ansible_minimal2_1 ... done" not in result.stderr
+
+
+def test_restart_minimal_docker_container():
+    env = ScriptTestEnvironment()
+    env.run('ansible-container', 'run', '--detached', cwd=project_dir('minimal_sleep'), expect_stderr=True)
+    result = env.run('ansible-container', 'restart', cwd=project_dir('minimal_sleep'), expect_stderr=True)
+    assert "Restarting ansible_minimal1_1 ... done" in result.stderr
+    assert "Restarting ansible_minimal2_1 ... done" in result.stderr
+    env.run('ansible-container', 'stop', cwd=project_dir('minimal_sleep'),
+            expect_stderr=True)
+
+
+def test_restart_service_minimal_docker_container():
+    env = ScriptTestEnvironment()
+    env.run('ansible-container', 'run', '--detached', cwd=project_dir('minimal_sleep'), expect_stderr=True)
+    result = env.run('ansible-container', 'restart', 'minimal1', cwd=project_dir('minimal_sleep'), expect_stderr=True)
+    assert "Restarting ansible_minimal1_1 ... done" in result.stderr
+    assert "Restarting ansible_minimal2_1 ... done" not in result.stderr
 
 
 #def test_shipit_minimal_docker_container():
