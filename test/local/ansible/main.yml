@@ -1,0 +1,51 @@
+- hosts: test 
+  gather_facts: no
+  vars:
+    project_path: "{{ lookup('env','ANSIBLE_CONTAINER_PATH') }}"
+  tasks:
+    - name: Update apt cache
+      apt: update_cache=yes
+
+    - name: Install https transport
+      apt: name="{{ item }}"
+      with_items:
+        - apt-transport-https
+        - ca-certificates
+
+    - name: Add apt key 
+      command: apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+
+    - name: Touch docker.list
+      file: name=/etc/apt/sources.list.d/docker.list state=touch
+
+    - name: Add repo to docker.list
+      lineinfile:
+        dest: /etc/apt/sources.list.d/docker.list
+        line: "deb https://apt.dockerproject.org/repo debian-jessie main"
+
+    - name: Update cache again
+      apt: update_cache=yes
+
+    - name: Install apt packages 
+      apt: name="{{ item }}"
+      with_items:
+        - docker-engine=1.11.2-0~jessie
+        - shellcheck
+
+    - name: Install python packages 
+      pip: name="{{ item }}"
+      with_items:
+        - pytest
+        - pytest-timeout
+        - pytest-cov
+        - markupsafe
+        - docker-compose
+        - scripttest
+
+    - name: Install python requirements
+      pip: requirements="{{ project_path }}/requirements.txt"
+
+    - name: Install ansible-container from source
+      command: python ./setup.py develop
+      args:
+        chdir: "{{ project_path }}" 
