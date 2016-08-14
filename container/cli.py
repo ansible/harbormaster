@@ -89,6 +89,9 @@ def subcmd_build_parser(parser, subparser):
     subparser.add_argument('--save-build-container', action='store_true',
                            help=u'Leave the Ansible Builder Container intact upon build completion. '
                                 u'Use for debugging and testing.', default=False)
+    subparser.add_argument('--with-data-container', action='store_true',
+                           help=u'Put ansible code in a separate data container'
+                                u'Use for remote docker hosts.', default=False)
     subparser.add_argument('ansible_options', action='store',
                            help=u'Provide additional commandline arguments to '
                                 u'Ansible in executing your playbook. If you '

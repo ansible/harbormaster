@@ -7,10 +7,23 @@ ansible-container:
     {% if env.DOCKER_CERT_PATH %}- DOCKER_CERT_PATH=/docker-certs/{% endif %}
     - COMPOSE_HTTP_TIMEOUT=3000
     - DOCKER_API_VERSION={{ api_version }}
+  {% if env.DOCKER_CERT_PATH or not with_data_container %}
   volumes:
     {% if env.DOCKER_CERT_PATH %}- $DOCKER_CERT_PATH:/docker-certs/:Z{% endif %}
+    {% if not with_data_container %}
     - {{ base_path }}:/ansible-container/:Z
+    {% endif %}
+  {% endif %}
+  {% if with_data_container %}
+  volumes_from:
+    - ansible-data
+  {% endif %}
   working_dir: /ansible-container/ansible/
   stdin_open: true
   tty: true
+{% if with_data_container %}
+ansible-data:
+  image: "{{ data_img_id }}"
+  entrypoint: sh -c "while true; do sleep 1; done"
+{% endif %}
 {{ config }}

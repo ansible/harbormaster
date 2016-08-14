@@ -265,7 +265,7 @@ def cmdrun_init(base_path, **kwargs):
 
 
 def cmdrun_build(base_path, engine_name, flatten=True, purge_last=True, local_builder=False,
-                 rebuild=False, ansible_options='', **kwargs):
+                 rebuild=False, with_data_container=False, ansible_options='', **kwargs):
     save_build_container = kwargs.pop('save_build_container')
     engine_args = kwargs.copy()
     engine_args.update(locals())
@@ -279,7 +279,9 @@ def cmdrun_build(base_path, engine_name, flatten=True, purge_last=True, local_bu
     with make_temp_dir() as temp_dir:
         logger.info('Starting %s engine to build your images...'
                     % engine_obj.orchestrator_name)
-        touched_hosts = engine_obj.hosts_touched_by_playbook()
+        if with_data_container:
+            engine_obj.prepare_data_container()
+        touched_hosts = engine_obj.hosts_touched_by_playbook(with_data_container)
         with_volumes = []
         if kwargs.get('with_volumes'):
             for vol in kwargs.pop('with_volumes'):
@@ -292,13 +294,12 @@ def cmdrun_build(base_path, engine_name, flatten=True, purge_last=True, local_bu
             logger.debug("env variables: %s" % ','.join(with_variables))
         engine_obj.orchestrate('build', temp_dir, context=dict(rebuild=rebuild,
                                                                with_volumes=with_volumes,
-                                                               with_variables=with_variables))
+                                                               with_variables=with_variables,
+                                                               with_data_container=with_data_container))
         if not engine_obj.build_was_successful():
             logger.error('Ansible playbook run failed.')
             if not save_build_container:
-                logger.info('Cleaning up Ansible Container builder...')
-                builder_container_id = engine_obj.get_builder_container_id()
-                engine_obj.remove_container_by_id(builder_container_id)
+                engine_obj.cleanup_build_containers(with_data_container)
             raise RuntimeError(u'Ansible build failed')
         # Cool - now export those containers as images
         version = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
@@ -306,9 +307,7 @@ def cmdrun_build(base_path, engine_name, flatten=True, purge_last=True, local_bu
         for host in touched_hosts:
             engine_obj.post_build(host, version, flatten=flatten, purge_last=purge_last)
         if not save_build_container:
-            logger.info('Cleaning up Ansible Container builder...')
-            builder_container_id = engine_obj.get_builder_container_id()
-            engine_obj.remove_container_by_id(builder_container_id)
+            engine_obj.cleanup_build_containers(with_data_container)
 
 
 def cmdrun_run(base_path, engine_name, service=[], production=False, **kwargs):
@@ -462,4 +461,3 @@ def resolve_push_to(push_to, default_url):
         namespace = parts[1]
 
     return registry_url, namespace
-
