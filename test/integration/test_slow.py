@@ -12,13 +12,13 @@ def project_dir(name):
 @pytest.mark.timeout(240)
 def test_build_minimal_docker_container():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'build', '--flatten', cwd=project_dir('minimal'), expect_stderr=True)
+    result = env.run('ansible-container', '--debug', 'build', '--flatten', cwd=project_dir('minimal'), expect_stderr=True)
     assert "Aborting on container exit" in result.stdout
     assert "Exported minimal-minimal with image ID " in result.stderr
 
 def test_build_with_variables():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'build', '--save-build-container', '--with-variables', 'foo=bar',
+    result = env.run('ansible-container', '--debug', 'build', '--save-build-container', '--with-variables', 'foo=bar',
                      'bar=baz', cwd=project_dir('minimal'), expect_stderr=True)
     assert "Aborting on container exit" in result.stdout
     assert "Exported minimal-minimal with image ID " in result.stderr
@@ -28,10 +28,17 @@ def test_build_with_variables():
     assert "foo=bar" in result.stdout
     assert "bar=baz" in result.stdout
 
+def test_build_minimal_docker_container_with_data_container():
+    env = ScriptTestEnvironment()
+    result = env.run('ansible-container', '--debug', 'build', '--with-data-container', cwd=project_dir('minimal'), expect_stderr=True)
+    assert "Aborting on container exit" in result.stdout
+    assert "Exported minimal-minimal with image ID " in result.stderr
+    assert "Stopping ansible_ansible-data_1 ... done" in result.stderr
+
 def test_build_with_volumes():
     env = ScriptTestEnvironment()
     volume_string = "{0}:{1}:{2}".format(os.getcwd(), '/projectdir', 'ro')
-    result = env.run('ansible-container', 'build', '--save-build-container', '--with-volumes', volume_string,
+    result = env.run('ansible-container', '--debug', 'build', '--save-build-container', '--with-volumes', volume_string,
                      cwd=project_dir('minimal'), expect_stderr=True)
     assert "Aborting on container exit" in result.stdout
     assert "Exported minimal-minimal with image ID " in result.stderr
@@ -43,22 +50,22 @@ def test_build_with_volumes():
 
 def test_run_minimal_docker_container():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'run', cwd=project_dir('minimal'), expect_stderr=True)
+    result = env.run('ansible-container', '--debug', 'run', cwd=project_dir('minimal'), expect_stderr=True)
     assert "ansible_minimal_1 exited with code 0" in result.stdout
 
 
 def test_run_minimal_docker_container_in_detached_mode():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'run', '--detached', cwd=project_dir('minimal'), expect_stderr=True)
+    result = env.run('ansible-container', '--debug', 'run', '--detached', cwd=project_dir('minimal'), expect_stderr=True)
     assert "Deploying application in detached mode" in result.stderr
 
 
 @pytest.mark.timeout(240)
 def test_stop_minimal_docker_container():
     env = ScriptTestEnvironment()
-    env.run('ansible-container', 'build', '--flatten',
+    env.run('ansible-container', '--debug', 'build', '--flatten',
             cwd=project_dir('minimal_sleep'), expect_stderr=True)
-    env.run('ansible-container', 'run', '--detached', cwd=project_dir('minimal_sleep'), expect_stderr=True)
+    env.run('ansible-container', '--debug', 'run', '--detached', cwd=project_dir('minimal_sleep'), expect_stderr=True)
     result = env.run('ansible-container', 'stop', cwd=project_dir('minimal_sleep'), expect_stderr=True)
     assert "Stopping ansible_minimal1_1 ... done" in result.stderr
     assert "Stopping ansible_minimal2_1 ... done" in result.stderr
@@ -66,7 +73,7 @@ def test_stop_minimal_docker_container():
 
 def test_stop_service_minimal_docker_container():
     env = ScriptTestEnvironment()
-    env.run('ansible-container', 'run', '--detached', cwd=project_dir('minimal_sleep'), expect_stderr=True)
+    env.run('ansible-container', '--debug', 'run', '--detached', cwd=project_dir('minimal_sleep'), expect_stderr=True)
     result = env.run('ansible-container', 'stop', 'minimal1',
                      cwd=project_dir('minimal_sleep'), expect_stderr=True)
     assert "Stopping ansible_minimal1_1 ... done" in result.stderr

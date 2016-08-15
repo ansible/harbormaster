@@ -12,6 +12,7 @@ import getpass
 import json
 import base64
 import pprint
+import datetime
 
 import docker
 from docker.client import errors as docker_errors
@@ -41,12 +42,17 @@ class Engine(BaseEngine):
     orchestrator_name = 'Docker Compose'
     builder_container_img_name = 'ansible-container'
     builder_container_img_tag = 'ansible-container-builder'
+    builder_data_container_name = 'ansible-data'
     default_registry_url = 'https://index.docker.io/v1/'
     default_registry_name = 'dockerhub'
     _client = None
     _orchestrated_hosts = None
     api_version = ''
     temp_dir = None
+
+    def __init__(self, *args, **kwargs):
+        super(Engine, self).__init__(*args, **kwargs)
+        self.builder_data_img_name = '%s-data' % self.project_name
 
     def all_hosts_in_orchestration(self):
         """
@@ -56,7 +62,16 @@ class Engine(BaseEngine):
         """
         return self.config.get('services', {}).keys()
 
-    def hosts_touched_by_playbook(self):
+    def cleanup_build_containers(self, with_data_container=False):
+        logger.info('Cleaning up Ansible Container builder...')
+        builder_container_id = self.get_builder_container_id()
+        self.remove_container_by_id(builder_container_id)
+        if with_data_container:
+            logger.info('Cleaning up Ansible Data Container builder...')
+            builder_data_container_id = self.get_builder_data_container_id()
+            self.remove_container_by_id(builder_data_container_id, force=True)
+
+    def hosts_touched_by_playbook(self, with_data_container=False):
         """
         List all hosts touched by the execution of the build playbook.
 
@@ -65,10 +80,9 @@ class Engine(BaseEngine):
         if not self._orchestrated_hosts:
             with teed_stdout() as stdout, make_temp_dir() as temp_dir:
                 self.orchestrate('listhosts', temp_dir,
-                                 hosts=[self.builder_container_img_name])
-                logger.info('Cleaning up Ansible Container builder...')
-                builder_container_id = self.get_builder_container_id()
-                self.remove_container_by_id(builder_container_id)
+                                 hosts=[self.builder_container_img_name],
+                                 context=dict(with_data_container=with_data_container))
+
                 # We need to cleverly extract the host names from the output...
                 logger.debug('--list-hosts\n%s', stdout.getvalue())
                 lines = stdout.getvalue().split('\r\n')
@@ -78,6 +92,42 @@ class Engine(BaseEngine):
                               if line.startswith('       ')]
                 self._orchestrated_hosts = list(set([line.strip() for line in host_lines]))
         return self._orchestrated_hosts
+
+    def prepare_data_container(self):
+        assert_initialized(self.base_path)
+        client = self.get_client()
+        with make_temp_dir() as temp_dir:
+            logger.info('Building Docker Engine context...')
+            tarball_path = os.path.join(temp_dir, 'context.tar')
+            tarball_file = open(tarball_path, 'wb')
+            tarball = tarfile.TarFile(fileobj=tarball_file,
+                                      mode='w')
+            container_dir = os.path.normpath(os.path.join(self.base_path,
+                                                          'ansible'))
+            try:
+                tarball.add(container_dir, arcname='ansible')
+            except OSError:
+                raise AnsibleContainerNotInitializedException()
+            dockerfile_path = os.path.join(temp_dir, "Dockerfile")
+            with open(dockerfile_path, 'w') as fd:
+                fd.write("FROM busybox\n")
+                fd.write("ADD ansible /ansible-container/ansible\n")
+                fd.write("VOLUME /ansible-container\n")
+            tarball.add(dockerfile_path, arcname='Dockerfile')
+            tarball.close()
+            tarball_file.close()
+            tarball_file = open(tarball_path, 'rb')
+            build_output = client.build(fileobj=tarball_file,
+                                        custom_context=True,
+                                        tag=self.builder_data_img_name,
+                                        nocache=True,
+                                        rm=True)
+            for line in build_output:
+                logger.debug(line)
+
+            version = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
+            image_id, = client.images('%s:latest' % self.builder_data_img_name, quiet=True)
+            client.tag(image_id, self.builder_data_img_name, tag=version, force=True)
 
     def build_buildcontainer_image(self):
         """
@@ -160,7 +210,7 @@ class Engine(BaseEngine):
         )
         self.remove_container_by_id(container_id)
 
-    def remove_container_by_id(self, id):
+    def remove_container_by_id(self, id, force=False):
         """
         Remove a container from the engine given its identifier
 
@@ -168,7 +218,9 @@ class Engine(BaseEngine):
         :return: None
         """
         client = self.get_client()
-        client.remove_container(id)
+        if force:
+            client.stop(id)
+        client.remove_container(id, force=force)
 
     def get_builder_image_id(self):
         """
@@ -185,6 +237,14 @@ class Engine(BaseEngine):
         :return: the container identifier
         """
         return self.get_container_id_by_name(self.builder_container_img_name)
+
+    def get_builder_data_container_id(self):
+        """
+        Query the enginer to get the builder data container identifier
+
+        :return: the container identifier
+        """
+        return self.get_container_id_by_name(self.builder_data_container_name)
 
     def build_was_successful(self):
         """
@@ -295,6 +355,14 @@ class Engine(BaseEngine):
             image_version = '.'.join(release_version.split('.')[:2])
             builder_img_id = 'ansible/%s:%s' % (self.builder_container_img_tag,
                                                 image_version)
+
+        try:
+            data_img_id = self.get_image_id_by_tag(
+                self.builder_data_img_name)
+        except NameError:
+            image_version = '.'.join(release_version.split('.')[:2])
+            data_img_id = 'ansible/%s-data:%s' % (self.builder_data_img_name,
+                                                  image_version)
         extra_options = getattr(self, 'orchestrate_%s_extra_args' % operation)()
         config = getattr(self, 'get_config_for_%s' % operation)()
         logger.debug('%s' % (config,))
@@ -310,6 +378,7 @@ class Engine(BaseEngine):
                              params=self.params,
                              api_version=self.api_version,
                              builder_img_id=builder_img_id,
+                             data_img_id=data_img_id,
                              config=config_yaml,
                              env=os.environ,
                              **context)

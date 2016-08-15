@@ -10,10 +10,23 @@ ansible-container:
     {% if with_variables %}{% for env_var in with_variables %}
     - {{ env_var }}
     {% endfor %}{% endif %}
+  {% if not env.DOCKER_HOST or env.DOCKER_CERT_PATH or not with_data_container %}
   volumes:
     {% if env.DOCKER_CERT_PATH %}- $DOCKER_CERT_PATH:/docker-certs/:Z{% endif %}
-    - {{ base_path }}:/ansible-container/:Z
     {% if not env.DOCKER_HOST %}- /var/run/docker.sock:/tmp/docker.sock:Z{% endif %}
+    {% if not with_data_container %}
+    - {{ base_path }}:/ansible-container/:Z
+    {% endif %}
     {% if with_volumes %}{% for vol in with_volumes %}- {{ vol }}{% endfor %}{% endif %}
+  {% endif %}
+  {% if with_data_container %}
+  volumes_from:
+    - ansible-data
+  {% endif %}
   working_dir: /ansible-container/ansible/
+{% if with_data_container %}
+ansible-data:
+  image: "{{ data_img_id }}"
+  entrypoint: sh -c "while true; do sleep 1; done"
+{% endif %}
 {{ config }}
