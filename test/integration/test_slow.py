@@ -28,6 +28,13 @@ def test_build_with_variables():
     assert "foo=bar" in result.stdout
     assert "bar=baz" in result.stdout
 
+def test_build_minimal_docker_container_with_data_container():
+    env = ScriptTestEnvironment()
+    result = env.run('ansible-container', '--debug', 'build', '--with-data-container', cwd=project_dir('minimal'), expect_stderr=True)
+    assert "Aborting on container exit" in result.stdout
+    assert "Exported minimal-minimal with image ID " in result.stderr
+    assert "Stopping ansible_ansible-data_1 ... done" in result.stderr
+
 def test_build_with_volumes():
     env = ScriptTestEnvironment()
     volume_string = "{0}:{1}:{2}".format(os.getcwd(), '/projectdir', 'ro')
