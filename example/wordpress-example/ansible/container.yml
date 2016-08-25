@@ -1,0 +1,16 @@
+version: "1"
+services:
+  db:
+    image: centos:7
+    ports: 
+      - "3306:3306"
+    command: ['/usr/bin/mysqld_safe']
+    
+  wordpress:
+    image: centos:7
+    ports:
+      - "80:80"
+    links:
+      - db
+    command: bash -c "bash /tmp/a.sh ; usr/sbin/apachectl -D FOREGROUND"
+    

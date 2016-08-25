@@ -1,0 +1,107 @@
+- hosts: db
+  vars:
+    - wp_mysql_db: wordpress
+    - wp_mysql_user: wordpress
+    - wp_mysql_password: password
+  tasks:
+    - name: Install mariadb maridb-server
+      yum:
+        name: "{{ item }}"   
+        state: latest
+      with_items:
+        - epel-release
+        - mariadb-server
+        - bind-utils
+        - psmisc
+        - hostname
+        - MySQL-python
+
+    - name: Update the repository
+      shell: yum -y erase vim-minimal && \
+             yum -y update && \
+             yum clean all    
+
+    - name: mysql_install_db
+      shell: mysql_install_db --user=mysql --basedir=/usr/ --ldata=/var/lib/mysql/ 
+
+    - name: run mysqld_safe
+      shell: mysqld_safe > /dev/null 2>&1 &
+             sleep 5
+           
+    - name: Create mysql database
+      mysql_db:
+        name: "{{ wp_mysql_db }}"
+        state: present
+        
+    - name: Create mysql user
+      mysql_user: 
+        name: "{{ wp_mysql_user }}"
+        password: "{{ wp_mysql_password }}"
+        state: present
+        priv: "*.*:ALL,GRANT"
+        host: "%" 
+
+
+- hosts: wordpress
+  vars:
+    - wp_mysql_db: wordpress
+    - wp_mysql_user: wordpress
+    - wp_mysql_password: password
+  tasks:
+    - name: Update the system with required packages
+      shell: yum -y update && \
+             yum clean all && \
+             yum -y install epel-release && \
+             yum clean all
+
+    - name: Install packages
+      yum:
+        name: "{{ item }}"
+        state: latest 
+      with_items:
+        - httpd
+        - php
+        - php-mysql
+        - php-gd
+        - psmisc
+        - tar 
+
+    - name: Download wordpress
+      shell: cd /tmp; curl -LO http://wordpress.org/latest.tar.gz
+      
+    - name: untar
+      shell: tar -zxvf /tmp/latest.tar.gz -C /var/www/html
+
+    - name: change permission
+      shell: chmod +x /tmp/* 
+
+    - name: Change permission of files
+      shell: chown -R apache:apache /var/www/*
+      
+      
+    - name: Copy the sample file
+      command: mv /var/www/html/wordpress/wp-config-sample.php /var/www/html/wordpress/wp-config.php
+     
+    - name: Change DocumentRoot
+      lineinfile:
+        dest: /etc/httpd/conf/httpd.conf 
+        regexp: "(.)+DocumentRoot /var/www/html"
+        line: "DocumentRoot /var/www/html/wordpress"
+
+    - name: Update the database path
+      copy:
+        content: sed /var/www/html/wordpress/wp-config.php -i -e "s/^\(define('DB_HOST', '\).*\(');.*\)/\1${DB_PORT#tcp://}\2/"   
+        dest: /tmp/a.sh
+
+    - name: change perm
+      shell: chmod +x /tmp/a.sh
+
+    - name: Update WordPress config file        
+      lineinfile:
+        dest: /var/www/html/wordpress/wp-config.php
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      with_items:
+        - {'regexp': "define\\('DB_NAME', '(.)+'\\);", 'line': "define('DB_NAME', '{{wp_mysql_db}}');"}
+        - {'regexp': "define\\('DB_USER', '(.)+'\\);", 'line': "define('DB_USER', '{{wp_mysql_user}}');"}
+        - {'regexp': "define\\('DB_PASSWORD', '(.)+'\\);", 'line': "define('DB_PASSWORD', '{{wp_mysql_password}}');"} 
