@@ -80,11 +80,12 @@ def config_format_version(base_path, config_data=None):
         config_data = get_config(base_path)
     return int(config_data.pop('version', 1))
 
-def assert_initialized(base_path):
+def assert_initialized(base_path, args={}):
     ansible_dir = os.path.normpath(
         os.path.join(base_path, 'ansible'))
     container_file = os.path.join(ansible_dir, 'container.yml')
-    ansible_file = os.path.join(ansible_dir, 'main.yml')
+    ansible_file = args.get('playbook') if args.get('playbook') else \
+        os.path.join(ansible_dir, 'main.yml')
     if not os.path.exists(ansible_dir) or not os.path.isdir(ansible_dir) or \
             not os.path.exists(container_file) or not os.path.isfile(container_file) \
             or not os.path.exists(ansible_file) or not os.path.isfile(ansible_file):

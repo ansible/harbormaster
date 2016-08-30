@@ -293,7 +293,7 @@ def cmdrun_build(base_path, engine_name, flatten=True, purge_last=True, local_bu
         builder_img_id = engine_obj.get_image_id_by_tag(engine_obj.builder_container_img_tag)
     except NameError:
         if local_builder:
-            create_build_container(engine_obj, base_path)
+            create_build_container(engine_obj, base_path, kwargs)
     with make_temp_dir() as temp_dir:
         logger.info('Starting %s engine to build your images...'
                     % engine_obj.orchestrator_name)
@@ -330,7 +330,7 @@ def cmdrun_build(base_path, engine_name, flatten=True, purge_last=True, local_bu
 
 
 def cmdrun_run(base_path, engine_name, service=[], production=False, **kwargs):
-    assert_initialized(base_path)
+    assert_initialized(base_path, kwargs)
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
@@ -341,7 +341,7 @@ def cmdrun_run(base_path, engine_name, service=[], production=False, **kwargs):
 
 
 def cmdrun_stop(base_path, engine_name, service=[], **kwargs):
-    assert_initialized(base_path)
+    assert_initialized(base_path, kwargs)
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
@@ -351,7 +351,7 @@ def cmdrun_stop(base_path, engine_name, service=[], **kwargs):
 
 
 def cmdrun_restart(base_path, engine_name, service=[], **kwargs):
-    assert_initialized(base_path)
+    assert_initialized(base_path, kwargs)
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
@@ -361,7 +361,7 @@ def cmdrun_restart(base_path, engine_name, service=[], **kwargs):
 
 
 def cmdrun_push(base_path, engine_name, username=None, password=None, email=None, push_to=None, **kwargs):
-    assert_initialized(base_path)
+    assert_initialized(base_path, kwargs)
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
@@ -394,7 +394,7 @@ def cmdrun_push(base_path, engine_name, username=None, password=None, email=None
 
 
 def cmdrun_shipit(base_path, engine_name, pull_from=None, **kwargs):
-    assert_initialized(base_path)
+    assert_initialized(base_path, kwargs)
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)

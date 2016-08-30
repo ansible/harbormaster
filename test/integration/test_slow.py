@@ -123,6 +123,28 @@ def test_run_with_var_file():
     assert "ansible_db_1 exited with code 0" in result.stdout
     assert "ansible_web_1 exited with code 0" in result.stdout
 
+def test_build_with_playbook_path():
+    env = ScriptTestEnvironment()
+    result = env.run('ansible-container', '--playbook', 'custom.yml', 'build',
+                     cwd=project_dir('minimal_playbook_path'),
+                     expect_stderr=True)
+    assert "Aborting on container exit" in result.stdout
+    assert "Exported minimal_playbook_path-minimal1 with image ID" in result.stderr
+
+def test_run_with_playbook_path():
+    env = ScriptTestEnvironment()
+    result = env.run('ansible-container', '--playbook', 'custom.yml', 'run',
+                     '--detached', cwd=project_dir('minimal_playbook_path'),
+                     expect_stderr=True)
+    assert "Deploying application in detached mode" in result.stderr
+
+def test_stop_with_playbook_path():
+    env = ScriptTestEnvironment()
+    result = env.run('ansible-container', '--playbook', 'custom.yml', 'stop',
+                     '-f', cwd=project_dir('minimal_playbook_path'),
+                     expect_stderr=True)
+    assert "Killing ansible_minimal1_1 ... done" in result.stderr
+
 #def test_shipit_minimal_docker_container():
 #    env = ScriptTestEnvironment()
 #    result = env.run('ansible-container', 'shipit', 'kube', cwd=project_dir('minimal'), expect_error=True)

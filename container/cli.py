@@ -174,6 +174,10 @@ def commandline():
     parser.add_argument('--var-file', action='store',
                         help=u'Path to a YAML or JSON formatted file providing variables for '
                              u'Jinja2 templating in container.yml.', default=None)
+    parser.add_argument('--playbook', action='store',
+                           help=u'Path to playbook to use to provision '
+                                u'container images, overrides ansible/main.yml')
+
 
     subparsers = parser.add_subparsers(title='subcommand', dest='subcommand')
     for subcommand in AVAILABLE_COMMANDS:
@@ -190,6 +194,9 @@ def commandline():
     if args.debug and args.subcommand != 'version':
         LOGGING['loggers']['container']['level'] = 'DEBUG'
     config.dictConfig(LOGGING)
+
+    if args.playbook:
+        args.playbook = os.path.realpath(args.playbook)
 
     try:
         getattr(engine, u'cmdrun_{}'.format(args.subcommand))(**vars(args))

@@ -1,0 +1,7 @@
+version: "1"
+services:
+  minimal1:
+    image: busybox
+    command: sleep 1d
+    volumes:
+      - '/tmp/volume1'
