@@ -49,14 +49,16 @@ class AnsibleContainerConfig(Mapping):
         if config.get('defaults'):
             del config['defaults']
 
-        for service, service_config in config['services'].items():
-            if not service_config or isinstance(service_config, basestring):
-                raise AnsibleContainerConfigException(u"Error: no definition found in container.yml for service %s."
-                                                      % service)
-            if isinstance(service_config, dict):
-                dev_overrides = service_config.pop('dev_overrides', {})
-                if env == 'dev':
-                    service_config.update(dev_overrides)
+        # definition is one of services, volumes, networks for Docker Compose v2
+        for definition, configuration in config.iteritems():
+            if definition in ['services', 'volumes', 'networks']:
+                for arg, param in configuration.items():
+                    if not param or isinstance(param, basestring):
+                        raise AnsibleContainerConfigException(u"Error: no definition found in container.yml for {} definition - {}.".format(definition, arg))
+                    if isinstance(param, dict):
+                        dev_overrides = param.pop('dev_overrides', {})
+                        if env == 'dev':
+                            param.update(dev_overrides)
 
         logger.debug(u"Config:\n%s" % json.dumps(config,
                                                  sort_keys=True,

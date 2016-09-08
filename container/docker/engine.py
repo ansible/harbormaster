@@ -433,13 +433,13 @@ class Engine(BaseEngine):
         for service, service_config in compose_config.items():
             if service in orchestrated_hosts:
                 logger.debug('Setting %s to sleep', service)
-                service_config.update(
-                    dict(
-                        user='root',
-                        working_dir='/',
-                        command='sh -c "while true; do sleep 1; done"',
-                        entrypoint=[],
-                    )
+                service_image = service_config.get('image')
+                compose_config[service] = dict(
+                    image=service_image,
+                    user='root',
+                    working_dir='/',
+                    command='sh -c "while true; do sleep 1; done"',
+                    entrypoint=[]
                 )
                 # Set ANSIBLE_CONTAINER=1 in env
                 if service_config.get('environment'):
@@ -490,13 +490,13 @@ class Engine(BaseEngine):
     def get_config_for_listhosts(self):
         compose_config = config_to_compose(self.config)
         for service, service_config in compose_config.items():
-            service_config.update(
-                dict(
+            service_image = service_config.get('image')
+            compose_config[service] = dict(
+                    image=service_image,
                     user='root',
                     working_dir='/',
                     command='sh -c "while true; do sleep 1; done"',
                     entrypoint=[]
-                )
             )
         return compose_config
 
@@ -740,7 +740,7 @@ class Engine(BaseEngine):
         pprint.pprint(client.version())
 
     def bootstrap_env(self, temp_dir, behavior, operation, compose_option,
-                      builder_img_id=None, context=None):
+                      is_jinja=True, builder_img_id=None, context=None):
         """
         Build common Docker Compose elements required to execute orchestrate,
         terminate, restart, etc.
@@ -759,6 +759,9 @@ class Engine(BaseEngine):
         if context is None:
             context = {}
 
+        if operation in ('run', 'stop', 'restart'):
+            is_jinja = False
+
         self.temp_dir = temp_dir
         extra_options = getattr(self, '{}_{}_extra_args'.format(behavior,
                                                                 operation))()
@@ -767,18 +770,24 @@ class Engine(BaseEngine):
         config_yaml = yaml_dump(config)
         logger.debug('Config YAML is')
         logger.debug(config_yaml)
-        jinja_render_to_temp('%s-docker-compose.j2.yml' % (operation,),
-                             temp_dir,
-                             'docker-compose.yml',
-                             hosts=self.all_hosts_in_orchestration(),
-                             project_name=self.project_name,
-                             base_path=self.base_path,
-                             params=self.params,
-                             api_version=self.api_version,
-                             builder_img_id=builder_img_id,
-                             config=config_yaml,
-                             env=os.environ,
-                             **context)
+
+        if is_jinja:
+            jinja_render_to_temp('%s-docker-compose.j2.yml' % (operation,),
+                                 temp_dir,
+                                 'docker-compose.yml',
+                                 hosts=self.all_hosts_in_orchestration(),
+                                 project_name=self.project_name,
+                                 base_path=self.base_path,
+                                 params=self.params,
+                                 api_version=self.api_version,
+                                 builder_img_id=builder_img_id,
+                                 config=config_yaml,
+                                 env=os.environ,
+                                 **context)
+        else:
+            with open(os.path.join(temp_dir, 'docker-compose.yml'), 'w') as f:
+                f.write(yaml_dump(self.config._config))
+
         options = self.DEFAULT_COMPOSE_OPTIONS.copy()
 
         options.update({
