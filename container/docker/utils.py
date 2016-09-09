@@ -82,6 +82,7 @@ def config_to_compose(config):
     # removing the ones that aren't.
     compose = copy.deepcopy(config.get('services', {}))
     assert compose is not config.get('services')
+    compose.pop('ansible_build')
     for service, service_config in compose.items():
         if 'options' in service_config:
             del service_config['options']

@@ -27,7 +27,8 @@ class BaseEngine(object):
         self.base_path = base_path
         self.project_name = project_name
         self.var_file = params.get('var_file')
-        self.config = get_config(base_path, var_file=self.var_file)
+        self.playbook = params.get('playbook')
+        self.config, self.ansible_build = get_config(base_path, var_file=self.var_file)
         self.params = params
         self.support_init = True
         self.supports_build = True
@@ -285,6 +286,7 @@ def cmdrun_init(base_path, **kwargs):
 
 def cmdrun_build(base_path, engine_name, flatten=True, purge_last=True, local_builder=False,
                  rebuild=False, ansible_options='', **kwargs):
+    assert_initialized(base_path, playbook=kwargs.get('playbook'))
     save_build_container = kwargs.pop('save_build_container')
     engine_args = kwargs.copy()
     engine_args.update(locals())
@@ -293,24 +295,12 @@ def cmdrun_build(base_path, engine_name, flatten=True, purge_last=True, local_bu
         builder_img_id = engine_obj.get_image_id_by_tag(engine_obj.builder_container_img_tag)
     except NameError:
         if local_builder:
-            create_build_container(engine_obj, base_path)
+            create_build_container(engine_obj, base_path, kwargs)
     with make_temp_dir() as temp_dir:
         logger.info('Starting %s engine to build your images...'
                     % engine_obj.orchestrator_name)
         touched_hosts = engine_obj.hosts_touched_by_playbook()
-        with_volumes = []
-        if kwargs.get('with_volumes'):
-            for vol in kwargs.pop('with_volumes'):
-                with_volumes += vol
-            logger.debug("volumes: %s" % ','.join(with_volumes))
-        with_variables = []
-        if kwargs.get('with_variables'):
-            for env_var in kwargs.pop('with_variables'):
-                with_variables += env_var
-            logger.debug("env variables: %s" % ','.join(with_variables))
-        engine_obj.orchestrate('build', temp_dir, context=dict(rebuild=rebuild,
-                                                               with_volumes=with_volumes,
-                                                               with_variables=with_variables))
+        engine_obj.orchestrate('build', temp_dir, context=dict(rebuild=rebuild))
         if not engine_obj.build_was_successful():
             logger.error('Ansible playbook run failed.')
             if not save_build_container:
@@ -330,7 +320,7 @@ def cmdrun_build(base_path, engine_name, flatten=True, purge_last=True, local_bu
 
 
 def cmdrun_run(base_path, engine_name, service=[], production=False, **kwargs):
-    assert_initialized(base_path)
+    assert_initialized(base_path, playbook=kwargs.get('playbook'))
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
@@ -341,7 +331,7 @@ def cmdrun_run(base_path, engine_name, service=[], production=False, **kwargs):
 
 
 def cmdrun_stop(base_path, engine_name, service=[], **kwargs):
-    assert_initialized(base_path)
+    assert_initialized(base_path, playbook=kwargs.get('playbook'))
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
@@ -351,7 +341,7 @@ def cmdrun_stop(base_path, engine_name, service=[], **kwargs):
 
 
 def cmdrun_restart(base_path, engine_name, service=[], **kwargs):
-    assert_initialized(base_path)
+    assert_initialized(base_path, playbook=kwargs.get('playbook'))
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
@@ -361,7 +351,7 @@ def cmdrun_restart(base_path, engine_name, service=[], **kwargs):
 
 
 def cmdrun_push(base_path, engine_name, username=None, password=None, email=None, push_to=None, **kwargs):
-    assert_initialized(base_path)
+    assert_initialized(base_path, playbook=kwargs.get('playbook'))
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
@@ -394,7 +384,7 @@ def cmdrun_push(base_path, engine_name, username=None, password=None, email=None
 
 
 def cmdrun_shipit(base_path, engine_name, pull_from=None, **kwargs):
-    assert_initialized(base_path)
+    assert_initialized(base_path, playbook=kwargs.get('playbook'))
     engine_args = kwargs.copy()
     engine_args.update(locals())
     engine_obj = load_engine(**engine_args)
@@ -442,19 +432,21 @@ def cmdrun_shipit(base_path, engine_name, pull_from=None, **kwargs):
         config_path = shipit_engine_obj.save_config()
         logger.info('Saved configuration to %s' % config_path)
 
+
 def cmdrun_version(base_path, engine_name, debug=False, **kwargs):
     print 'Ansible Container, version', __version__
     if debug:
         print u', '.join(os.uname())
         print sys.version, sys.executable
-        assert_initialized(base_path)
+        assert_initialized(base_path, playbook=kwargs.get('playbook'))
         engine_args = kwargs.copy()
         engine_args.update(locals())
         engine_obj = load_engine(**engine_args)
         engine_obj.print_version_info()
 
-def create_build_container(container_engine_obj, base_path):
-    assert_initialized(base_path)
+
+def create_build_container(container_engine_obj, base_path, **kwargs):
+    assert_initialized(base_path, playbook=kwargs.get('playbook'))
     logger.info('(Re)building the Ansible Container image.')
     build_output = container_engine_obj.build_buildcontainer_image()
     for line in build_output:
@@ -469,8 +461,8 @@ def resolve_push_to(push_to, default_url):
     Given a push-to value, return the registry and namespace.
 
     :param push_to: string: User supplied --push-to value.
-    :param default_index: string: Container engine's default_index value (e.g. docker.io).
-    :return: tuple: index_name, namespace
+    :param default_url: string: Container engine's default_url value (e.g. docker.io).
+    :return: tuple: registry_url, namespace
     '''
     protocol = 'http://' if push_to.startswith('http://') else 'https://'
     url = push_to = REMOVE_HTTP.sub('', push_to)
@@ -490,4 +482,9 @@ def resolve_push_to(push_to, default_url):
         namespace = parts[1]
 
     return registry_url, namespace
+
+def get_playbook_volume(playbook, volumes):
+    path = os.path.normpath(playbook)
+    dirname = os.path.dirname(path)
+    volume = "{0}:{0}".format(dirname)
 

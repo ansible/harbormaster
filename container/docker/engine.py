@@ -85,7 +85,7 @@ class Engine(BaseEngine):
 
         :return: generator of strings
         """
-        assert_initialized(self.base_path)
+        assert_initialized(self.base_path, playbook=self.playbook)
         client = self.get_client()
         with make_temp_dir() as temp_dir:
             logger.info('Building Docker Engine context...')
@@ -757,6 +757,10 @@ class Engine(BaseEngine):
         config_yaml = yaml_dump(config)
         logger.debug('Config YAML is')
         logger.debug(config_yaml)
+        with_volumes = self.params.get('with_volumes')
+        with_variables = self.params.get('with_variables')
+        logger.debug("with volumes: {0}\n with_variables: {1}".format(','.join(with_volumes),
+                                                                      ','.join(with_variables)))
         jinja_render_to_temp('%s-docker-compose.j2.yml' % (operation,),
                              temp_dir,
                              'docker-compose.yml',
@@ -768,6 +772,9 @@ class Engine(BaseEngine):
                              builder_img_id=builder_img_id,
                              config=config_yaml,
                              env=os.environ,
+                             playbook=self.playbook,
+                             with_volumes=with_volumes,
+                             with_variables=with_variables,
                              **context)
         options = self.DEFAULT_COMPOSE_OPTIONS.copy()
 

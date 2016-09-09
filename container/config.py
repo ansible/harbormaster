@@ -31,7 +31,7 @@ class AnsibleContainerConfig(Mapping):
         self.config_path = os.path.join(self.base_path, 'ansible/container.yml')
         self.all_filters = self.filter_loader.all()
         self.set_env('prod')
-
+    
     def set_env(self, env):
         '''
         Loads config from container.yml, performs Jinja templating, and stores the resulting dict to self._config.
@@ -48,7 +48,6 @@ class AnsibleContainerConfig(Mapping):
             raise AnsibleContainerConfigException(u"Parsing container.yml - %s" % str(exc))
         if config.get('defaults'):
             del config['defaults']
-
         for service, service_config in config['services'].items():
             if not service_config or isinstance(service_config, basestring):
                 raise AnsibleContainerConfigException(u"Error: no definition found in container.yml for service %s."
