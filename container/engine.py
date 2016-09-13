@@ -298,7 +298,8 @@ def cmdrun_build(base_path, engine_name, flatten=True, purge_last=True, local_bu
         logger.info('Starting %s engine to build your images...'
                     % engine_obj.orchestrator_name)
         touched_hosts = engine_obj.hosts_touched_by_playbook()
-        engine_obj.orchestrate('build', temp_dir, context=dict(rebuild=rebuild))
+        context = {'rebuild': rebuild, 'temp_file': 'builder_service.yml'}
+        engine_obj.orchestrate('build', temp_dir, context=context)
         if not engine_obj.build_was_successful():
             logger.error('Ansible playbook run failed.')
             if not save_build_container:

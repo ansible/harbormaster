@@ -5,6 +5,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from copy import deepcopy
 import os
 import re
 import tarfile
@@ -18,7 +19,7 @@ from docker.client import errors as docker_errors
 from docker.utils import kwargs_from_env
 from compose.cli.command import project_from_options
 from compose.cli import main
-from yaml import dump as yaml_dump
+from yaml import load as yaml_load, dump as yaml_dump
 
 from ..exceptions import (AnsibleContainerNotInitializedException,
                           AnsibleContainerNoAuthenticationProvidedException,
@@ -762,6 +763,9 @@ class Engine(BaseEngine):
         if operation in ('run', 'stop', 'restart'):
             is_jinja = False
 
+        filename = context['temp_file'] if context.get('temp_file') \
+            else 'docker-compose.yml'
+
         self.temp_dir = temp_dir
         extra_options = getattr(self, '{}_{}_extra_args'.format(behavior,
                                                                 operation))()
@@ -774,7 +778,7 @@ class Engine(BaseEngine):
         if is_jinja:
             jinja_render_to_temp('%s-docker-compose.j2.yml' % (operation,),
                                  temp_dir,
-                                 'docker-compose.yml',
+                                 dest_file=filename,
                                  hosts=self.all_hosts_in_orchestration(),
                                  project_name=self.project_name,
                                  base_path=self.base_path,
@@ -784,6 +788,14 @@ class Engine(BaseEngine):
                                  config=config_yaml,
                                  env=os.environ,
                                  **context)
+            with open(os.path.join(temp_dir, filename), 'r') as f:
+                builder_service_yaml = yaml_load(f.read())
+
+            with open(os.path.join(temp_dir, 'docker-compose.yml'), 'w') as f:
+                original_compose = deepcopy(self.config._config)
+                original_compose['services'].update(builder_service_yaml)
+                f.write(yaml_dump(original_compose))
+
         else:
             with open(os.path.join(temp_dir, 'docker-compose.yml'), 'w') as f:
                 f.write(yaml_dump(self.config._config))
