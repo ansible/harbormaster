@@ -23,4 +23,3 @@ ansible-container:
   working_dir: /ansible-container/ansible/
   stdin_open: true
   tty: true
-{{ config }}

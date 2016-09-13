@@ -63,10 +63,12 @@ class Engine(BaseEngine):
 
         :return: list of strings
         """
+        context = {'temp_file': 'builder_service.yml'}
         if not self._orchestrated_hosts:
             with teed_stdout() as stdout, make_temp_dir() as temp_dir:
                 self.orchestrate('listhosts', temp_dir,
-                                 hosts=[self.builder_container_img_name])
+                                 hosts=[self.builder_container_img_name],
+                                 context=context)
                 logger.info('Cleaning up Ansible Container builder...')
                 builder_container_id = self.get_builder_container_id()
                 self.remove_container_by_id(builder_container_id)
@@ -775,6 +777,8 @@ class Engine(BaseEngine):
         logger.debug('Config YAML is')
         logger.debug(config_yaml)
 
+        original_compose = deepcopy(self.config._config)
+
         if is_jinja:
             jinja_render_to_temp('%s-docker-compose.j2.yml' % (operation,),
                                  temp_dir,
@@ -788,17 +792,23 @@ class Engine(BaseEngine):
                                  config=config_yaml,
                                  env=os.environ,
                                  **context)
+
             with open(os.path.join(temp_dir, filename), 'r') as f:
                 builder_service_yaml = yaml_load(f.read())
 
-            with open(os.path.join(temp_dir, 'docker-compose.yml'), 'w') as f:
-                original_compose = deepcopy(self.config._config)
-                original_compose['services'].update(builder_service_yaml)
-                f.write(yaml_dump(original_compose))
+            original_compose['services'].update(builder_service_yaml)
 
-        else:
-            with open(os.path.join(temp_dir, 'docker-compose.yml'), 'w') as f:
-                f.write(yaml_dump(self.config._config))
+        original_compose['services'].update(config)
+
+        if original_compose.get('version') == '1':
+            original_compose = original_compose['services']
+
+        docker_compose_yaml = yaml_dump(original_compose)
+        logger.debug('Generated docker-compose.yml is:')
+        logger.debug(docker_compose_yaml)
+
+        with open(os.path.join(temp_dir, 'docker-compose.yml'), 'w') as f:
+            f.write(docker_compose_yaml)
 
         options = self.DEFAULT_COMPOSE_OPTIONS.copy()
 
