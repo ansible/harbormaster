@@ -1,0 +1,17 @@
+version: "2"
+services:
+  minimal1:
+    image: centos:7
+    command: sleep 1d
+    volumes:
+      - vol1:/tmp/volume1
+    networks:
+      - front-tier
+
+networks:
+  front-tier:
+    driver: bridge
+
+volumes:
+  vol1:
+    external: false

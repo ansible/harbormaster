@@ -137,6 +137,36 @@ def test_setting_ansible_container_envar():
     assert "db MYVAR=foo ANSIBLE_CONTAINER=1" in result.stdout
     assert "mw ANSIBLE_CONTAINER=1" in result.stdout
 
+def test_build_compose_v2():
+    env = ScriptTestEnvironment()
+    result = env.run('ansible-container', '--debug', 'build',
+                     cwd=project_dir('minimal_compose_v2'),
+                     expect_stderr=True)
+    assert "Aborting on container exit" in result.stdout
+    assert "Exported minimal_compose_v2-minimal2 with image ID " in \
+        result.stderr
+    assert "Exported minimal_compose_v2-minimal1 with image ID " in \
+        result.stderr
+
+def test_run_compose_v2():
+    env = ScriptTestEnvironment()
+    result = env.run('ansible-container', 'run',
+                     cwd=project_dir('minimal_compose_v2'),
+                     expect_stderr=True)
+    assert "ansible_minimal1_1 exited with code 0" in result.stdout
+    assert "ansible_minimal2_1 exited with code 0" in result.stdout
+
+def test_stop_compose_v2():
+    env = ScriptTestEnvironment()
+    env.run('ansible-container', 'run', '-d',
+            cwd=project_dir('minimal_sleep_compose_v2'),
+            expect_stderr=True)
+    result = env.run('ansible-container', 'stop', '-f',
+                     cwd=project_dir('minimal_sleep_compose_v2'),
+                     expect_stderr=True)
+
+    assert "Killing ansible_minimal1_1 ... done" in result.stderr
+
 #def test_shipit_minimal_docker_container():
 #    env = ScriptTestEnvironment()
 #    result = env.run('ansible-container', 'shipit', 'kube', cwd=project_dir('minimal'), expect_error=True)

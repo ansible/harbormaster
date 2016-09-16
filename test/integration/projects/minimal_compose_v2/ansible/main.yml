@@ -1,0 +1,5 @@
+- hosts: minimal1, minimal2
+  gather_facts: false
+  tasks:
+    - name: Create temporary file and add data
+      shell: echo "this_is_test" > /tmp/test.conf
