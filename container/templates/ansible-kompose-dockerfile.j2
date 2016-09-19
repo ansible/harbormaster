@@ -1,0 +1,7 @@
+FROM ansible/ansible-container-builder:0.2
+
+# Fetch kompose
+ADD https://github.com/skippbox/kompose/releases/download/v0.1.0/kompose_linux-amd64.tar.gz /tmp/
+
+# Decompress and add binary to $PATH
+RUN tar xzf /tmp/kompose_linux-amd64.tar.gz --strip-components 1 -C /usr/bin/
