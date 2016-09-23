@@ -1,4 +1,0 @@
-ansible-container:
-  image: tianon/true
-  command: /bin/false
-{{ config }}

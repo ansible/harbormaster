@@ -21,4 +21,3 @@ ansible-container:
     {% if params.with_volumes %}{% for vol in params.with_volumes %}
     - {{ vol }}{% endfor %}{% endif %}
   working_dir: /ansible-container/ansible/
-{{ config }}

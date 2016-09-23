@@ -1,0 +1,28 @@
+version: "2"
+services:
+  minimal1:
+    image: centos:7
+    command: cat /tmp/test.conf
+    volumes:
+      - vol1:/tmp/volume1
+    networks:
+      - front-tier
+  minimal2:
+    image: centos:7
+    command: cat /tmp/test.conf
+    volumes:
+      - vol2:/tmp/volume2
+    networks:
+      - back-tier
+
+networks:
+  front-tier:
+    driver: bridge
+  back-tier:
+    driver: bridge
+
+volumes:
+  vol1:
+    external: false
+  vol2:
+    external: false

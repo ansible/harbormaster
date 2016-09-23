@@ -5,6 +5,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from copy import deepcopy
 import os
 import re
 import tarfile
@@ -18,7 +19,7 @@ from docker.client import errors as docker_errors
 from docker.utils import kwargs_from_env
 from compose.cli.command import project_from_options
 from compose.cli import main
-from yaml import dump as yaml_dump
+from yaml import load as yaml_load, dump as yaml_dump
 
 from ..exceptions import (AnsibleContainerNotInitializedException,
                           AnsibleContainerNoAuthenticationProvidedException,
@@ -62,10 +63,12 @@ class Engine(BaseEngine):
 
         :return: list of strings
         """
+        context = {'temp_file': 'builder_service.yml'}
         if not self._orchestrated_hosts:
             with teed_stdout() as stdout, make_temp_dir() as temp_dir:
                 self.orchestrate('listhosts', temp_dir,
-                                 hosts=[self.builder_container_img_name])
+                                 hosts=[self.builder_container_img_name],
+                                 context=context)
                 logger.info('Cleaning up Ansible Container builder...')
                 builder_container_id = self.get_builder_container_id()
                 self.remove_container_by_id(builder_container_id)
@@ -433,13 +436,13 @@ class Engine(BaseEngine):
         for service, service_config in compose_config.items():
             if service in orchestrated_hosts:
                 logger.debug('Setting %s to sleep', service)
-                service_config.update(
-                    dict(
-                        user='root',
-                        working_dir='/',
-                        command='sh -c "while true; do sleep 1; done"',
-                        entrypoint=[],
-                    )
+                service_image = service_config.get('image')
+                compose_config[service] = dict(
+                    image=service_image,
+                    user='root',
+                    working_dir='/',
+                    command='sh -c "while true; do sleep 1; done"',
+                    entrypoint=[]
                 )
                 # Set ANSIBLE_CONTAINER=1 in env
                 if service_config.get('environment'):
@@ -490,13 +493,13 @@ class Engine(BaseEngine):
     def get_config_for_listhosts(self):
         compose_config = config_to_compose(self.config)
         for service, service_config in compose_config.items():
-            service_config.update(
-                dict(
+            service_image = service_config.get('image')
+            compose_config[service] = dict(
+                    image=service_image,
                     user='root',
                     working_dir='/',
                     command='sh -c "while true; do sleep 1; done"',
                     entrypoint=[]
-                )
             )
         return compose_config
 
@@ -745,7 +748,7 @@ class Engine(BaseEngine):
         pprint.pprint(client.version())
 
     def bootstrap_env(self, temp_dir, behavior, operation, compose_option,
-                      builder_img_id=None, context=None):
+                      is_jinja=True, builder_img_id=None, context=None):
         """
         Build common Docker Compose elements required to execute orchestrate,
         terminate, restart, etc.
@@ -764,6 +767,12 @@ class Engine(BaseEngine):
         if context is None:
             context = {}
 
+        if operation in ('run', 'stop', 'restart'):
+            is_jinja = False
+
+        filename = context['temp_file'] if context.get('temp_file') \
+            else 'docker-compose.yml'
+
         self.temp_dir = temp_dir
         extra_options = getattr(self, '{}_{}_extra_args'.format(behavior,
                                                                 operation))()
@@ -772,18 +781,40 @@ class Engine(BaseEngine):
         config_yaml = yaml_dump(config)
         logger.debug('Config YAML is')
         logger.debug(config_yaml)
-        jinja_render_to_temp('%s-docker-compose.j2.yml' % (operation,),
-                             temp_dir,
-                             'docker-compose.yml',
-                             hosts=self.all_hosts_in_orchestration(),
-                             project_name=self.project_name,
-                             base_path=self.base_path,
-                             params=self.params,
-                             api_version=self.api_version,
-                             builder_img_id=builder_img_id,
-                             config=config_yaml,
-                             env=os.environ,
-                             **context)
+
+        original_compose = deepcopy(self.config._config)
+
+        if is_jinja:
+            jinja_render_to_temp('%s-docker-compose.j2.yml' % (operation,),
+                                 temp_dir,
+                                 dest_file=filename,
+                                 hosts=self.all_hosts_in_orchestration(),
+                                 project_name=self.project_name,
+                                 base_path=self.base_path,
+                                 params=self.params,
+                                 api_version=self.api_version,
+                                 builder_img_id=builder_img_id,
+                                 config=config_yaml,
+                                 env=os.environ,
+                                 **context)
+
+            with open(os.path.join(temp_dir, filename), 'r') as f:
+                builder_service_yaml = yaml_load(f.read())
+
+            original_compose['services'].update(builder_service_yaml)
+
+        original_compose['services'].update(config)
+
+        if original_compose.get('version') == '1':
+            original_compose = original_compose['services']
+
+        docker_compose_yaml = yaml_dump(original_compose)
+        logger.debug('Generated docker-compose.yml is:')
+        logger.debug(docker_compose_yaml)
+
+        with open(os.path.join(temp_dir, 'docker-compose.yml'), 'w') as f:
+            f.write(docker_compose_yaml)
+
         options = self.DEFAULT_COMPOSE_OPTIONS.copy()
 
         options.update({
