@@ -127,7 +127,10 @@ def test_install_role_requirements():
     env = ScriptTestEnvironment()
     result = env.run('ansible-container', '--debug', 'build',
                      cwd=project_dir('requirements'), expect_stderr=True)
-    assert "ansible-role-apache was installed successfully" in result.stderr
+    print result.stdout
+    print "YYYYYYYYYYYYYYYYYYYYYYYYYYY\n"
+    print result.stderr
+    assert "ansible-role-apache was installed successfully" in result.stdout
 
 @pytest.mark.timeout(240)
 def test_setting_ansible_container_envar():
