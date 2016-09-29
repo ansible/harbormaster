@@ -1,6 +1,7 @@
 import os
 import pytest
-
+import json
+import yaml
 from scripttest import TestFileEnvironment as ScriptTestEnvironment  # rename to avoid pytest collect warning
 
 
@@ -8,6 +9,12 @@ def project_dir(name):
     test_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(test_dir, 'projects', name)
 
+def order_dict_or_list(to_order):
+    if isinstance(to_order, dict):
+        return sorted((k, order_dict_or_list(v)) for k, v in to_order.items())
+    if isinstance(to_order, list):
+        return sorted(order_dict_or_list(x) for x in to_order)
+    return to_order
 
 @pytest.mark.timeout(240)
 def test_build_minimal_docker_container():
@@ -137,6 +144,36 @@ def test_setting_ansible_container_envar():
     assert "web MYVAR=foo ANSIBLE_CONTAINER=1" in result.stdout
     assert "db MYVAR=foo ANSIBLE_CONTAINER=1" in result.stdout
     assert "mw ANSIBLE_CONTAINER=1" in result.stdout
+
+def test_shipit_save_config_kube():
+    env = ScriptTestEnvironment()
+    result = env.run('ansible-container', 'shipit', 'kube', '--save-config',
+                     cwd=project_dir('minimal2_v1'), expect_stderr=True)
+    assert "Saved configuration to" in result.stderr
+
+    with open(os.path.join(project_dir('minimal2_v1'),
+        'ansible/shipit_config/kubernetes/deployment_artifacts.yml'), 'r') as f:
+        converted = order_dict_or_list(yaml.load(f.read()))
+
+    with open(os.path.join(project_dir('minimal2_v1'), 'desired_k8s.yml')) as f:
+        desired = order_dict_or_list(yaml.load(f.read()))
+
+    assert converted == desired
+
+def test_shipit_save_config_openshift():
+    env = ScriptTestEnvironment()
+    result = env.run('ansible-container', 'shipit', 'openshift', '--save-config',
+                     cwd=project_dir('minimal2_v1'), expect_stderr=True)
+    assert "Saved configuration to" in result.stderr
+
+    with open(os.path.join(project_dir('minimal2_v1'),
+        'ansible/shipit_config/openshift/deployment_artifacts.yml'), 'r') as f:
+        converted = order_dict_or_list(yaml.load(f.read()))
+
+    with open(os.path.join(project_dir('minimal2_v1'), 'desired_oc.yml')) as f:
+        desired = order_dict_or_list(yaml.load(f.read()))
+
+        assert converted == desired
 
 #def test_shipit_minimal_docker_container():
 #    env = ScriptTestEnvironment()
