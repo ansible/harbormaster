@@ -1,6 +1,5 @@
 import os
 import pytest
-import json
 import yaml
 from scripttest import TestFileEnvironment as ScriptTestEnvironment  # rename to avoid pytest collect warning
 
@@ -147,7 +146,7 @@ def test_setting_ansible_container_envar():
 
 def test_shipit_save_config_kube():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'shipit', 'kube', '--save-config',
+    result = env.run('ansible-container', '--debug', 'shipit', 'kube', '--save-config',
                      cwd=project_dir('minimal2_v1'), expect_stderr=True)
     assert "Saved configuration to" in result.stderr
 
@@ -162,7 +161,7 @@ def test_shipit_save_config_kube():
 
 def test_shipit_save_config_openshift():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'shipit', 'openshift', '--save-config',
+    result = env.run('ansible-container', '--debug', 'shipit', 'openshift', '--save-config',
                      cwd=project_dir('minimal2_v1'), expect_stderr=True)
     assert "Saved configuration to" in result.stderr
 
