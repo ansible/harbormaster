@@ -103,8 +103,8 @@ def test_restart_minimal_docker_container():
     result = env.run('ansible-container', 'restart', cwd=project_dir('minimal_sleep'), expect_stderr=True)
     assert "Restarting ansible_minimal1_1 ... done" in result.stderr
     assert "Restarting ansible_minimal2_1 ... done" in result.stderr
-    env.run('ansible-container', 'stop', cwd=project_dir('minimal_sleep'),
-            expect_stderr=True)
+    env.run('ansible-container', 'stop', '-f',
+            cwd=project_dir('minimal_sleep'), expect_stderr=True)
 
 
 def test_restart_service_minimal_docker_container():
@@ -113,7 +113,8 @@ def test_restart_service_minimal_docker_container():
     result = env.run('ansible-container', 'restart', 'minimal1', cwd=project_dir('minimal_sleep'), expect_stderr=True)
     assert "Restarting ansible_minimal1_1 ... done" in result.stderr
     assert "Restarting ansible_minimal2_1 ... done" not in result.stderr
-
+    env.run('ansible-container', 'stop', '-f',
+            cwd=project_dir('minimal_sleep'))
 
 def test_build_with_var_file():
     env = ScriptTestEnvironment()
