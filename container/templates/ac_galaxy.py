@@ -186,7 +186,7 @@ def update_requirements_yml(role_obj):
             return
     role_def = {}
     role_def[u'src'] = role_obj.src
-    if role_obj.version and role_obj.vesion != 'master':
+    if role_obj.version and role_obj.version != 'master':
         role_def[u'version'] = role_obj.version
     if role_obj.scm:
         role_def[u'scm'] = role_obj.scm
