@@ -360,12 +360,18 @@ class Deployment(object):
                         existing_ports.append(int(port))
 
     @staticmethod
+    # def _port_exists(port, ports):
+    #     found = False
+    #     for p in ports:
+    #         if p['containerPort'] == int(port):
+    #             found = True
+    #             break
+    #     return found
     def _port_exists(port, ports):
         found = False
-        for p in ports:
-            if p['containerPort'] == int(port):
-                found = True
-                break
+        if int(port) in ports:
+            found = True
+            break
         return found
 
     @staticmethod
