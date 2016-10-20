@@ -180,11 +180,19 @@ def update_requirements_yml(role_obj):
     if not requirements:
         requirements = []
     for req in requirements:
-        if req.get('src', '') == role_obj.name:
+        if req.get('src', '') == role_obj.src:
             logger.warning('Requirement %s already found in requirements.yml',
                            role_obj.name)
             return
-    requirements.append({'src': role_obj.name})
+    role_def = {}
+    role_def[u'src'] = role_obj.src
+    if role_obj.version and role_obj.version != 'master':
+        role_def[u'version'] = role_obj.version
+    if role_obj.scm:
+        role_def[u'scm'] = role_obj.scm
+    if role_obj.name and role_obj.name != role_obj.src:
+        role_def[u'name'] = role_obj.name
+    requirements.append(role_def)
     try:
         ruamel.yaml.round_trip_dump(requirements,
                                     stream=open(requirements_yml_path, 'w'))

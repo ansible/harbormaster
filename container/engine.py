@@ -435,7 +435,7 @@ def cmdrun_push(base_path, engine_name, username=None, password=None, email=None
     url = engine_obj.default_registry_url
     namespace = None
     if push_to:
-        if config.get('registries', {}).get(push_to):
+        if (config.get('registries') or {}).get(push_to):
             url = config['registries'][push_to].get('url')
             namespace = config['registries'][push_to].get('namespace')
             if not url:

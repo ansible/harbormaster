@@ -31,13 +31,13 @@ locally, then the following will execute the role as part of ``main.yml``:
 
 .. note::
 
-    If using Docker Machine, be aware that mounting paths outside fo the user's home directory to a container may
+    If using Docker Machine, be aware that mounting paths outside of the user's home directory to a container may
     require additional steps. For more details see the Docker tutorial, `Manage data in containers <https://docs.docker.com/engine/tutorials/dockervolumes/#/mount-a-host-directory-as-a-data-volume>`_.
 
 .. note::
 
     If you choose to access locally installed roles using ``--roles-path``, then you must include the ``--roles-path``
-    optioin when running the ``run``, ``push`` and ``shipit`` commands. During these operations the ``main.yml`` playbook is
+    option when running the ``run``, ``push`` and ``shipit`` commands. During these operations the ``main.yml`` playbook is
     accessed using the ``--list-hosts`` option to determine the list of hosts affected by the playbook. If roles cannot be
     accessed, Ansible Playbook will fail to parse ``main.yml``.
 

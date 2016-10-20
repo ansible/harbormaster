@@ -55,6 +55,36 @@ For more details, prerequisite, and instructions on installing the latest develo
 
 For examples and a tour of Ansible Container [visit our docs site](https://docs.ansible.com/ansible-container/).
 
+If you just can't wait, the following provides a quick install and run of the demo app.
+
+Assuming you already installed Ansible Container, start by creating an empty project folder, and then initialize it with a Container App from [Ansible Galaxy](https://galaxy.ansible.com):
+
+```
+$ mkdir demo
+$ cd demo
+$ ansible-container init j00bar.django-gulp-nginx
+```
+
+From the project directory, build the images:
+
+```
+$ ansible-container build
+```
+
+And finally, from the project directory, run the app:
+
+```
+$ ansible-container run
+```
+
+The demo web server is available at port 8080. If you're running Docker Machine, for example, you can access the 
+site using the IP address of the Docker Machine host like so:
+
+```
+$ open http://$(docker-machine ip default):8080/admin
+```
+(Replace *default* with the name of your Docker Machine host.)
+
 ## Get Involved
 
 * Visit [Community Information and Contributing](https://docs.ansible.com/ansible-container/community/index.html) 
