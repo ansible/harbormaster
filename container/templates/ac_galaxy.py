@@ -15,7 +15,10 @@ import ansible.constants as C
 from ansible.galaxy import Galaxy
 from ansible.galaxy.role import GalaxyRole
 from ansible.playbook.role.requirement import RoleRequirement
+
 import ruamel.yaml
+from ruamel.yaml.comments import CommentedMap
+
 
 ANSIBLE_CONTAINER_PATH = '/ansible-container'
 
@@ -98,12 +101,14 @@ def get_knobs_and_dials(role_obj):
     if os.path.exists(defaults_yml_path):
         try:
             defaults = ruamel.yaml.round_trip_load(open(defaults_yml_path))
-        except Exception, e:
+        except Exception:
             logger.exception('Error loading defaults/main.yml for %s',
                              role_obj)
         else:
+            if not defaults:
+                defaults = CommentedMap()
             return defaults
-    return {}
+    return CommentedMap()
 
 def update_container_yml(role_obj):
     snippet = get_container_yml_snippet(role_obj)
@@ -151,8 +156,7 @@ def update_main_yml(service, role_obj):
     if not main_yml:
         main_yml = [] 
 
-    # this is a ruamel.ordereddict.OrderedDict
-    # for readability, put the role name at the start of the dict
+    # For readability, put the role name at the start of the dict
     defaults.insert(0, 'role', role_obj.name)
 
     snippet = {
