@@ -224,8 +224,8 @@ def install(roles):
                         if service:
                             update_main_yml(service, role_obj)
                         else:
-                            logger.warning('Role %s is not Ansible Container enabled.',
-                                           role_obj)
+                            logger.warning("WARNING: %s is not Container Enabled but will still be added to "
+                                           "requirements.yml", role_obj.name)
                         update_requirements_yml(role_obj)
                     roles_processed.append(role_to_install)
                 except FatalException:
