@@ -361,12 +361,7 @@ class Deployment(object):
 
     @staticmethod
     def _port_exists(port, ports):
-        found = False
-        for p in ports:
-            if p['containerPort'] == int(port):
-                found = True
-                break
-        return found
+        return int(port) in ports
 
     @staticmethod
     def _env_vars_to_task(env_vars):
