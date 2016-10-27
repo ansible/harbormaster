@@ -1,0 +1,5 @@
+ansible-container-kompose:
+  image: {{ builder_img_id }}
+  command: "kompose -f /tmp/docker-compose.yml convert --yaml {% if is_openshift %} --dc {% endif %} -o /tmp/artifacts.yml"
+  volumes:
+    - {{ host_dir }}:/tmp/

@@ -19,65 +19,68 @@ def test_no_command_shows_help():
 
 def test_help_command_shows_help():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'help')
+    result = env.run('ansible-container', 'help', expect_stderr=True)
     assert "usage: ansible-container" in result.stdout
 
 
 def test_help_option_shows_help():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', '--help')
+    result = env.run('ansible-container', '--help', expect_stderr=True)
     assert "usage: ansible-container" in result.stdout
 
 
 def test_help_option_shows_help_for_run_command():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'run', '--help')
+    result = env.run('ansible-container', 'run', '--help', expect_stderr=True)
     assert "usage: ansible-container run" in result.stdout
 
 
 def test_help_option_shows_help_for_stop_command():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'stop', '--help')
+    result = env.run('ansible-container', 'stop', '--help', expect_stderr=True)
     assert "usage: ansible-container stop" in result.stdout
 
 
 def test_help_option_shows_help_for_restart_command():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'restart', '--help')
+    result = env.run('ansible-container', 'restart', '--help',
+                     expect_stderr=True)
     assert "usage: ansible-container restart" in result.stdout
 
 
 def test_help_option_shows_help_for_help_command():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'help', '--help')
+    result = env.run('ansible-container', 'help', '--help', expect_stderr=True)
     assert "usage: ansible-container help" in result.stdout
 
 
 def test_help_option_shows_help_for_shipit_command():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'shipit', '--help')
+    result = env.run('ansible-container', 'shipit', '--help',
+                     expect_stderr=True)
     assert "usage: ansible-container shipit" in result.stdout
 
 def test_help_option_shows_help_for_shipit_engine_command():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'shipit', 'kube', '--help')
+    result = env.run('ansible-container', 'shipit', 'kube', '--help',
+                     expect_stderr=True)
     assert "usage: ansible-container shipit kube" in result.stdout
 
 def test_help_option_shows_help_for_init_command():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'init', '--help')
+    result = env.run('ansible-container', 'init', '--help', expect_stderr=True)
     assert "usage: ansible-container init" in result.stdout
 
 
 def test_help_option_shows_help_for_build_command():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'build', '--help')
+    result = env.run('ansible-container', 'build', '--help', expect_stderr=True)
     assert "usage: ansible-container build" in result.stdout
 
 
 def test_help_option_shows_help_for_push_command():
     env = ScriptTestEnvironment()
-    result = env.run('ansible-container', 'push', '--help')
+    result = env.run('ansible-container', 'push', '--help', expect_stderr=True)
     assert "usage: ansible-container push" in result.stdout
 
 
