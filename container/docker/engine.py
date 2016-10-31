@@ -754,7 +754,7 @@ class Engine(BaseEngine):
         """
         Build common Docker Compose elements required to execute orchestrate,
         terminate, restart, etc.
-        
+
         :param temp_dir: A temporary directory usable as workspace
         :param behavior: x in x_operation_extra_args
         :param operation: Operation to perform, like, build, run, listhosts, etc
