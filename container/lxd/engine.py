@@ -23,11 +23,6 @@ import docker
 from lxdapi import lxd
 from yaml import dump as yaml_dump
 
-from ..exceptions import (AnsibleContainerNotInitializedException,
-                          AnsibleContainerNoAuthenticationProvided,
-                          AnsibleContainerDockerConfigFileException,
-                          AnsibleContainerDockerLoginException)
-
 from ..engine import BaseEngine
 from ..utils import *
 from .utils import *
@@ -165,6 +160,15 @@ class Engine(BaseEngine):
             '/tmp/ansible-container-build.sh',
         )
 
+        # publish the container with an image alias
+        stdout, stderr = lxc_exec(
+            lxc_cmd,
+            'publish',
+            'ansible-container',
+            '--alias',
+            self.builder_container_img_tag,
+        )
+
         return stdout.split('\n')
 
     def get_image_id_by_tag(self, name):
@@ -174,11 +178,10 @@ class Engine(BaseEngine):
         :param name: the image name
         :return: the image identifier
         """
-        print name
         client = self.get_client()
         try:
-            return client.images(name=name, quiet=True)[0]
-        except IndexError:
+            return client.get('images/aliases/' + name)
+        except lxd.APINotFoundException:
             raise NameError('No image with the name %s' % name)
 
     def get_container_id_by_name(self, name):
