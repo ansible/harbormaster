@@ -1,4 +1,4 @@
-- hosts: test 
+- hosts: test*
   gather_facts: no
   vars:
     project_path: "{{ lookup('env','ANSIBLE_CONTAINER_PATH') }}"

@@ -1,7 +1,7 @@
 version: "1"
 services:
-  test:
-    image: python:2.7
+  test-{{ python_version }}:
+    image: "python:{{ python_version }}"
     volumes:
        - "${ANSIBLE_CONTAINER_PATH}:${ANSIBLE_CONTAINER_PATH}" 
        - /var/run/docker.sock:/var/run/docker.sock
