@@ -91,8 +91,7 @@ class Route(object):
                     if hostname:
                         template['oso_route']['host'] = hostname
 
-                    if state != 'present':
-                        template['oso_route'] = state
+                    template['oso_route']['state'] = state
 
                 templates.append(template)
 
