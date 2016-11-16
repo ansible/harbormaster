@@ -137,7 +137,7 @@ To secure the Docker daemon you will need the following:
 * openssl
 * ansible (optional)
 
-Use the `ansible.secure-docker-daemon <https://galaxy.ansible.com/ansible/secure-docker-daemon/>`_ Galaxy role to
+Use the `ansible.secure-docker-daemon <https://github.com/ansible/role-secure-docker-daemon/>`_ Galaxy role to
 generate the certificates. Instructions for using the role and a sample playbook are provided in the README. You can
 also generate the certificates manually by following the
 `instructions here <https://docs.docker.com/engine/security/https/>`_.
