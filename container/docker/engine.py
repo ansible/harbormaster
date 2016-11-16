@@ -532,11 +532,14 @@ class Engine(BaseEngine):
             entrypoint = json.dumps(entrypoint)
         image_config = dict(
             USER=self.config['services'][host].get('user', 'root'),
-            WORKDIR=self.config['services'][host].get('working_dir', '/'),
             LABEL='com.docker.compose.oneoff="" com.docker.compose.project="%s"' % self.project_name,
             ENTRYPOINT=entrypoint,
             CMD=cmd
         )
+        # Only add WORKDIR if it does not contain an unexpanded environment var
+        workdir = self.config['services'][host].get('working_dir', '/')
+        image_config['WORKDIR'] = workdir if not re.search('\$|\{', workdir) else '/' 
+
         if flatten:
             logger.info('Flattening image...')
             exported = client.export(container_id)

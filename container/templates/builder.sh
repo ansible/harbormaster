@@ -1,6 +1,7 @@
 #!/bin/bash
 
 if [ -s "./requirements.txt" ]; then
+    echo "Running pip install of ansible/requirements.txt" 
     pip install --no-cache-dir -q -U -r ./requirements.txt
 fi
 
