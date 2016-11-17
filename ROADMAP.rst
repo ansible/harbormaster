@@ -15,15 +15,14 @@ Ways to submit feedback:
 
   - `Ansible Container Mailing List <https://groups.google.com/forum/#!forum/ansible-container>`_
   - #ansible-container IRC channel on irc.freenode.net
-  - `Open an issue <https://github.com/ansible/ansible-container/issues/new>`_ 
-  - Join us at the next `AnsibleFest or RedHat Summit <https://www.ansible.com/blog/topic/ansiblefest>`_ 
+  - `Open an issue <https://github.com/ansible/ansible-container/issues/new>`_
+  - Join us at the next `AnsibleFest or RedHat Summit <https://www.ansible.com/blog/topic/ansiblefest>`_
 
-0.2.0 Roadmap
+0.3.0 Roadmap
 =============
 
-We are currently working on release 0.2.0, and targeting an early October delivery. There may not be time to add additional
+We are currently working on release 0.3.0. There may not be time to add additional
 features at this point, as we were late getting this first roadmap published, but your feedback is still very important. If
 we can't squeeze something in, we can certainly add it to the next release. Don't hesitate to share your thoughts.
 
-View the official roadmap doc here: `0.2.0 Roadmap Document <./docs/rst/roadmaps/roadmap_0_2_0.rst>`_
-
+View the official roadmap doc here: `0.3.0 Roadmap Document <./docs/rst/roadmaps/roadmap_0_3_0.rst>`_
