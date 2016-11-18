@@ -16,6 +16,7 @@ import pprint
 import docker
 from docker.client import errors as docker_errors
 from docker.utils import kwargs_from_env
+from docker.constants import DEFAULT_TIMEOUT_SECONDS
 from compose.cli.command import project_from_options
 from compose.cli import main
 from yaml import dump as yaml_dump
@@ -743,7 +744,8 @@ class Engine(BaseEngine):
         if not self._client:
             # To ensure version compatibility, we have to generate the kwargs ourselves
             client_kwargs = kwargs_from_env(assert_hostname=False)
-            self._client = docker.AutoVersionClient(**client_kwargs)
+            timeout = os.environ.get('DOCKER_CLIENT_TIMEOUT', DEFAULT_TIMEOUT_SECONDS)
+            self._client = docker.AutoVersionClient(timeout=timeout, **client_kwargs)
             self.api_version = self._client.version()['ApiVersion']
             # Set the version in the env so it can be used elsewhere
             os.environ['DOCKER_API_VERSION'] = self.api_version
