@@ -17,8 +17,13 @@ import docker
 from docker.client import errors as docker_errors
 from docker.utils import kwargs_from_env
 from docker.constants import DEFAULT_TIMEOUT_SECONDS
-from compose.cli.command import project_from_options
-from compose.cli import main
+
+try:
+    from compose.cli.command import project_from_options
+    from compose.cli import main
+except Exception as exc:
+    raise Exception("Error importing Docker compose: {0}".format(exc.message))
+
 from yaml import dump as yaml_dump
 
 from ..exceptions import (AnsibleContainerNotInitializedException,
@@ -35,6 +40,24 @@ from .utils import *
 if not os.environ.get('DOCKER_HOST'):
     logger.warning('No DOCKER_HOST environment variable found. Assuming UNIX '
                    'socket at /var/run/docker.sock')
+
+
+def get_timeout():
+    timeout = DEFAULT_TIMEOUT_SECONDS
+    source = None
+    if os.environ.get('DOCKER_CLIENT_TIMEOUT'):
+        timeout_value = os.environ.get('DOCKER_CLIENT_TIMEOUT')
+        source = 'DOCKER_CLIENT_TIMEOUT'
+    elif os.environ.get('COMPOSE_HTTP_TIMEOUT'):
+        timeout_value = os.environ.get('COMPOSE_HTTP_TIMEOUT')
+        source = 'COMPOSE_HTTP_TIMEOUT'
+    if source:
+        try:
+            timeout = int(timeout_value)
+        except ValueError:
+            raise Exception("Error: {0} set to '{1}'. Expected an integer.".format(source, timeout_value))
+    logger.debug("Setting Docker client timeout to {0}".format(timeout))
+    return timeout
 
 
 class Engine(BaseEngine):
@@ -744,7 +767,7 @@ class Engine(BaseEngine):
         if not self._client:
             # To ensure version compatibility, we have to generate the kwargs ourselves
             client_kwargs = kwargs_from_env(assert_hostname=False)
-            timeout = os.environ.get('DOCKER_CLIENT_TIMEOUT', DEFAULT_TIMEOUT_SECONDS)
+            timeout = get_timeout()
             self._client = docker.AutoVersionClient(timeout=timeout, **client_kwargs)
             self.api_version = self._client.version()['ApiVersion']
             # Set the version in the env so it can be used elsewhere
