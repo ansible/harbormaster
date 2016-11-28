@@ -27,6 +27,10 @@ version 1, 2 and 2.1 are listed along with any directives added by Ansible Conta
 column indicates that the directive is supported. In some cases the directive name links to specific implementation notes
 that provide details on how the directive is used.
 
+.. note::
+
+    Support of Compose V2 directives is new in Ansible Container 0.3.0. Earlier versions support V1 directives only.
+
 Top level directives
 ````````````````````
 
