@@ -2,7 +2,7 @@ Install and Configure OpenShift
 ===============================
 
 Prior to running any of the examples that deploy an application to OpenShift, you'll need access to an OpenShift instance, and this guide
-will help you install and configure an OpenShift cluster in your local environment.
+will help you create one in your local environment.
 
 The installation and configuration process is fairly simple, as the OpenShift instance you'll install runs in containers. In fact, if you
 already have Docker installed and working, you're halfway there!
