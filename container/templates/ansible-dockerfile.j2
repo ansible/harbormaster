@@ -13,7 +13,7 @@ RUN yum update -y                 && \
 RUN pip install paramiko PyYAML Jinja2 httplib2 six
 
 # Installing the latest from Ansible to get synchronize module support.
-RUN pip install -q --no-cache-dir https://github.com/ansible/ansible.git@devel
+RUN pip install -q --no-cache-dir git+https://github.com/ansible/ansible.git@devel
 
 # Install ruamel.yaml to support Galaxy role installation 
 RUN pip install -q --no-cache-dir ruamel.yaml
