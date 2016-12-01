@@ -744,9 +744,8 @@ class Engine(BaseEngine):
             email=email
         )
 
-        if config['auths'][url] != encoded_credentials:
-            config['auths'][url] = encoded_credentials
-            self.write_config(path, config)
+        config['auths'][url] = encoded_credentials
+        self.write_config(path, config)
 
     @staticmethod
     def write_config(path, config):

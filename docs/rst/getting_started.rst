@@ -52,7 +52,7 @@ By way of an example, consider the below ``container.yml`` file:
 
 .. code-block:: yaml
 
-    version: "1"
+    version: "2"
     services:
       web:
         image: "ubuntu:trusty"
@@ -65,7 +65,7 @@ By way of an example, consider the below ``container.yml`` file:
 
 Things to note:
 
-1. In this example the schema is set to version 1. Starting with version 0.3.0, it supports 2 as well.
+1. In this example the schema is set to version 2. (Version 2 support was add in version 0.3.0.)
 2. Each of the containers you wish to orchestrate should be under the `services` key.
 3. For supported `service` keys, see :doc:`container_yml/reference`.
 4. The image you specify should be the base image that your containers will start from.
@@ -244,20 +244,20 @@ Conversely, the Nginx server runs in production but does not in development orch
 
 .. code-block:: yaml
 
-      nginx:
-        image: centos:7
-        ports:
-          - "80:{{ DJANGO_PORT }}"
-        user: 'nginx'
-        links:
-          - django
-        command: ['/usr/bin/dumb-init', 'nginx', '-c', '/etc/nginx/nginx.conf']
-        dev_overrides:
-          ports: []
-          command: '/bin/false'
-        options:
-          kube:
-            runAsUser: 997
+    nginx:
+      image: centos:7
+      ports:
+        - "80:{{ DJANGO_PORT }}"
+      user: 'nginx'
+      links:
+        - django
+      command: ['/usr/bin/dumb-init', 'nginx', '-c', '/etc/nginx/nginx.conf']
+      dev_overrides:
+        ports: []
+        command: '/bin/false'
+      options:
+        kube:
+          runAsUser: 997
 
 In development, Gulp's webserver listens on port 80 and proxies requests to Django, whereas
 in production we want Nginx to have that functionality.
@@ -266,16 +266,16 @@ Finally, we set up a PostgreSQL database server using a stock image from Docker 
 
 .. code-block:: yaml
 
-  postgresql:
-    image: postgres:9.4
-    expose:
-      - "5432"
-    volumes:
-      - '/var/lib/postgresql/data'
-    environment:
-      POSTGRES_USER: "{{ POSTGRES_USER }}"
-      POSTGRES_PASSWORD: "{{ POSTGRES_PASSWORD }}"
-      POSTGRES_DB: "{{ POSTGRES_DB }}"
+    postgresql:
+      image: postgres:9.4
+      expose:
+        - "5432"
+      volumes:
+        - '/var/lib/postgresql/data'
+      environment:
+        POSTGRES_USER: "{{ POSTGRES_USER }}"
+        POSTGRES_PASSWORD: "{{ POSTGRES_PASSWORD }}"
+        POSTGRES_DB: "{{ POSTGRES_DB }}"
 
 You can use distribution base images like CentOS, Ubuntu, or Fedora for the build process
 to customize, or you can use pre-built base images from a container registry like Docker Hub

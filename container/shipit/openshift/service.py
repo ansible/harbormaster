@@ -48,7 +48,7 @@ class Service(BaseShipItObject):
                         ports=ports,
                     )
                 )
-            elif type == 'task':
+            elif request_type == 'task':
                 template = dict(
                     oso_service=OrderedDict(
                         project_name=self.project_name,

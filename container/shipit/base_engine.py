@@ -158,6 +158,8 @@ class BaseShipItEngine(object):
                 target_name = template.replace('.j2', '')
                 if target_name.startswith('travis'):
                     target_name = '.' + target_name
+                if target_name.startswith('defaults') or target_name.startswith('meta'):
+                    target_name = 'main.yml'
                 if not os.path.exists(os.path.join(role_dir, target_name)):
                     logger.debug("Rendering template for %s/%s" % (path, template))
                     jinja_render_to_temp('shipit_role/%s' % template,
@@ -219,12 +221,11 @@ class BaseShipItEngine(object):
             play['hosts'] = 'localhost'
             play['gather_facts'] = False
             play['connection'] = 'local'
-            play['vars'] = dict(
-                playbook_debug=False
-            )
-            play['roles'] = [dict(
-                role=self.role_name
-            )]
+            play['roles'] = []
+            role = OrderedDict()
+            role['role'] = self.role_name
+            role['playbook_debug'] = 'no'
+            play['roles'].append(role)
             with open(playbook_path, 'w') as f:
                 f.write(yaml.safe_dump([play], default_flow_style=False))
 

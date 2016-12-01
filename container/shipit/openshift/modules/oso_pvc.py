@@ -82,7 +82,8 @@ class OSOPvcManager(object):
             requested_storage=dict(type='str', default='1Gi'),
             match_labels=dict(type='dict',),
             match_expressions=dict(type='list',),
-            volume_name=dict(type='str',)
+            volume_name=dict(type='str',),
+            replace=dict(type='bool', default=False),
         )
 
         self.module = AnsibleModule(self.arg_spec,
@@ -98,6 +99,7 @@ class OSOPvcManager(object):
         self.match_expressions = None
         self.volume_name = None
         self.api = None
+        self.replace = None
         self.check_mode = self.module.check_mode
         self.debug = self.module._debug
 

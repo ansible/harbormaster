@@ -1,8 +1,11 @@
-Configure OpenShift
-===================
+Install and Configure OpenShift
+===============================
 
-Prior to running any of the examples that deploy an application to OpenShift, you'll need a locally running OpenShift instance, and
-this guide will walk you through the installation and configuration.
+Prior to running any of the examples that deploy an application to OpenShift, you'll need access to an OpenShift instance, and this guide
+will help you install and configure an OpenShift cluster in your environment.
+
+The installation and configuration process is fairly simple, as the OpenShift instance you'll install runs in containers. In fact, if you
+already have Docker installed and working, you're halfway there!
 
 .. contents:: Topics
 
@@ -102,7 +105,7 @@ option, as pictured in the following example:
 Allow insecure registry access
 ``````````````````````````````
 
-In order to use the private registry that comes installed, you will need Docker to allow access to insecure registry addressed
+In order to use the private registry that comes installed, you will need Docker to allow access to the insecure registry address
 displayed when you ran the ``oc cluster up`` command, as pictured above.
 
 Additionally, you will need to allow access to the host name on which the registry will be exposed. The host name will be your
@@ -265,7 +268,7 @@ you just created:
 .. code-block:: bash
 
     # Create the route
-    $ oc create -f registry.yml.
+    $ oc create -f registry.yml
 
 To test registry access, log in with the ``docker login`` command, using *developer* as the username and the OpenShift access
 token as the password. Execute the following command to perform the login, replacing the IP address with your own:

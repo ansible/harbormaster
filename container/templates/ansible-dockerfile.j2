@@ -6,10 +6,17 @@ FROM centos:7
 RUN yum update -y                 && \
     yum install -y epel-release   && \
     yum install -y docker-latest && \
-    yum install -y "@Development Tools" ansible git python-setuptools python-devel python-pip && \
+    yum install -y "@Development Tools" git python-setuptools python-devel python-pip rsync libffi-devel openssl-devel && \
     yum clean all
 
-RUN pip install -q --no-cache-dir ansible==2.1.1.0 ruamel.yaml
+# Ansible requirements
+RUN pip install paramiko PyYAML Jinja2 httplib2 six
+
+# Installing the latest from Ansible to get synchronize module support.
+RUN pip install -q --no-cache-dir https://github.com/ansible/ansible.git@devel
+
+# Install ruamel.yaml to support Galaxy role installation 
+RUN pip install -q --no-cache-dir ruamel.yaml
 
 RUN mkdir -p /etc/ansible/roles
 

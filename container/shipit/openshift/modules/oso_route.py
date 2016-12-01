@@ -82,7 +82,6 @@ class RouteManager(object):
             service_name=dict(type='str', required=True, aliases=['to']),
             service_port=dict(type='str', required=True, aliases=['port']),
             replace=dict(type='bool', default=False),
-            cli=dict(type='str', choices=['kubectl', 'oc'], default='oc'),
             debug=dict(type='bool', default=False)
         )
 
@@ -97,7 +96,6 @@ class RouteManager(object):
         self.service_name = None
         self.service_port = None
         self.replace = None
-        self.cli = None
         self.api = None
         self.debug = None
         self.check_mode = self.module.check_mode
