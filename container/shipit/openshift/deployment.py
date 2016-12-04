@@ -299,7 +299,10 @@ class Deployment(BaseShipItObject):
             logger.debug("source: %s destination: %s permissions: %s" % (source, destination, permissions))
 
             if source:
-                if re.match(r'[~./]', source):
+                if re.match(r'\$', source):
+                    # Source is an environment var. Skip for now.
+                    continue
+                elif re.match(r'[~./]', source):
                     name = re.sub(r'\/', '-', destination)
                     name = re.sub(r'-', '', name, 1)
                     # Source is a host path.

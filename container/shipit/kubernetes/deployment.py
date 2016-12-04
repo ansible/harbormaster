@@ -298,7 +298,10 @@ class Deployment(BaseShipItObject):
                 name = re.sub(r'-', '', name, 1)
 
             if source:
-                if re.match(r'[~./]', source):
+                if re.match(r'\$', source):
+                    # Source is an environment var. Skip for now.
+                    continue
+                elif re.match(r'[~./]', source):
                     # Source is a host path. We'll assume it exists on the host machine?
                     volumes.append(dict(
                         name=name,
