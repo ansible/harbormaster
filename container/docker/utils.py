@@ -89,7 +89,6 @@ SERVICE_KEY_WHITELIST = [
     'cap_add',
     'cap_drop',
     'command',
-    'container_name',
     'depends_on',
     'entrypoint',
     'environment',

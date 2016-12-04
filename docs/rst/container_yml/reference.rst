@@ -54,7 +54,7 @@ build                 Run Dockerfile based build
 cap_add               Add container capabilities
 cap_drop              Drop container capabilities
 command               Command executed by the container at startup             |checkmark|
-container_name        Custom container name                                    |checkmark|
+container_name        Custom container name
 cpuset                CPUs in which to allow execution
 cpu_shares            CPU shares (relative weight)
 cpu_quota             Limit the CPU CFS (Completely Fair Scheduler) quota
