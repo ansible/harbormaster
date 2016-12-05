@@ -38,6 +38,7 @@ Before creating a local OpenShift cluster, you'll need the following installed:
 Install using an Ansible role
 -----------------------------
 
+<<<<<<< 31406b89f26becbd935ce3ecf4b2e1426ba4b595
 But wait, there's a role for this! There actually is, and it attempts to automate installing the ``oc`` client, and creating and configuring a cluster. In fact, it was created specifically for automating the tasks described in this document. You can find te role with instructions here: `chouseknecht.cluster-up-role <https://galaxy.ansible.com/chouseknecht/cluster-up-role/>`_
 
 To use the role, you'll need Ansible installed. Also, note in the video that the playbook is copied from the installed role's file structure. You'll find the playbook, *cluster-up.yml*, in the *files* subfolder.
