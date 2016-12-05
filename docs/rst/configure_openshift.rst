@@ -54,7 +54,6 @@ The following video demonstrates using the role:
 
 As noted in the role's `README <https://github.com/chouseknecht/cluster-up-role/blob/master/README.md>`_, if you have not already added the *insecure-registry* option to Docker, the role will error, and provide the subnet or IP range that needs to be added. You'll also need to add the value of the *openshift_hostname* option, which by default is *local.openshift*. For more about adding the insecure-registry option see `Docker's documentation <https://docs.docker.com/registry/insecure/>`_.
 
-
 .. _install_the_oc_client:
 
 Install the oc client
