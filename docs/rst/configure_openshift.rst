@@ -33,6 +33,15 @@ Before creating a local OpenShift cluster, you'll need the following installed:
         # Install socat
         $ brew install socat
 
+.. _ansible_role:
+
+Install using an Ansible role
+-----------------------------
+
+But wait, there's a role for this! There actually is, and it attempts to automate installing the ``oc`` client, and creating and configuring a cluster. In fact, it was created specifically for automating the
+tasks described in this document. You can find te role with instructions here: `chouseknecht.cluster-up-role <https://galaxy.ansible.com/chouseknecht/cluster-up-role/>`_
+
+
 .. _install_the_oc_client:
 
 Install the oc client
@@ -79,6 +88,47 @@ You should see a response similar to the following:
     kubernetes v1.3.0+52492b4
     features: Basic-Auth
 
+.. _create_hostname:
+
+Create a hostname
+-----------------
+
+The installation process associates the cluster with your public IP address. If you're working on a laptop or other mobile device,
+your public IP address changes as you move between wireless networks. Each time you change networks, you'll find yourself
+recreating the cluster. And so for convenience, it's better to associate local registry access with a hostname.
+
+Start by first finding your IP address. To obtain your IP address on Mac OSX run ``ifconfig en0`` in a terminal window,
+and look for the *inet* address. On linux hosts, use the command ``ip addr show eth0``.
+
+Once you have the IP address, open */etc/hosts* in your favorite editor using a privileged account. For example, the following
+will open the file using ``vi`` as the *root* user:
+
+.. code-block:: bash
+
+    # Open /etc/hosts in vi as root
+    $ sudo vi /etc/hosts
+
+Add the following line, replacing the IP address with your IP address, and separating the IP and the hostname with a minimum of one space:
+
+.. code-block:: bash
+
+    # Local OpenShift registry access
+    192.168.14.30  local.openshift
+
+After saving your changes, check that you can ``ping`` the new hostname by running the following:
+
+.. code-block:: bash
+
+    # ping our new hostname
+    $ ping -c 3 local.openshift
+
+    PING local.openshift (192.168.30.14): 56 data bytes
+    64 bytes from 192.168.30.14: icmp_seq=0 ttl=64 time=0.051 ms
+    64 bytes from 192.168.30.14: icmp_seq=1 ttl=64 time=0.129 ms
+    64 bytes from 192.168.30.14: icmp_seq=2 ttl=64 time=0.127 ms
+
+Later, when you change networks, modify */etc/hosts* and associate the hostname with the new IP address.
+
 .. _create_the_cluster:
 
 Create the cluster
@@ -112,16 +162,11 @@ option, as pictured in the following example:
 Allow insecure registry access
 ``````````````````````````````
 
-In order to use the private registry that comes installed, you will need Docker to allow access to the insecure registry address
-displayed when you ran the ``oc cluster up`` command, as pictured above.
+In order to use the private registry that comes installed, Docker must be updated to allow insecure access to the IP address
+ranged displayed when you ran the ``oc cluster up`` command, as pictured above as well as the new hostname *local.openshift*
+you added earlier to */etc/hosts*.
 
-Additionally, you will need to allow access to the host name on which the registry will be exposed. The host name will be your
-local IP address followed by *.xip.io*. For example, if your IP address is 192.168.30.14, the host name will be *192.168.30.14.xip.io*.
-
-To obtain your IP address on Mac OSX run ``ifconfig en0`` in a terminal window, and look for the *inet* address. On linux hosts, use
-the command ``ip addr show eth0``.
-
-Once you're ready to add the insecure registries, follow the instructions for the version of Docker you're using.
+Once you're ready to add the insecure registries, follow the instructions for the version of Docker you have installed:
 
 + `Docker Engine <https://docs.docker.com/registry/insecure/>`_
 + `Docker Machine <https://docs.docker.com/machine/reference/create/#/specifying-configuration-options-for-the-created-docker-engine>`_
@@ -129,29 +174,15 @@ Once you're ready to add the insecure registries, follow the instructions for th
 Docker for Mac
 ..............
 
-Go to the Docker toolbar menu, choose *Preferences* and open the *Advanced* tab. Add the addresses to the list of
+Go to the Docker toolbar menu, choose *Preferences* and open the *Advanced* or *Daemon* tab, and add the addresses to the list of
 *Insecure Registries*, as pictured in the following:
 
 .. image:: _static/doc_images/insecure_registry.png
-   :height: 111px
-   :width: 188px
+   :height: 156px
+   :width: 190px
    :scale: 250%
-   :alt: Adding an insecure registry
+   :alt: Adding an insecure registry to Docker for Mac
    :align: center
-
-.. Docker Toolbox
-   ..............
-   For Docker Toolbox you will need to create a new machine with the correct options. The following demonstrates creating a new
-   machine named *devel*. Replace the IP addresses with those for your machine:
-   .. code-block:: bash
-   # Create a new Docker machine
-   $ docker-machine create -d virtualbox
-       --engine-insecure-registry 172.30.0.0/16 \
-       --engine-insecure-registry 192.168.30.14.xip.io \
-       --virtualbox-host-dns-resolver \
-       devel
-
-|
 
 .. _restart_the_cluster:
 
@@ -215,13 +246,15 @@ Now attempt to restart the cluster:
 Configure the cluster
 ---------------------
 
-Now that you have a running cluster, you will need to create a route to the internal registry and a persistent volume.
+Now that you have a running cluster, it's time to apply some configuration. In the next couple sections you'll grant your
+account (the developer) admin access, create a route to allow access to the registry, and create a persistent volume for storage.
 
-.. _create_a_route:
+.. _grant_admin_access:
 
-Create a route
-``````````````
-Start by giving yourself (the developer) admin rights to the cluster, and setting the namespace or project to *default*:
+Grant admin access
+``````````````````
+
+Start by giving the developer account admin access to the cluster by running the following commands:
 
 .. code-block:: bash
 
@@ -237,8 +270,19 @@ Start by giving yourself (the developer) admin rights to the cluster, and settin
     # Switch to the default project
     $ oc project default
 
-Next copy the following YAML to a local file called *registry.yml*, replacing each occurrence of the IP address (there are two)
-with your local IP address:
+Going forward, log in using the *developer* account. It now has full access to perform CRUD operations on any object.
+
+Also, a quick note before creating the route. The last command above sets the namespace or project to *default*. The registry is
+part of the *default* project, and the route object you're about to create must be created in the *default* project as well.
+
+.. _create_a_route:
+
+Create a route
+``````````````
+A route exposes a service, allowing access from outside of the cluster. In this case you'll expose the registry service.
+With the route in place the registry will be accessible using the new hostname.
+
+Copy the following YAML to a local file called *registry.yml*:
 
 .. code-block:: bash
 
@@ -247,7 +291,7 @@ with your local IP address:
     metadata:
       name: registry-access
     spec:
-      host: 192.168.30.14.xip.io
+      host: local.openshift
       to:
         kind: Service
         name: docker-registry
@@ -260,14 +304,14 @@ with your local IP address:
     status:
       ingress:
         -
-          host: 192.168.30.14.xip.io
+          host: local.openshift
           routerName: router
           conditions:
             -
               type: Admitted
               status: 'True'
 
-The above configuration defines a route object that allows the registry to be accessed as *https://<your IP address>.xip.io*.
+The above configuration defines a route object that allows the registry to be accessed as *https://local.openshift*.
 
 Now execute the following to actually create the route by using the ``oc create`` command to read the definition from the file
 you just created:
@@ -278,12 +322,12 @@ you just created:
     $ oc create -f registry.yml
 
 To test registry access, log in with the ``docker login`` command, using *developer* as the username and the OpenShift access
-token as the password. Execute the following command to perform the login, replacing the IP address with your own:
+token as the password. Execute the following command to perform the login:
 
 .. code-block:: bash
 
     # Log into the OpenShift registry
-    $ docker login https://192.168.30.14.xip.io -u developer -p $(oc whoami -t)
+    $ docker login https://local.openshift -u developer -p $(oc whoami -t)
 
 .. _create_a_persistent_volume:
 
