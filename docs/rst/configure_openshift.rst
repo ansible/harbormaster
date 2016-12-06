@@ -38,9 +38,21 @@ Before creating a local OpenShift cluster, you'll need the following installed:
 Install using an Ansible role
 -----------------------------
 
-But wait, there's a role for this! There actually is, and it attempts to automate installing the ``oc`` client, and creating and configuring a cluster. In fact, it was created specifically for automating the
-tasks described in this document. You can find te role with instructions here: `chouseknecht.cluster-up-role <https://galaxy.ansible.com/chouseknecht/cluster-up-role/>`_
+But wait, there's a role for this! There actually is, and it attempts to automate installing the ``oc`` client, and creating and configuring a cluster. In fact, it was created specifically for automating the tasks described in this document. You can find te role with instructions here: `chouseknecht.cluster-up-role <https://galaxy.ansible.com/chouseknecht/cluster-up-role/>`_
 
+To use the role, you'll need Ansible installed. Also, note in the video that the playbook is copied from the installed role's file structure. You'll find the playbook, *cluster-up.yml*, in the *files* subfolder.
+
+As noted in the role's `README <https://github.com/chouseknecht/cluster-up-role/blob/master/README.md`_, if you have not already added the *insecure-registry* option to Docker, the role will error, and provide the subnet or IP range that needs to be added. You'll also need to add the value of the *openshift_hostname* option, which by default is *local.openshift*. For more about adding the insecure-registry option see `Docker's documentation <https://docs.docker.com/registry/insecure/>`_.
+
+The following video demonstrates using the role:
+
+.. image:: _static/doc_images/cluster.png
+   :target: https://youtu.be/iY4bkHDaxCc
+   :height: 360px
+   :width: 640px
+   :scale: 85%
+   :alt: Running the cluster-up-role 
+   :align: center
 
 .. _install_the_oc_client:
 
