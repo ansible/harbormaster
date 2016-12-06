@@ -57,31 +57,34 @@ For examples and a tour of Ansible Container [visit our docs site](https://docs.
 
 If you just can't wait, the following provides a quick install and run of the demo app.
 
-Assuming you already installed Ansible Container, start by creating an empty project folder, and then initialize it with a Container App from [Ansible Galaxy](https://galaxy.ansible.com):
+After you install Ansible Container, you can run the demo app by creating an empty project folder, and then initializing it with a copy of the demo project [Ansible Galaxy](https://galaxy.ansible.com/chouseknecht/django-gulp-nginx) by running the following:
 
 ```
+# Create a directory named 'demo'
 $ mkdir demo
+
+# Set the working directory to 'demo'
 $ cd demo
-$ ansible-container init j00bar.django-gulp-nginx
+
+# Initialize the project
+$ ansible-container init chouseknecht.django-gulp-nginx
 ```
 
-From the project directory, build the images:
+You now have a copy of the project in your local *demo* directory. From *demo* directory, run the following to build the images:
 
 ```
+# Start the build process 
 $ ansible-container build
 ```
 
-And finally, from the project directory, run the app:
+Once the build completes, you will have a local copy of the project's conatiner images, and you're ready to launch the application by running the following:
 
 ```
+# Run the project containers
 $ ansible-container run
 ```
 
-The demo web server is available at port 8080.
-
-```
-$ open http://localhost:8080
-```
+The application containers are now running, and the demo web server is available at port 8080. You can access it from a web browser at [http://localhost:8080](http://localhost:8080).
 
 ## Get Involved
 
