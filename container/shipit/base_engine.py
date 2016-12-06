@@ -224,7 +224,7 @@ class BaseShipItEngine(object):
             play['roles'] = []
             role = OrderedDict()
             role['role'] = self.role_name
-            role['playbook_debug'] = 'no'
+            role['playbook_debug'] = False 
             play['roles'].append(role)
             with open(playbook_path, 'w') as f:
                 f.write(yaml.safe_dump([play], default_flow_style=False))
