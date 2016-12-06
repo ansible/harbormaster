@@ -77,13 +77,11 @@ And finally, from the project directory, run the app:
 $ ansible-container run
 ```
 
-The demo web server is available at port 8080. If you're running Docker Machine, for example, you can access the 
-site using the IP address of the Docker Machine host like so:
+The demo web server is available at port 8080.
 
 ```
-$ open http://$(docker-machine ip default):8080/admin
+$ open http://localhost:8080
 ```
-(Replace *default* with the name of your Docker Machine host.)
 
 ## Get Involved
 
