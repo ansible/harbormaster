@@ -90,7 +90,8 @@ def subcmd_build_parser(parser, subparser):
     subparser.add_argument('--no-purge-last', action='store_false',
                            help=u'By default, Ansible Container will remove the '
                                 u'previously built image for your hosts. Disable '
-                                u'that with this flag.')
+                                u'that with this flag.',
+                           dest='purge_last', default=True)
     subparser.add_argument('--from-scratch', action='store_true',
                            help=u'Instead of running the Ansible playbook against '
                                 u'the existing copies of your containers, run the '
