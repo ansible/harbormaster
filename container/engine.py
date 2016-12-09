@@ -10,11 +10,11 @@ import os
 import datetime
 import re
 import sys
-import urllib
 import gzip
 import tarfile
 
 import requests
+from six.moves.urllib.parse import urljoin
 
 from .exceptions import AnsibleContainerAlreadyInitializedException, \
                         AnsibleContainerRegistryAttributeException, \
@@ -285,8 +285,7 @@ def cmdrun_init(base_path, project=None, **kwargs):
             raise ValueError(u'Invalid project name: %r; use '
                              u'"username.project" style syntax.' % project)
         galaxy_base_url = kwargs.pop('server')
-        response = requests.get(urllib.basejoin(galaxy_base_url,
-                                                '/api/v1/roles/'),
+        response = requests.get(urljoin(galaxy_base_url, '/api/v1/roles/'),
                                 params={'role_type': 'APP',
                                         'namespace': namespace,
                                         'name': name},
