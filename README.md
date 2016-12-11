@@ -55,9 +55,9 @@ For more details, prerequisite, and instructions on installing the latest develo
 
 For examples and a tour of Ansible Container [visit our docs site](https://docs.ansible.com/ansible-container/).
 
-If you just can't wait, the following provides a quick install and run of our [demo project](https://galaxy.ansible.com/chouseknecht/django-gulp-nginx).
+If you just can't wait, the following provides a quick install and run of our [demo project](https://galaxy.ansible.com/chouseknecht/django-gulp-nginx). But before continuing, you *must* [install from source](http://docs.ansible.com/ansible-container/installation.html#running-from-source), so that you have the latest code.
 
-After you install Ansible Container, start by running the following commands to create an empty directory named *demo*, and initialize it with a copy of the project:
+Setup the demo locally by running the following commands to create an empty directory named *demo*, and initialize it with a copy of the project:
 
 ```
 # Create a directory named 'demo'
