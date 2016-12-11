@@ -38,7 +38,7 @@ Top level directives
 Directive             Definition                                               Supported?
 ===================== ======================================================== ============
 networks              Create named, persistent networks
-:ref:`registries`     Registry definitions
+:ref:`registries`     Registry definitions                                     |checkmark|
 services              Services included in the app                             |checkmark|
 version               Specifiy the version of Compose, '1' or '2'              |checkmark|
 volumes               Create named, persistent volumes                         |checkmark|
@@ -105,9 +105,9 @@ tmpfs                 Mount a temporary volume to the container                |
 ulimits               Override the default ulimit
 user                  Username or UID used to execute internal container       |checkmark|
                       processes
-:ref: `volumes`       Mounts paths or named volumes                            |checkmark|
+:ref:`volumes`        Mounts paths or named volumes                            |checkmark|
 volume_driver         Specify a volume driver
-:ref: `volumes_from`  Mount one or more volumes from one container into        |checkmark|
+:ref:`volumes_from`   Mount one or more volumes from one container into        |checkmark|
                       another
 working_dir           Path to set as the working directory                     |checkmark|
 ===================== ======================================================== ============
@@ -339,10 +339,7 @@ Docker named volumes map to persistent volume claims (PVCs) in the cloud. Consid
     volumes:
        static-files: {}
 
-In the above example the Compose *volumes* directives create a named volume called *static-files*, and the Docker volume gets
-created during the execution of the ``build`` and ``run`` commands. When ``shipit`` executes, it creates a volume called
-*static-files* that maps to a persistent volume claim, and it creates the persistent volume claim using the parameters
-specified in *options*. In this case the options are supplied for OpenShift.
+In the above example the Compose *volumes* directive creates a named volume called *static-files*, and the Docker volume gets created during the execution of the ``build`` and ``run`` commands. When ``shipit`` executes and generates cloud configuration (in this case for OpenShift), it creates a volume called *static-files* that maps to a persistent volume claim, and the persistent volume claim will be created using the parameters specified in *options*.
 
 The following options can be defined for a persistent volume claim:
 
