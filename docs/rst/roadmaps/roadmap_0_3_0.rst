@@ -1,7 +1,7 @@
 Roadmap for release 0.3.0
 =========================
 
-**Target delivery: Early December 2016**
+**Target delivery: Early January 2017**
 
 - **Build Cache** (Jag @j00bar)
   - One of the niceties of Dockerfile is that Docker Engine re-uses cached layers to accelerate rebuilds. We should be able to create something similar using a custom Ansible execution strategy.
