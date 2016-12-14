@@ -139,7 +139,7 @@ Gulp and Node.js. To pull the skeleton from Ansible Galaxy and bootstrap a new a
 
 .. code-block:: bash
 
-  ansible-container init j00bar.django-gulp-nginx
+  ansible-container init ansible.django-gulp-nginx
 
 From here, you can even build and run this app, even though it doesn't do a whole lot.
 
@@ -349,4 +349,9 @@ Now, you can run:
    $ ansible-container build
 
 ... to recreate your app, and this time, you'll find a newly built Redis container image all ready to go.
+
+Managing the Application Lifecycle
+----------------------------------
+
+Ansible Container can manage the lifecycle of an application from development through cloud deployment. For a hands-on walk through of creating, testing, and deploying a sample application, visit our `demo site <https://ansible.github.io/ansible-container-demo/>`_.
 
