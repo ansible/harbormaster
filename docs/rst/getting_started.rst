@@ -299,13 +299,13 @@ each container:
         - gulp-static
     - hosts: nginx
       roles:
-        - role: j00bar.nginx-container
+        - role: ansible.nginx-container
           ASSET_PATHS:
             - /tmp/django/static/
             - /tmp/gulp/node/dist/
 
 The first two of these roles come bundled with the app and can be found in the ``ansible/roles/`` directory.
-The third one, `j00bar.nginx-container`, is a reference to a role hosted on Ansible Galaxy, and we make that
+The third one, `ansible.nginx-container`, is a reference to a role hosted on Ansible Galaxy, and we make that
 role a dependency for build in ``requirements.yml``. Because the containers described by the included roles
 are so closely tied to the source code in the project, it's appropriate that they're bundled with this app
 skeleton whereas the `j00bar.nginx-container` role is independent of the source code in the project, making
