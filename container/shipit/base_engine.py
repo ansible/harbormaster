@@ -55,7 +55,7 @@ class BaseShipItEngine(object):
         self.role_name = "%s-%s" % (self.project_name, self.name)
         self.roles_path = os.path.join(self.base_path, SHIPIT_PATH, SHIPIT_ROLES_DIR, self.role_name)
 
-    def add_options(self, subparser):
+    def add_options(self, parser):
         """
         Given an argument subparser, add to it the arguments and options
         this engine allows.
@@ -65,16 +65,21 @@ class BaseShipItEngine(object):
         :param subparser: An argparse.ArgumentSubparser
         :return: None
         """
-        subparser.add_argument('--save-config', action='store_true',
-                               help=(u'Generate and save the %s configuration files in '
-                                     u'ansible/shipit_config/kubernetes.' % self.name),
-                               dest='save_config', default=False)
+        parser.add_argument('--save-config', action='store_true',
+                            help=(u'Generate and save the %s configuration files in '
+                                  u'ansible/shipit_config/kubernetes.' % self.name),
+                            dest='save_config', default=False)
 
-        subparser.add_argument('--pull-from', action='store',
-                               help=u'Name of a registry defined in container.yml or the actual URL the cluster will '
-                                    u'use to pull images. If passing a URL, an example would be: '
-                                    u'"registry.example.com:5000/myproject"',
-                               dest='pull_from', default=None)
+        egroup = parser.add_mutually_exclusive_group()
+        egroup.add_argument('--pull-from', action='store',
+                            help=u'Name of a registry defined in container.yml or the actual URL the cluster will '
+                                 u'use to pull images. If passing a URL, an example would be: '
+                                 u'"registry.example.com:5000/myproject"',
+                            dest='pull_from', default=None)
+
+        egroup.add_argument('--local-images', action='store_true',
+                            help=u'Images can be accessed from the Docker daemon',
+                            dest='local_images', default=False)
 
     def run(self):
         """

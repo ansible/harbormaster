@@ -463,31 +463,33 @@ def cmdrun_shipit(base_path, engine_name, pull_from=None, **kwargs):
     engine_obj = load_engine(**engine_args)
     shipit_engine_name = kwargs.pop('shipit_engine')
     project_name = os.path.basename(base_path).lower()
+    local_images = kwargs.get('local_images')
 
     # determine the registry url and namespace the cluster will use to pull images
     config = engine_obj.config
     url = None
     namespace = None
-    if not pull_from:
-        url = engine_obj.default_registry_url
-    elif config.get('registries', {}).get(pull_from):
-        url = config['registries'][pull_from].get('url')
-        namespace = config['registries'][pull_from].get('namespace')
-        if not url:
-            raise AnsibleContainerRegistryAttributeException("Registry %s missing required attribute 'url'."
-                                                             % pull_from)
-        pull_from = None  # pull_from is now resolved to a url/namespace
-    if url and not namespace:
-        # try to get the username for the url from the container engine
-        try:
-            namespace = engine_obj.registry_login(url=url)
-        except Exception as exc:
-            if "Error while fetching server API version" in str(exc):
-                msg = "Cannot connect to the Docker daemon. Is the daemon running?"
-            else:
-                msg = "Unable to determine namespace for registry %s. Error: %s. Either authenticate with the " \
-                      "registry or provide a namespace for the registry in container.yml" % (url, str(exc))
-            raise AnsibleContainerRegistryAttributeException(msg)
+    if not local_images:
+        if not pull_from:
+            url = engine_obj.default_registry_url
+        elif config.get('registries', {}).get(pull_from):
+            url = config['registries'][pull_from].get('url')
+            namespace = config['registries'][pull_from].get('namespace')
+            if not url:
+                raise AnsibleContainerRegistryAttributeException("Registry %s missing required attribute 'url'."
+                                                                 % pull_from)
+            pull_from = None  # pull_from is now resolved to a url/namespace
+        if url and not namespace:
+            # try to get the username for the url from the container engine
+            try:
+                namespace = engine_obj.registry_login(url=url)
+            except Exception as exc:
+                if "Error while fetching server API version" in str(exc):
+                    msg = "Cannot connect to the Docker daemon. Is the daemon running?"
+                else:
+                    msg = "Unable to determine namespace for registry %s. Error: %s. Either authenticate with the " \
+                          "registry or provide a namespace for the registry in container.yml" % (url, str(exc))
+                raise AnsibleContainerRegistryAttributeException(msg)
 
     config = engine_obj.get_config_for_shipit(pull_from=pull_from, url=url, namespace=namespace)
 

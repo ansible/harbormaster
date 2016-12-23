@@ -247,25 +247,27 @@ class Engine(BaseEngine):
         '''
         config = get_config(self.base_path, var_file=self.var_file)
         client = self.get_client()
-
-        if pull_from:
-            image_path = re.sub(r'/$', '', REMOVE_HTTP.sub('', pull_from))
+        image_path = None
+        if self.params.get('local_images'):
+            logger.info("Using local images")
         else:
-            image_path = namespace
-            if url != self.default_registry_url:
-                url = REMOVE_HTTP.sub('', url)
-                image_path = "%s/%s" % (re.sub(r'/$', '', url), image_path)
+            if pull_from:
+                image_path = re.sub(r'/$', '', REMOVE_HTTP.sub('', pull_from))
+            else:
+                image_path = namespace
+                if url != self.default_registry_url:
+                    url = REMOVE_HTTP.sub('', url)
+                    image_path = "%s/%s" % (re.sub(r'/$', '', url), image_path)
 
-        logger.info("Images will be pulled from %s" % image_path)
+            logger.info("Images will be pulled from %s" % image_path)
         orchestrated_hosts = self.hosts_touched_by_playbook()
         for host, service_config in config.get('services', {}).items():
             if host in orchestrated_hosts:
                 image_id, image_buildstamp = get_latest_image_for(self.project_name, host, client)
-                service_config.update(
-                    dict(
-                        image='%s/%s-%s:%s' % (image_path, self.project_name, host, image_buildstamp)
-                    )
-                )
+                image = '{0}-{1}:{2}'.format(self.project_name, host, image_buildstamp)
+                if image_path:
+                    image = '{0}/{1}'.format(image_path, image)
+                service_config.update({u'image':  image})
         return config
 
     # Docker-compose uses docopt, which outputs things like the below
