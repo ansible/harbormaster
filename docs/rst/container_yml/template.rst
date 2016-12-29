@@ -338,12 +338,12 @@ Given a YAML file containing variable definitions, you could pass it into the An
 
     $ ansible-container --var-file vars.yml build -- -e"@/ansible-container/vars.yml"
 
-Or, by using the ``var_files`` directive in your playbook:
+Or, by using the ``vars_files`` directive in your playbook:
 
 .. code-block:: yaml
 
     - hosts: all
-      var_files:
+      vars_files:
          - /ansible-container/vars.yml
       tasks:
         ...
