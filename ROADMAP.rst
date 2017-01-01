@@ -16,7 +16,7 @@ Ways to submit feedback:
   - `Ansible Container Mailing List <https://groups.google.com/forum/#!forum/ansible-container>`_
   - #ansible-container IRC channel on irc.freenode.net
   - `Open an issue <https://github.com/ansible/ansible-container/issues/new>`_
-  - Join us at the next `AnsibleFest or RedHat Summit <https://www.ansible.com/blog/topic/ansiblefest>`_
+  - Join us at the next `AnsibleFest or Red Hat Summit <https://www.ansible.com/blog/topic/ansiblefest>`_
 
 0.3.0 Roadmap
 =============
