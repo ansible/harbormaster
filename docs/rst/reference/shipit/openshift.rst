@@ -60,7 +60,7 @@ If ``--roles-path`` was used during the `build` process, then pass the same opti
 
 .. option:: --local-images
 
-** New in version 0.3.0**
+**New in version 0.3.0**
 
 Use images directly from the local image cache managed by the Docker daemon. Prevents the automatic use of the default registry URL.
 
