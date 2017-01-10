@@ -380,5 +380,5 @@ and `Jinja2 Filters <http://docs.ansible.com/ansible/playbooks_filters.html>`_.
 
     Ansible Jinja filters and lookups are only available if Ansible is installed on the host where Ansible Container runs.
     Template rendering occurs outside of the Ansible Build Container, so access to Ansible filters and lookups requires that
-    Ansible be installed locally. If Ansible is not installed, and ``containery.yml`` includes references to Ansible filters
+    Ansible be installed locally. If Ansible is not installed, and ``container.yml`` includes references to Ansible filters
     and lookups, an error will occur.
