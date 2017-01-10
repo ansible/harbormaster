@@ -9,7 +9,7 @@ ansible-container:
     - {{ env_var }}
     {% endfor %}{% endif %}
   volumes:
-    - {{ base_path }}:/ansible-container/:Z
+    - {{ base_path }}:/ansible-container/{% if params.selinux %}:Z{% endif %}
     {% if with_volumes %}{% for vol in with_volumes %}
     - {{ vol }}{% endfor %}{% endif %}
   working_dir: /ansible-container/ansible/

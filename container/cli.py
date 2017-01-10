@@ -192,6 +192,10 @@ def commandline():
     parser.add_argument('--var-file', action='store',
                         help=u'Path to a YAML or JSON formatted file providing variables for '
                              u'Jinja2 templating in container.yml.', default=None)
+    parser.add_argument('--no-selinux', action='store_false', dest='selinux',
+                        help=u"Disables the 'Z' option from being set on volumes automatically "
+                             u"mounted to the build container.", default=True)
+
 
     subparsers = parser.add_subparsers(title='subcommand', dest='subcommand')
     subparsers.required = True

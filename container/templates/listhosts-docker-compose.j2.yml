@@ -17,8 +17,8 @@ ansible-container:
     {% endfor %}{% endif %}
   volumes:
     {% if not env.DOCKER_HOST %}- /var/run/docker.sock:/var/run/docker.sock{% endif %}
-    {% if env.DOCKER_CERT_PATH %}- $DOCKER_CERT_PATH:/etc/docker:Z{% endif %}
-    - {{ base_path }}:/ansible-container/:Z
+    {% if env.DOCKER_CERT_PATH %}- $DOCKER_CERT_PATH:/etc/docker{% if params.selinux %}:Z{% endif %}{% endif %}
+    - {{ base_path }}:/ansible-container/{% if params.selinux %}:Z{% endif %}
     {% if params.with_volumes %}{% for vol in params.with_volumes %}
     - {{ vol }}{% endfor %}{% endif %}
     {% if params.roles_path %}- {{ params.roles_path }}:/local-roles{% endif %}
