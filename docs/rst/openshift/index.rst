@@ -7,4 +7,5 @@ Prior to running any of the examples that include an OpenShift deployment, you'l
    :maxdepth: 2
 
    containers 
-   minishift 
+   minishift
+   adb

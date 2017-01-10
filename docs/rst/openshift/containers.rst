@@ -38,7 +38,7 @@ The `cluster-up-role <https://galaxy.ansible.com/chouseknecht/cluster-up-role>`_
 
 To use the role, you'll need Ansible installed. Also note, as demonstrated in the following video, that the playbook used to execute the role is copied from the installed role's file structure. You'll find the playbook, *cluster-up.yml*, in the *files* subfolder.
 
-.. image:: _static/doc_images/cluster.png
+.. image:: ../../_static/doc_images/cluster.png
    :target: https://youtu.be/iY4bkHDaxCc
    :height: 360px
    :width: 640px
@@ -183,7 +183,7 @@ Docker for Mac
 Go to the Docker toolbar menu, choose *Preferences* and open the *Advanced* or *Daemon* tab, and add the addresses to the list of
 *Insecure Registries*, as pictured in the following:
 
-.. image:: _static/doc_images/insecure_registry.png
+.. image:: ../../_static/doc_images/insecure_registry.png
    :height: 156px
    :width: 190px
    :scale: 250%

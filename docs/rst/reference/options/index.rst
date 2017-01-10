@@ -16,6 +16,10 @@ Enable debug output.
 
 Select your container engine and orchestrator. Defaults to *docker*.
 
+.. option:: --no-selinux
+
+Stops the 'Z' option from being added to any volumes that get automatically mounted to the build container. For example, the base path to the project is automatically mounted as */ansible-container:Z*.
+
 .. option:: --project BASE_PATH, -p BASE_PATH
 
 Specify a path to your project. Defaults to the current working directory.

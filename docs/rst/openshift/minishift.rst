@@ -36,8 +36,7 @@ Prerequisites
 If you're running on a Mac, you'll need the following installed:
 
 - `homebrew <https://brew.sh>`_ 
-- `Ansible 2.2+ <https://docs.ansible.com>`_
-
+- `Ansible 2.1+ <https://docs.ansible.com>`_
 
 **Linux**
 
@@ -54,16 +53,15 @@ If you're running on Fedora, Ansible requires the following packages:
 - python2-dnf
 - libselinux-python
 
-
 Install the role
 ----------------
 
-Use the Ansible Galaxy client, which comes bundled with Ansible, to install the role. If you're not familiar with installing roles, start by establishing a local directory where roles will be installed and executed. Run the following commands to create a ``~/roles`` directory, and then add ``ANSIBLE_ROLES_PATH=~/roles`` to you're login script:
+Use the Ansible Galaxy client, which comes bundled with Ansible, to install the role. If you're not familiar with installing roles, start by establishing a local directory where roles will be installed and executed. The following example creates the directory ``roles`` in your home directory, and then adds ``ANSIBLE_ROLES_PATH=~/roles`` to the login script, ``.bashrc``:
 
 .. code-block:: bash
 
     # Set your home directory as the working directory
-    $ cd ~  
+    $ cd ~
 
     # Create the roles directory
     $ mkdir roles
@@ -71,7 +69,11 @@ Use the Ansible Galaxy client, which comes bundled with Ansible, to install the 
     # Define ANSIBLE_ROLES_PATH in your login script
     $ echo "export ANSIBLE_ROLES_PATH=~/roles" >>.bashrc
 
-Now open a new terminal window or tab to create a new session, which will execute your login script, and check that *ANSIBLE_ROLES_PATH* is defined:
+.. NOTE::
+
+    The login script name will vary by platform and shell. Use the script that matches your environment.
+
+Now open a new terminal window or tab to create a new session and execute the login script, and then check that *ANSIBLE_ROLES_PATH* is defined:
 
 .. code-block:: bash
 
