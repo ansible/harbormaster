@@ -58,7 +58,7 @@ class Service(BaseShipItObject):
                 app=self.project_name,
                 service=name
             )
-            if type == 'config' and state != 'absent':
+            if request_type == 'config' and state != 'absent':
                 template = dict(
                     apiVersion="v1",
                     kind="Service",
@@ -75,7 +75,7 @@ class Service(BaseShipItObject):
                 for port in ports:
                     if port['port'] != port['targetPort']:
                         template['spec']['type'] = 'LoadBalancer'
-            elif type == 'task':
+            elif request_type == 'task':
                 template = dict(
                     kube_service=OrderedDict(
                         service_name=name,
@@ -87,13 +87,9 @@ class Service(BaseShipItObject):
                 if service.get('labels'):
                     template['kube_service']['labels'] = service.get('labels')
 
-                load_balancer = False
                 for port in ports:
                     if port['port'] != port['targetPort']:
-                        load_balancer = True
-
-                if load_balancer:
-                    template['kube_service']['type'] = 'LoadBalancer'
+                        template['kube_service']['type'] = 'LoadBalancer'
 
         return template
 
