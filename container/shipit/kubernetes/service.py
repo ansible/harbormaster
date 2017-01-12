@@ -32,7 +32,7 @@ class Service(BaseShipItObject):
         '''
         templates = []
         for link in links:
-            if not ':' in link:
+            if ':' not in link:
                 continue
             service_name, alias = link.split(':')
             alias_config = self.config['services'].get(service_name)
