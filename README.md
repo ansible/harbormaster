@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/ansible/ansible-container.svg)](https://travis-ci.org/ansible/ansible-container)
+[![Build Status](https://travis-ci.org/ansible/ansible-container.svg?branch=develop)](https://travis-ci.org/ansible/ansible-container)
 [![Code Coverage](https://codecov.io/gh/ansible/ansible-container/coverage.svg)](https://codecov.io/gh/ansible/ansible-container)
 
 # Ansible Container
