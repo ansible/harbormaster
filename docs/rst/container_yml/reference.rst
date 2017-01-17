@@ -182,7 +182,7 @@ for details.
 links
 `````
 
-Links allow containers to communicate directly without having to define a network, and this is upported by the ``build``
+Links allow containers to communicate directly without having to define a network, and this is supported by the ``build``
 and ``run`` commands.
 
 In the cloud, *links* are not supported, and so they will be ignored by ``shipit``. However, containers can communicate
@@ -304,7 +304,7 @@ Directive                Definition
 ======================== ======================================================================================================
 persistent_volume_claims Define a persistent volume claim. See :ref:`pvc` for more details.
 
-replicas                 Scale the servie by setting the number of pods to create. Defaults to 1.
+replicas                 Scale the service by setting the number of pods to create. Defaults to 1.
 runAsNonRoot             Set the runAsNonRoot option in the container's security context. Boolean. Defaults to false.
 runAsUser                The UID to run the entrypoint of the container process. Defaults to user specified in image metadata,
                          if unspecified.
