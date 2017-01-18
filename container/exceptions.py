@@ -59,4 +59,7 @@ class AnsibleContainerConfigException(Exception):
 class AnsibleContainerMissingPersistentVolumeClaim(Exception):
     pass
 
+class AnsibleContainerListHostsException(Exception):
+    pass
+
 

@@ -30,6 +30,7 @@ from ..exceptions import (AnsibleContainerNotInitializedException,
                           AnsibleContainerNoAuthenticationProvidedException,
                           AnsibleContainerDockerConfigFileException,
                           AnsibleContainerDockerLoginException,
+                          AnsibleContainerListHostsException,
                           AnsibleContainerNoMatchingHosts)
 
 from ..engine import BaseEngine, REMOVE_HTTP
@@ -98,6 +99,16 @@ class Engine(BaseEngine):
                 # We need to cleverly extract the host names from the output...
                 logger.debug('--list-hosts\n%s', stdout.getvalue())
                 lines = stdout.getvalue().split('\r\n')
+                clean_exit = False
+                for line in lines:
+                     if "exited with code 0" in line:
+                         clean_exit = True
+                         break
+                if not clean_exit:
+                    logger.error("ERROR: encountered the following while attempting to get hosts touhed by main.yml:")
+                    for line in lines:
+                        logger.error(line)
+                    raise AnsibleContainerListHostsException("ERROR: unable to get the list of hosts touched by main.yml") 
                 lines_minus_builder_host = [line.rsplit('|', 1)[1] for line
                                             in lines if '|' in line]
                 host_lines = set(line.strip() for line in lines_minus_builder_host
