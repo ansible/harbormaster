@@ -87,7 +87,7 @@ To install the role to your new ``~/roles`` directory, run the following:
 .. code-block:: bash
 
     # Install the role
-    $ ansible-galaxy install chousekncht.minishift-up-role
+    $ ansible-galaxy install chouseknecht.minishift-up-role
 
 Run the role
 ------------
