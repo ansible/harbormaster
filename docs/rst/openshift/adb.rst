@@ -18,7 +18,7 @@ The following platforms are supported:
 Prerequisites
 -------------
 
-- [Ansible 2.1+](https://github.com/ansible/ansible)
+- `Ansible 2.1+ <https://github.com/ansible/ansible>`_
 - Virtualbox 5.0.26+
 - Vagrant 1.9.1+
 
@@ -60,7 +60,7 @@ To install the role to the new ``~/roles`` directory, run the following:
 .. code-block:: bash
 
     # Install the role
-    $ ansible-galaxy install chousekncht.adb-up-role
+    $ ansible-galaxy install chouseknecht.adb-up-role
 
 Run the role
 ------------
