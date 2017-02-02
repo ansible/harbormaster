@@ -161,7 +161,11 @@ def subcmd_push_parser(parser, subparser):
                                  u'including the namespace. If passing a URL, an example would be: '
                                  u'"https://registry.example.com:5000/myproject"'),
                            dest='push_to', default=None)
-    subparser.add_argument('--tag', action='store', dest='push_tag', default=None)
+    subparser.add_argument('--tag', action='store',
+                           help = (u'A custom tag to apply to the image before pushing. '
+                                   u'For example, to tag and push images with "latest": ',
+                                   u'--tag latest'),
+                           dest='push_tag', default=None)
     subcmd_common_parsers(parser, subparser, 'push')
 
 def subcmd_version_parser(parser, subparser):
