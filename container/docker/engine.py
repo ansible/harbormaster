@@ -768,7 +768,7 @@ class Engine(BaseEngine):
             raise AnsibleContainerDockerConfigFileException("Failed to write docker registry config to %s - %s" %
                                                             (path, str(exc)))
 
-    def push_latest_image(self, host, url=None, namespace=None):
+    def push_latest_image(self, host, url=None, namespace=None, tag=None):
         '''
         :param host: The host in the container.yml to push
         :parm url: URL of the registry to which images will be pushed
@@ -778,6 +778,7 @@ class Engine(BaseEngine):
         client = self.get_client()
         image_id, image_buildstamp = get_latest_image_for(self.project_name,
                                                           host, client)
+        tag = tag or image_buildstamp
 
         repository = "%s/%s-%s" % (namespace, self.project_name, host)
         if url != self.default_registry_url:
@@ -785,11 +786,11 @@ class Engine(BaseEngine):
             repository = "%s/%s" % (re.sub('/$', '', url), repository)
 
         logger.info('Tagging %s' % repository)
-        client.tag(image_id, repository, tag=image_buildstamp)
+        client.tag(image_id, repository, tag=tag)
 
-        logger.info('Pushing %s:%s...' % (repository, image_buildstamp))
+        logger.info('Pushing %s:%s...' % (repository, tag))
         stream = client.push(repository,
-                             tag=image_buildstamp,
+                             tag=tag,
                              stream=True)
         last_status = None
         for data in stream:

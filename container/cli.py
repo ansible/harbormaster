@@ -161,6 +161,7 @@ def subcmd_push_parser(parser, subparser):
                                  u'including the namespace. If passing a URL, an example would be: '
                                  u'"https://registry.example.com:5000/myproject"'),
                            dest='push_to', default=None)
+    subparser.add_argument('--tag', action='store', dest='push_tag', default=None)
     subcmd_common_parsers(parser, subparser, 'push')
 
 def subcmd_version_parser(parser, subparser):

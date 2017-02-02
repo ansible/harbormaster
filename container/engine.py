@@ -240,7 +240,7 @@ class BaseEngine(object):
         """
         raise NotImplementedError()
 
-    def push_latest_image(self, host, url=None, namespace=None):
+    def push_latest_image(self, host, url=None, namespace=None, tag=None):
         """
         Push the latest built image for a host to a registry
 
@@ -423,7 +423,7 @@ def cmdrun_restart(base_path, engine_name, service=[], **kwargs):
         engine_obj.restart('restart', temp_dir, hosts=hosts)
 
 
-def cmdrun_push(base_path, engine_name, username=None, password=None, email=None, push_to=None, **kwargs):
+def cmdrun_push(base_path, engine_name, username=None, password=None, email=None, push_to=None, push_tag=None, **kwargs):
     assert_initialized(base_path)
     engine_args = kwargs.copy()
     engine_args.update(locals())
@@ -452,7 +452,7 @@ def cmdrun_push(base_path, engine_name, username=None, password=None, email=None
     logger.info('Pushing to "%s/%s' % (re.sub(r'/$', '', url), namespace))
 
     for host in engine_obj.hosts_touched_by_playbook():
-        engine_obj.push_latest_image(host, url=url, namespace=namespace)
+        engine_obj.push_latest_image(host, url=url, namespace=namespace, tag=push_tag)
     logger.info('Done!')
 
 
