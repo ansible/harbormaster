@@ -247,7 +247,7 @@ class Engine(BaseEngine):
         exit_status = build_container_info['Status']
         return '(0)' in exit_status
 
-    def get_config_for_shipit(self, pull_from=None, url=None, namespace=None):
+    def get_config_for_shipit(self, pull_from=None, url=None, namespace=None, tag=None):
         '''
         Retrieve the configuration needed to run the shipit command
 
@@ -275,7 +275,7 @@ class Engine(BaseEngine):
         for host, service_config in config.get('services', {}).items():
             if host in orchestrated_hosts:
                 image_id, image_buildstamp = get_latest_image_for(self.project_name, host, client)
-                image = '{0}-{1}:{2}'.format(self.project_name, host, image_buildstamp)
+                image = '{0}-{1}:{2}'.format(self.project_name, host, tag or image_buildstamp)
                 if image_path:
                     image = '{0}/{1}'.format(image_path, image)
                 service_config.update({u'image':  image})

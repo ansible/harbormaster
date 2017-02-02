@@ -254,7 +254,7 @@ class BaseEngine(object):
     def get_config(self):
         raise NotImplementedError()
 
-    def get_config_for_shipit(self, url=None, namespace=None):
+    def get_config_for_shipit(self, url=None, namespace=None, tag=None):
         '''
         Get the configuration needed by cmdrun_shipit. Result should include
         the *options* attribute for each service, as it may contain cluster
@@ -423,7 +423,7 @@ def cmdrun_restart(base_path, engine_name, service=[], **kwargs):
         engine_obj.restart('restart', temp_dir, hosts=hosts)
 
 
-def cmdrun_push(base_path, engine_name, username=None, password=None, email=None, push_to=None, push_tag=None, **kwargs):
+def cmdrun_push(base_path, engine_name, username=None, password=None, email=None, push_to=None, tag=None, **kwargs):
     assert_initialized(base_path)
     engine_args = kwargs.copy()
     engine_args.update(locals())
@@ -452,11 +452,11 @@ def cmdrun_push(base_path, engine_name, username=None, password=None, email=None
     logger.info('Pushing to "%s/%s' % (re.sub(r'/$', '', url), namespace))
 
     for host in engine_obj.hosts_touched_by_playbook():
-        engine_obj.push_latest_image(host, url=url, namespace=namespace, tag=push_tag)
+        engine_obj.push_latest_image(host, url=url, namespace=namespace, tag=tag)
     logger.info('Done!')
 
 
-def cmdrun_shipit(base_path, engine_name, pull_from=None, **kwargs):
+def cmdrun_shipit(base_path, engine_name, pull_from=None, tag=None, **kwargs):
     assert_initialized(base_path)
     engine_args = kwargs.copy()
     engine_args.update(locals())
@@ -491,7 +491,7 @@ def cmdrun_shipit(base_path, engine_name, pull_from=None, **kwargs):
                           "registry or provide a namespace for the registry in container.yml" % (url, str(exc))
                 raise AnsibleContainerRegistryAttributeException(msg)
 
-    config = engine_obj.get_config_for_shipit(pull_from=pull_from, url=url, namespace=namespace)
+    config = engine_obj.get_config_for_shipit(pull_from=pull_from, url=url, namespace=namespace, tag=tag)
 
     shipit_engine_obj = load_shipit_engine(AVAILABLE_SHIPIT_ENGINES[shipit_engine_name]['cls'],
                                            config=config,

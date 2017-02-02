@@ -70,6 +70,10 @@ class BaseShipItEngine(object):
                                   u'ansible/shipit_config/kubernetes.' % self.name),
                             dest='save_config', default=False)
 
+        parser.add_argument('--tag', action='store',
+                            help=(u'Name of a tag to pull down'),
+                            dest='tag', default=None)
+
         egroup = parser.add_mutually_exclusive_group()
         egroup.add_argument('--pull-from', action='store',
                             help=u'Name of a registry defined in container.yml or the actual URL the cluster will '

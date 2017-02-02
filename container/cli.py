@@ -165,7 +165,7 @@ def subcmd_push_parser(parser, subparser):
                            help=(u'A custom tag to apply to the image before pushing. '
                                  u'For example, to tag and push images with "latest": '
                                  u'--tag latest'),
-                           dest='push_tag', default=None)
+                           dest='tag', default=None)
     subcmd_common_parsers(parser, subparser, 'push')
 
 def subcmd_version_parser(parser, subparser):
