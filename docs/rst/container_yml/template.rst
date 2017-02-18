@@ -363,11 +363,17 @@ Using Ansible Vault
 `Ansible Vault <http://docs.ansible.com/ansible/playbooks_vault.html>`_ provides a way to encrypt and decrypt files, and
 Ansible Playbook can also decrypt Vault files and use them as variable files.
 
-As of now Ansible Container cannot decrypt a Vault file. If you wish to use a Vault, you will have to decrypt it first,
-and then pass the decrypted contents to Ansible Container either by way of ``--var-file`` or environment variables.
+To allow Ansible Container to decrypt your Vault, the Vault password file needs to be accessible to the Ansible Container and the option --vault-password-file used in the ansible_options part of the build command.
 
-It is certainly possible to decrypt a Vault file within your CI/CD process and expose it to Ansible Container. We'll
-leave it up to you to figure out the right way to do that in your environment. Just be careful!
+Either you put the password file in the ansible directory along with container.yml and it will be mounted and available
+```
+ansible-container build -- --vault-password-file /vault_password
+```
+
+Or the password file is in another location, its directory has to be shared with Docker engine in order to be mounted. 
+```
+ansible-container build --with-volumes /private/vault_password:/etc/vault_password -- --vault-password-file /etc/vault_password
+``` 
 
 
 Ansible filters and lookups
