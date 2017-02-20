@@ -50,6 +50,7 @@ Python sandbox:
 For more details, prerequisite, and instructions on installing the latest development release, please view our 
 [Installation Guide](https://docs.ansible.com/ansible-container/installation.html).
 
+Or, run with `docker run -v "${PWD}:/work" -it --rm ansible/ansible-container`.
 
 ## Getting started
 
