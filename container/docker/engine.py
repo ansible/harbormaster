@@ -105,7 +105,7 @@ class Engine(BaseEngine):
                          clean_exit = True
                          break
                 if not clean_exit:
-                    logger.error("ERROR: encountered the following while attempting to get hosts touhed by main.yml:")
+                    logger.error("ERROR: encountered the following while attempting to get hosts touched by main.yml:")
                     for line in lines:
                         logger.error(line)
                     raise AnsibleContainerListHostsException("ERROR: unable to get the list of hosts touched by main.yml") 
