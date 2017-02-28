@@ -23,12 +23,11 @@ import docker
 from lxdapi import lxd
 from yaml import dump as yaml_dump
 
-from ..docker.engine import Engine as DockerEngine
-
 from .. import __version__ as release_version
 from ..engine import BaseEngine
 from ..utils import *
 from .utils import *
+
 
 def lxc_exec(*cmd):
     lxc_cmd = find_executable('lxc')
@@ -48,8 +47,7 @@ def lxc_exec(*cmd):
     return '\n'.join(stdout)
 
 
-class Engine(DockerEngine):
-
+class Engine(BaseEngine):
     engine_name = 'LXD'
     orchestrator_name = 'Ansible with LXD'
     builder_container_img_name = 'ansible-container'
@@ -58,6 +56,7 @@ class Engine(DockerEngine):
     _client = None
     api_version = ''
     temp_dir = None
+    _orchestrated_hosts = None
 
     def orchestrate(self, operation, temp_dir, hosts=[], context={}):
         client = self.get_client()
@@ -87,6 +86,23 @@ class Engine(DockerEngine):
             lxd.container_get(client, 'ansible-container'),
             'Running',
         )
+
+        for name, config in self.config['services'].items():
+            try:
+                self.get_container_id_by_name(name)
+            except NameError:
+                lxc_exec(
+                    'launch',
+                    config.get('image'),
+                    name,
+                    '--debug',
+                )
+
+            lxd.container_apply_status(
+                client,
+                lxd.container_get(client, name),
+                'Running',
+            )
 
         if operation == 'listhosts':
             lxc_exec(
@@ -214,6 +230,29 @@ class Engine(DockerEngine):
         )
 
         return stdout.split('\n')
+
+    def hosts_touched_by_playbook(self):
+        """
+        List all hosts touched by the execution of the build playbook.
+
+        :return: list of strings
+        """
+        if not self._orchestrated_hosts:
+            with teed_stdout() as stdout, make_temp_dir() as temp_dir:
+                self.orchestrate('listhosts', temp_dir,
+                                 hosts=[self.builder_container_img_name])
+                logger.info('Cleaning up Ansible Container builder...')
+                builder_container_id = self.get_builder_container_id()
+                self.remove_container_by_id(builder_container_id)
+                # We need to cleverly extract the host names from the output...
+                logger.debug('--list-hosts\n%s', stdout.getvalue())
+                lines = stdout.getvalue().split('\r\n')
+                lines_minus_builder_host = [line.rsplit('|', 1)[1] for line
+                                            in lines if '|' in line]
+                host_lines = [line for line in lines_minus_builder_host
+                              if line.startswith('       ')]
+                self._orchestrated_hosts = list(set([line.strip() for line in host_lines]))
+        return filter(None, self._orchestrated_hosts)
 
     def get_image_id_by_tag(self, name):
         """
