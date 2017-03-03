@@ -2,11 +2,12 @@
 from __future__ import absolute_import
 
 import logging
+import importlib
+
+from .engine import CAPABILITIES
 
 logger = logging.getLogger(__name__)
 
-import importlib
-from .engine import CAPABILITIES
 
 def load_engine(capabilities_needed, engine_name, project_name, services=[], **kwargs):
     logger.debug(u"Loading capabilities %s for engine %s", ','.join(capabilities_needed), engine_name)

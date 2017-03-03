@@ -8,10 +8,12 @@ logger = logging.getLogger(__name__)
 CAPABILITIES = dict(
     BUILD='building container images',
     BUILD_CONDUCTOR='building the Conductor image',
-    RUN='orchestrating containers locally',
     DEPLOY='pushing and orchestrating containers remotely',
-    IMPORT='importing as Ansible Container project'
-)
+    IMPORT='importing as Ansible Container project',
+    LOGIN='authenticate with registry',
+    PUSH='push images to registry',
+    RUN='orchestrating containers locally',
+ )
 
 class BaseEngine(object):
     """
@@ -22,9 +24,11 @@ class BaseEngine(object):
     # Capabilities of engine implementations
     CAP_BUILD_CONDUCTOR = False
     CAP_BUILD = False
-    CAP_RUN = False
     CAP_DEPLOY = False
     CAP_IMPORT = False
+    CAP_LOGIN = False
+    CAP_PUSH = False
+    CAP_RUN = False
 
     def __init__(self, project_name, services, debug=False, selinux=True,
                  **kwargs):
@@ -49,6 +53,21 @@ class BaseEngine(object):
     @property
     def python_interpreter_path(self):
         return u'/_usr/bin/python'
+
+    @property
+    def default_registry_url(self):
+        """Default registry for pushing images"""
+        raise NotImplementedError()
+
+    @property
+    def registry_name(self):
+        """Name of the default registry for pushing images"""
+        raise NotImplementedError()
+
+    @property
+    def auth_config_path(self):
+        """Path to config file where the engine stores registry authentication"""
+        raise NotImplementedError()
 
     def run_container(self,
                       image_id,
@@ -100,7 +119,10 @@ class BaseEngine(object):
         repository. If not, presume the images are already present."""
         raise NotImplementedError()
 
-    def push_image(self, image_id, service_name, repository_data):
+    def push(self, image_id, service_name, repository_data):
+        """
+        Push an image to a registry.
+        """
         raise NotImplementedError()
 
     def build_conductor_image(self, base_path, base_image, cache=True):
@@ -111,4 +133,20 @@ class BaseEngine(object):
         raise NotImplementedError()
 
     def import_project(self, base_path, import_from, bundle_files=False, **kwargs):
+        raise NotImplementedError()
+
+    def login(self, username, password, email, url, config_path):
+        """
+        Authenticate with a registry, and update the engine's config file. Otherwise,
+        verify there is an existing authentication record within the config file for
+        the given url. Returns a username.
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def get_registry_username(registry_url, config_path):
+        """
+        Read authentication data stored at config_path for the regisrtry url, and
+        return the username
+        """
         raise NotImplementedError()

@@ -11,12 +11,12 @@ import hashlib
 import tempfile
 import shutil
 import subprocess
-import threading
 
 import yaml
 
 from .loader import load_engine
 from .utils import get_metadata_from_role, get_role_fingerprint
+
 
 def run_playbook(playbook, engine, service_map, ansible_options='',
                  python_interpreter=None, debug=False):
@@ -84,6 +84,7 @@ def apply_role_to_container(role, container_id, service_name, engine,
         logger.error('Error applying role!')
     return rc
 
+
 def build(engine_name, project_name, services, cache=True,
           python_interpreter=None, ansible_options='', debug=False, **kwargs):
     engine = load_engine(['BUILD'], engine_name, project_name, services)
@@ -105,7 +106,7 @@ def build(engine_name, project_name, services, cache=True,
                 engine.stop_container(cur_container_id, forcefully=True)
             engine.delete_container(cur_container_id)
 
-        if service['roles']:
+        if service.get('roles'):
             for role in service['roles']:
                 role_fingerprint = get_role_fingerprint(role)
                 fingerprint_hash.update(role_fingerprint)
@@ -129,9 +130,9 @@ def build(engine_name, project_name, services, cache=True,
                                      fingerprint_hash.hexdigest())
 
                 container_id = engine.run_container(
-                    image_id=cur_image_id,
+                    cur_image_id,
+                    service_name,
                     name=engine.container_name_for_service(service_name),
-                    service_name=service_name,
                     user='root',
                     working_dir='/',
                     command='sh -c "while true; do sleep 1; '
@@ -174,6 +175,7 @@ def build(engine_name, project_name, services, cache=True,
             logger.info(u'%s: No roles specified. Nothing to do.', service_name)
     logger.info(u'All images successfully built.')
 
+
 def run(engine_name, project_name, services, **kwargs):
     engine = load_engine(['RUN'], engine_name, project_name, services)
     logger.info(u'%s integration engine loaded. Preparing run.',
@@ -191,12 +193,14 @@ def run(engine_name, project_name, services, **kwargs):
     playbook = engine.generate_orchestration_playbook()
     rc = run_playbook(playbook, engine, services)
 
+
 def restart(engine_name, project_name, services, **kwargs):
     engine = load_engine(engine_name, project_name, services)
     logger.info(u'%s integration engine loaded. Preparing to restart containers.',
                 engine.display_name())
     engine.restart_all_containers()
     logger.info(u'All services restarted.')
+
 
 def stop(engine_name, project_name, services, **kwargs):
     engine = load_engine(engine_name, project_name, services)
@@ -208,6 +212,7 @@ def stop(engine_name, project_name, services, **kwargs):
             logger.debug(u'Stopping %s...', service_name)
             engine.stop_container(container_id)
     logger.info(u'All services stopped.')
+
 
 def deploy(engine_name, project_name, services, repository_data, playbook_dest, **kwargs):
     engine = load_engine(engine_name, project_name, services)
@@ -239,7 +244,40 @@ def deploy(engine_name, project_name, services, repository_data, playbook_dest, 
         logger.error(u'Failure writing deployment playbook: %s', e)
         raise
 
+
 def install(engine_name, project_name, services, role, **kwargs):
     # FIXME: Port me from ac_galaxy.py
     pass
 
+
+def push(engine_name, project_name, services, **kwargs):
+    """ Push images to a registry """
+    username = kwargs.pop('username')
+    password = kwargs.pop('password')
+    email = kwargs.pop('email')
+    url = kwargs.pop('url')
+    namespace = kwargs.pop('namespace')
+    tag = kwargs.pop('tag')
+    config_path = kwargs.pop('config_path')
+
+    engine = load_engine(['PUSH', 'LOGIN'], engine_name, project_name, services)
+    logger.info(u'%s integration engine loaded. Preparing push.',
+                engine.display_name)
+
+    # Verify that we can authenticate with the registry
+    username, password = engine.login(username, password, email, url, config_path)
+
+    repo_data = {
+        'url': url,
+        'namespace': namespace or username,
+        'tag': tag,
+        'username': username,
+        'password': password
+    }
+
+    # Push each image that has been built using Ansible roles
+    for service_name, service_config in services.items():
+        if service_config.get('roles'):
+            # if the service has roles, it's an image we should push
+            image_id = engine.get_latest_image_id_for_service(service_name)
+            engine.push(image_id, service_name, repo_data)

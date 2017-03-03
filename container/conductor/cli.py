@@ -50,8 +50,8 @@ def commandline():
                                                  u'except in a container by '
                                                  u'Ansible Container.')
     parser.add_argument('command', action='store', help=u'Command to run.',
-                        choices=['build', 'run', 'restart', 'stop', 'deploy',
-                                 'install'])
+                        choices=['build', 'deploy', 'install', 'push', 'run', 'restart',
+                                 'stop'])
     parser.add_argument('--project-name', action='store', help=u'Project name.', required=True)
     parser.add_argument('--engine', action='store', help=u'Engine name.', required=True)
     parser.add_argument('--params', action='store', required=False,

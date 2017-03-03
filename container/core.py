@@ -5,277 +5,27 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+import getpass
+import gzip
 import io
 import os
-import time
 import re
 import sys
-import gzip
 import tarfile
-import json
+import time
 
 import requests
 from six.moves.urllib.parse import urljoin
 
-from .exceptions import AnsibleContainerAlreadyInitializedException, \
-                        AnsibleContainerRegistryAttributeException, \
-                        AnsibleContainerHostNotTouchedByPlaybook, \
-                        AnsibleContainerException
+from .exceptions import AnsibleContainerException, \
+                        AnsibleContainerAlreadyInitializedException,\
+                        AnsibleContainerRegistryAttributeException
 from .utils import *
 from . import __version__
 from .conductor.loader import load_engine
 
 REMOVE_HTTP = re.compile('^https?://')
 DEFAULT_CONDUCTOR_BASE = 'centos:7'
-
-class BaseEngine(object):
-    engine_name = None
-    orchestrator_name = None
-    default_registry_url = ''
-    default_registry_name = ''
-
-    def __init__(self, base_path, project_name, params={}):
-        self.base_path = base_path
-        self.project_name = project_name
-        self.var_file = params.get('var_file')
-        self.config = get_config(base_path, var_file=self.var_file)
-        self.params = params
-        self.support_init = True
-        self.supports_build = True
-        self.supports_push = True
-        self.supports_run = True
-
-        logger.debug('Initialized with params: %s', params)
-
-
-    def all_hosts_in_orchestration(self):
-        """
-        List all hosts being orchestrated by the compose engine.
-
-        :return: list of strings
-        """
-        raise NotImplementedError()
-
-    def hosts_touched_by_playbook(self):
-        """
-        List all hosts touched by the execution of the build playbook.
-
-        :return: frozenset of strings
-        """
-        raise NotImplementedError()
-
-    def build_buildcontainer_image(self):
-        """
-        Build in the container engine the builder container
-
-        :return: generator of strings
-        """
-        raise NotImplementedError()
-
-    def get_image_id_by_tag(self, name):
-        """
-        Query the engine to get an image identifier by tag
-
-        :param name: the image name
-        :return: the image identifier
-        """
-        raise NotImplementedError()
-
-    def get_container_id_by_name(self, name):
-        """
-        Query the engine to get a container identifier by name
-
-        :param name: the container name
-        :return: the container identifier
-        """
-        raise NotImplementedError()
-
-    def remove_container_by_name(self, name):
-        """
-        Remove a container from the engine given its name
-
-        :param name: the name of the container to remove
-        :return: None
-        """
-        raise NotImplementedError()
-
-    def remove_container_by_id(self, id):
-        """
-        Remove a container from the engine given its identifier
-
-        :param id: container identifier
-        :return: None
-        """
-        raise NotImplementedError()
-
-    def get_builder_image_id(self):
-        """
-        Query the enginer to get the builder image identifier
-
-        :return: the image identifier
-        """
-        raise NotImplementedError()
-
-    def get_builder_container_id(self):
-        """
-        Query the enginer to get the builder container identifier
-
-        :return: the container identifier
-        """
-        raise NotImplementedError()
-
-    def build_was_successful(self):
-        """
-        After the build completed, did the build run successfully?
-
-        :return: bool
-        """
-        raise NotImplementedError()
-
-    def orchestrate(self, operation, temp_dir, hosts=[]):
-        """
-        Execute the compose engine.
-
-        :param operation: One of build, run, or listhosts
-        :param temp_dir: A temporary directory usable as workspace
-        :param hosts: (optional) A list of hosts to limit orchestration to
-        :return: The exit status of the builder container (None if it wasn't run)
-        """
-        raise NotImplementedError()
-
-    def orchestrate_build_extra_args(self):
-        """
-        Provide extra arguments to provide the orchestrator during build.
-
-        :return: dictionary
-        """
-        raise NotImplementedError()
-
-    def orchestrate_run_extra_args(self):
-        """
-        Provide extra arguments to provide the orchestrator during run.
-
-        :return: dictionary
-        """
-        raise NotImplementedError()
-
-    def orchestrate_install_extra_args(self):
-        """
-        Provide extra arguments to provide the orchestrator during install calls.
-
-        :return: dictionary
-        """
-        return {}
-
-    def orchestrate_listhosts_args(self):
-        """
-        Provide extra arguments to provide the orchestrator during listhosts.
-
-        :return: dictionary
-        """
-        raise NotImplementedError()
-
-    def terminate(self, operation, temp_dir, hosts=[]):
-        """
-        Stop, remove containers deployed by `orchestrate`.
-
-        :return: dictionary
-        """
-        raise NotImplementedError()
-
-    def terminate_stop_extra_args(self):
-        """
-        Provide extra arguments to provide the orchestrator during stop.
-
-        :return: dictionary
-        """
-        return NotImplementedError
-
-    def restart(self, operation, temp_dir, hosts=[]):
-        """
-        Restart containers deployed by `orchestrate`, deploys if not deployed
-
-        :param operation: 'restart'
-        :param temp_dir: A temporary directory usable as workspace
-        :param hosts: (optional) A list of hosts to limit orchestration to
-        """
-
-        return NotImplementedError
-
-    def restart_restart_extra_args(self):
-        """
-        Provide extra arguments to provide the orchestrator during restart.
-
-        :return: dictionary
-        """
-        return NotImplementedError
-
-    def post_build(self, host, version, flatten=True, purge_last=True):
-        """
-        After orchestrated build, prepare an image from the built container.
-
-        :param host: the name of the host in the orchestration file
-        :param version: the version tag for the resultant image
-        :param flatten: whether to flatten the resulatant image all the way
-        :param purge_last: whether to purge the last version of the image in the engine
-        :return: None
-        """
-        raise NotImplementedError()
-
-    def registry_login(self, username=None, password=None, email=None, url=None):
-        """
-        Logs into registry for this engine
-
-        :param username: Username to login with
-        :param password: Password to login with - None to prompt user
-        :param email: Email address to login with
-        :param url: URL of registry - default defined per backend
-        :return: None
-        """
-        raise NotImplementedError()
-
-    def currently_logged_in_registry_user(self, url):
-        """
-        Gets logged in user from configuration for a URL for the registry for
-        this engine.
-
-        :param url: URL
-        :return: (username, email) tuple
-        """
-        raise NotImplementedError()
-
-    def push_latest_image(self, host, url=None, namespace=None):
-        """
-        Push the latest built image for a host to a registry
-
-        :param host: The host in the container.yml to push
-        :param url: The url of the registry.
-        :param namespace: The username or organization that owns the image repo
-        :return: None
-        """
-        raise NotImplementedError()
-
-    def get_config(self):
-        raise NotImplementedError()
-
-    def get_config_for_shipit(self, url=None, namespace=None):
-        '''
-        Get the configuration needed by cmdrun_shipit. Result should include
-        the *options* attribute for each service, as it may contain cluster
-        directives.
-
-        :param url: URL to the registry.
-        :param namepace: a namespace withing the registry. Typically a username or organization.
-        :return: configuration dictionary
-        '''
-        raise NotImplementedError()
-
-    def print_version_info(self):
-        '''
-        Output to stdout version information about this engine and orchestrator.
-
-        :return: None
-        '''
 
 
 def cmdrun_init(base_path, project=None, **kwargs):
@@ -397,6 +147,7 @@ def cmdrun_build(base_path, project_name, engine_name, var_file=None, cache=True
         else:
             logger.info('Conductor terminated. Preserving as requested.')
 
+
 def cmdrun_run(base_path, project_name, engine_name, var_file=None, cache=True,
                **kwargs):
     logger.info('Got extra args %s to `run` command' % (kwargs))
@@ -464,37 +215,87 @@ def cmdrun_restart(base_path, engine_name, service=[], **kwargs):
         engine_obj.restart('restart', temp_dir, hosts=hosts)
 
 
-def cmdrun_push(base_path, engine_name, username=None, password=None, email=None, push_to=None, **kwargs):
+def cmdrun_push(base_path, project_name, engine_name, var_file=None, **kwargs):
+    """
+    Push images to a registry. Requires authenticating with the registry prior to starting
+    the push. If your engine's config file does not already contain an authorization for the
+    registry, pass username and/or password. If you exclude password, you will be prompted.
+    """
     assert_initialized(base_path)
-    engine_args = kwargs.copy()
-    engine_args.update(locals())
-    engine_obj = load_engine(**engine_args)
+    config = get_config(base_path, var_file=var_file)
 
-    # resolve url and namespace
-    config = engine_obj.config
+    engine_obj = load_engine(['LOGIN', 'PUSH'],
+                             engine_name, project_name or os.path.basename(base_path),
+                             config['services'], **kwargs)
+
+    config_path = kwargs.get('config_path', engine_obj.auth_config_path)
+    username = kwargs.get('username')
+    password = kwargs.get('password')
+    push_to = kwargs.get('push_to')
+
     url = engine_obj.default_registry_url
+    registry_name = engine_obj.default_registry_name
     namespace = None
     if push_to:
-        if (config.get('registries') or {}).get(push_to):
+        if config.get('registries', dict()).get(push_to):
             url = config['registries'][push_to].get('url')
             namespace = config['registries'][push_to].get('namespace')
             if not url:
-                raise AnsibleContainerRegistryAttributeException("Registry %s missing required attribute 'url'."
-                                                                 % push_to)
+                raise AnsibleContainerRegistryAttributeException(
+                    u"Registry {} missing required attribute 'url'".format(push_to)
+                )
         else:
             url, namespace = resolve_push_to(push_to, engine_obj.default_registry_url)
 
-    # Check that we can authenticate to the registry and get the username
-    username = engine_obj.registry_login(username=username, password=password,
-                                         email=email, url=url)
-    if not namespace:
-        namespace = username
+    if username and not password:
+        # If a username was supplied without a password, prompt for it
+        while not password:
+            password = getpass.getpass(u"Enter password for {0} at {1}: ".format(username, registry_name))
 
-    logger.info('Pushing to "%s/%s' % (re.sub(r'/$', '', url), namespace))
+    if config_path:
+        # Make sure the config_path exists
+        #  - gives us a chance to create the file with correct permissions, if it does not exists
+        #  - makes sure we mount a path to the conductor for a specific file
+        config_path = os.path.normpath(os.path.expanduser(config_path))
+        if os.path.exists(config_path) and os.path.isdir(config_path):
+            raise AnsibleContainerException(
+                u"Expecting --config-path to be a path to a file and not a directory"
+            )
+        elif not os.path.exists(config_path):
+            # Make sure the directory path exists
+            try:
+                os.makedirs(os.path.dirname(config_path), 0o750)
+            except OSError:
+                raise AnsibleContainerException(
+                    u"Failed to create the requested the path {}".format(os.path.dirname(config_path))
+                )
+            # Touch the file
+            open(config_path, 'w').close()
 
-    for host in engine_obj.hosts_touched_by_playbook():
-        engine_obj.push_latest_image(host, url=url, namespace=namespace)
-    logger.info('Done!')
+    # If you ran build with --save-build-container, then you're broken without first removing
+    #  the old build container.
+    remove_existing_container(engine_obj, 'conductor')
+
+    push_params = {}
+    push_params.update(kwargs)
+    push_params['config_path'] = config_path
+    push_params['password'] = password
+    push_params['url'] = url
+    push_params['namespace'] = namespace
+
+    conductor_container_id = engine_obj.run_conductor('push', dict(config), base_path, push_params)
+
+    try:
+        while engine_obj.service_is_running('conductor'):
+            time.sleep(0.1)
+    finally:
+        if not config.get('save_build_container', False):
+            logger.info('Conductor terminated. Cleaning up.')
+            if engine_obj.service_is_running('conductor'):
+                engine_obj.stop_container(conductor_container_id, forcefully=True)
+            engine_obj.delete_container(conductor_container_id)
+        else:
+            logger.info('Conductor terminated. Preserving as requested.')
 
 
 def cmdrun_shipit(base_path, engine_name, pull_from=None, **kwargs):
@@ -548,6 +349,7 @@ def cmdrun_shipit(base_path, engine_name, pull_from=None, **kwargs):
         config_path = shipit_engine_obj.save_config()
         logger.info('Saved configuration to %s' % config_path)
 
+
 def cmdrun_install(base_path, engine_name, roles=[], **kwargs):
     assert_initialized(base_path)
     engine_args = kwargs.copy()
@@ -569,6 +371,7 @@ def cmdrun_version(base_path, engine_name, debug=False, **kwargs):
         engine_obj = load_engine(**engine_args)
         engine_obj.print_version_info()
 
+
 def cmdrun_import(base_path, project_name, engine_name, **kwargs):
     engine_obj = load_engine(['IMPORT'],
                              engine_name,
@@ -577,6 +380,18 @@ def cmdrun_import(base_path, project_name, engine_name, **kwargs):
 
     engine_obj.import_project(base_path, **kwargs)
     logger.info('Project imported.')
+
+
+def remove_existing_container(engine_obj, service_name):
+    """
+    Remove a container for an existing service. Handy for removing an existing conductor.
+    """
+    conductor_container_id = engine_obj.get_container_id_for_service(service_name)
+    if engine_obj.service_is_running(service_name):
+        engine_obj.stop_container(conductor_container_id, forcefully=True)
+    if conductor_container_id:
+        engine_obj.delete_container(conductor_container_id)
+
 
 def create_build_container(container_engine_obj, base_path):
     assert_initialized(base_path)
@@ -594,8 +409,8 @@ def resolve_push_to(push_to, default_url):
     Given a push-to value, return the registry and namespace.
 
     :param push_to: string: User supplied --push-to value.
-    :param default_index: string: Container engine's default_index value (e.g. docker.io).
-    :return: tuple: index_name, namespace
+    :param default_url: string: Container engine's default_index value (e.g. docker.io).
+    :return: tuple: registry_url, namespace
     '''
     protocol = 'http://' if push_to.startswith('http://') else 'https://'
     url = push_to = REMOVE_HTTP.sub('', push_to)

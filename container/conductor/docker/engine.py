@@ -5,14 +5,15 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+import base64
 import datetime
+import functools
+import json
 import os
+import re
+import six
 import sys
 import tarfile
-import six
-import json
-import base64
-import functools
 
 try:
     import httplib as StatusCodes
@@ -27,6 +28,7 @@ from .. import exceptions
 try:
     import docker
     from docker import errors as docker_errors
+    from docker.utils.ports import build_port_bindings
 except ImportError:
     raise ImportError('Use of this engine requires you "pip install \'docker>=2.1\'" first.')
 
@@ -42,6 +44,16 @@ FILES_PATH = os.path.normpath(
 
 DOCKER_VERSION = '1.13.1'
 
+DOCKER_DEFAULT_CONFIG_PATH = os.path.join(os.environ.get('HOME', ''), '.docker', 'config.json')
+
+DOCKER_CONFIG_FILEPATH_CASCADE = [
+    os.environ.get('DOCKER_CONFIG', ''),
+    DOCKER_DEFAULT_CONFIG_PATH,
+    os.path.join(os.environ.get('HOME', ''), '.dockercfg')
+]
+
+REMOVE_HTTP = re.compile('^https?://')
+
 def log_runs(fn):
     @functools.wraps(fn)
     def __wrapped__(self, *args, **kwargs):
@@ -53,18 +65,22 @@ def log_runs(fn):
         return fn(self, *args, **kwargs)
     return __wrapped__
 
+
 class Engine(BaseEngine):
 
     # Capabilities of engine implementations
     CAP_BUILD_CONDUCTOR = True
     CAP_BUILD = True
-    CAP_RUN = True
     CAP_DEPLOY = True
     CAP_IMPORT = True
+    CAP_LOGIN = True
+    CAP_PUSH = True
+    CAP_RUN = True
 
     display_name = u'Docker\u2122 daemon'
 
     _client = None
+    _api_client = None
 
     FINGERPRINT_LABEL_KEY = 'com.ansible.container.fingerprint'
     LAYER_COMMENT = 'Built with Ansible Container (https://github.com/ansible/ansible-container)'
@@ -76,9 +92,32 @@ class Engine(BaseEngine):
         return self._client
 
     @property
+    def api_client(self):
+        if not self._api_client:
+            self._api_client = docker.APIClient()
+        return self._api_client
+
+    @property
     def ansible_args(self):
         """Additional commandline arguments necessary for ansible-playbook runs."""
         return u'-c docker'
+
+    @property
+    def default_registry_url(self):
+        return u'https://index.docker.io/v1/'
+
+    @property
+    def default_registry_name(self):
+        return u'Docker Hub'
+
+    @property
+    def auth_config_path(self):
+        result = DOCKER_DEFAULT_CONFIG_PATH
+        for path in DOCKER_CONFIG_FILEPATH_CASCADE:
+            if path and os.path.exists(path):
+                result = os.path.normpath(os.path.expanduser(path))
+                break
+        return result
 
     def container_name_for_service(self, service_name):
         return u'%s_%s' % (self.project_name, service_name)
@@ -88,16 +127,16 @@ class Engine(BaseEngine):
 
     def run_kwargs_for_service(self, service_name):
         to_return = self.services[service_name].copy()
-        # to_return['name'] = self.container_name_for_service(service_name)
         for key in ['from', 'roles']:
             to_return.pop(key)
+        if to_return.get('ports'):
+            # convert ports from a list to a dict that docker-py likes
+            new_ports = build_port_bindings(to_return.get('ports'))
+            to_return['ports'] = new_ports
         return to_return
 
     @log_runs
-    def run_container(self,
-                      image_id,
-                      service_name,
-                      **kwargs):
+    def run_container(self, image_id, service_name, **kwargs):
         """Run a particular container. The kwargs argument contains individual
         parameter overrides from the service definition."""
         run_kwargs = self.run_kwargs_for_service(service_name)
@@ -139,11 +178,18 @@ class Engine(BaseEngine):
             volumes['/var/run/docker.sock'] = {'bind': '/var/run/docker.sock',
                                                'mode': 'rw'}
 
+        environ['ANSIBLE_ROLES_PATH'] = '/src/roles:/etc/ansible/roles'
+
         if params.get('devel'):
             from container import conductor
             conductor_path = os.path.dirname(conductor.__file__)
             logger.debug(u"Binding conductor at %s into conductor container", conductor_path)
             volumes[conductor_path] = {'bind': '/_ansible/conductor/conductor', 'mode': 'rw'}
+
+        if command in ('login', 'push') and params.get('config_path'):
+            config_path = params.get('config_path')
+            volumes[config_path] = {'bind': config_path,
+                                    'mode': 'rw'}
 
         run_kwargs = dict(
             name=self.container_name_for_service('conductor'),
@@ -158,6 +204,7 @@ class Engine(BaseEngine):
             user='root',
             volumes=volumes,
             environment=environ,
+            working_dir='/src'
         )
 
         logger.debug('Docker run: image=%s, params=%s', image_id, run_kwargs)
@@ -262,6 +309,18 @@ class Engine(BaseEngine):
         else:
             return image.id
 
+    def get_build_stamp_for_image(self, image_id):
+        build_stamp = None
+        try:
+            image = self.client.images.get(image_id)
+        except docker_errors.ImageNotFound:
+            raise exceptions.AnsibleContainerConductorException(
+                "Unable to find image {}".format(image_id)
+            )
+        if image and image.tags:
+            build_stamp = [tag for tag in image.tags if not tag.endswith(':latest')][0].split(':')[-1]
+        return build_stamp
+
     @log_runs
     def commit_role_as_layer(self,
                              container_id,
@@ -286,9 +345,45 @@ class Engine(BaseEngine):
         # FIXME: Implement me.
         raise NotImplementedError()
 
-    def push_image(self, image_id, service_name, repository_data):
-        # FIXME: Implement me.
-        raise NotImplementedError()
+    def push(self, image_id, service_name, repository_data):
+        """
+        Puse an image to a remote registry.
+        """
+        tag = repository_data.get('tag')
+        namespace = repository_data.get('namespace')
+        url = repository_data.get('url')
+        auth_config = {
+            'username': repository_data.get('username'),
+            'password': repository_data.get('password')
+        }
+
+        build_stamp = self.get_build_stamp_for_image(image_id)
+        tag = tag or build_stamp
+
+        repository = "%s/%s-%s" % (namespace, self.project_name, service_name)
+        if url != self.default_registry_url:
+            url = REMOVE_HTTP.sub('', url)
+            repository = "%s/%s" % (re.sub('/$', '', url), repository)
+
+        logger.info('Tagging %s' % repository)
+        self.api_client.tag(image_id, repository, tag=tag)
+
+        logger.info('Pushing %s:%s...' % (repository, tag))
+        stream = self.api_client.push(repository, tag=tag, stream=True, auth_config=auth_config)
+
+        last_status = None
+        for data in stream:
+            data = data.splitlines()
+            for line in data:
+                line = json.loads(line)
+                if type(line) is dict and 'error' in line:
+                    logger.error(line['error'])
+                if type(line) is dict and 'status' in line:
+                    if line['status'] != last_status:
+                        logger.info(line['status'])
+                    last_status = line['status']
+                else:
+                    logger.debug(line)
 
     @log_runs
     def build_conductor_image(self, base_path, base_image, cache=True):
@@ -386,3 +481,73 @@ class Engine(BaseEngine):
                                import_from,
                                bundle_files)
         dfi.run()
+
+    def login(self, username, password, email, url, config_path):
+        """
+        If username and password are provided, authenticate with the registry.
+        Otherwise, check the config file for existing authentication data.
+        """
+        if username and password:
+            try:
+                self.client.login(username=username, password=password, email=email,
+                                  registry=url, reauth=True)
+            except docker_errors.APIError as exc:
+                raise exceptions.AnsibleContainerConductorException(
+                    u"Error logging into registry: {}".format(exc)
+                )
+            except Exception:
+                raise
+
+            self.update_config_file(username, password, email, url, config_path)
+
+        username, password = self.get_registry_auth(url, config_path)
+        if not username:
+            raise exceptions.AnsibleContainerConductorException(
+                u'Please provide login credentials for registry {}.'.format(url))
+        return username, password
+
+    @staticmethod
+    def update_config_file(username, password, email, url, config_path):
+        """Update the config file with the authorization."""
+        try:
+            # read the existing config
+            config = json.load(open(config_path, "r"))
+        except ValueError:
+            config = dict()
+
+        if not config.get('auths'):
+            config['auths'] = dict()
+
+        if not config['auths'].get(url):
+            config['auths'][url] = dict()
+        encoded_credentials = dict(
+            auth=base64.b64encode(username + b':' + password),
+            email=email
+        )
+        config['auths'][url] = encoded_credentials
+        try:
+            json.dump(config, open(config_path, "w"), indent=5, sort_keys=True)
+        except Exception as exc:
+            raise exceptions.AnsibleContainerConductorException(
+                u"Failed to write registry config to {0} - {1}".format(config_path, exc)
+            )
+
+    @staticmethod
+    def get_registry_auth(registry_url, config_path):
+        """
+        Retrieve from the config file the current authentication for a given URL, and
+        return the username, password
+        """
+        username = None
+        password = None
+        try:
+            docker_config = json.load(open(config_path))
+        except ValueError:
+            # The configuration file is empty
+            return username, password
+        if docker_config.get('auths'):
+            docker_config = docker_config['auths']
+        auth_key = docker_config.get(registry_url, {}).get('auth', None)
+        if auth_key:
+            username, password = base64.decodestring(auth_key).split(':', 1)
+        return username, password

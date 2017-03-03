@@ -153,6 +153,7 @@ def create_role_from_templates(role_name=None, role_path=None,
     if os.path.exists(tasks_file):
         os.rename(tasks_file, new_tasks_file)
 
+
 def resolve_role_to_path(role_name):
     loader, variable_manager = DataLoader(), VariableManager()
     role_obj = RoleInclude.load(data=role_name, play=None,
@@ -160,6 +161,7 @@ def resolve_role_to_path(role_name):
                                 loader=loader)
     role_path = role_obj._role_path
     return role_path
+
 
 def get_role_fingerprint(role_name):
 
@@ -210,8 +212,10 @@ def get_content_from_role(role_name, relative_path):
         return metadata
     return ordereddict.ordereddict()
 
+
 def get_metadata_from_role(role_name):
     return get_content_from_role(role_name, os.path.join('meta', 'container.yml'))
+
 
 def get_defaults_from_role(role_name):
     return get_content_from_role(role_name, os.path.join('defaults', 'main.yml'))

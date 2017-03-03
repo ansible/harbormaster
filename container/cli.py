@@ -51,6 +51,7 @@ AVAILABLE_COMMANDS = {'help': 'Display this help message',
                       'shipit': 'Generate a deployment playbook to your cloud of choice.',
                       'import': 'Convert a Dockerfile to a container.yml and role.'}
 
+
 def subcmd_common_parsers(parser, subparser, cmd):
     if cmd in ('build', 'run', 'shipit', 'push'):
         subparser.add_argument('--with-volumes', '-v', action='store', nargs='+',
@@ -65,6 +66,7 @@ def subcmd_common_parsers(parser, subparser, cmd):
                                help=u'Specify a local path containing roles you want to '
                                     u'use in the Conductor.')
 
+
 def subcmd_init_parser(parser, subparser):
     subparser.add_argument('--server', '-s', action='store',
                            default='https://galaxy.ansible.com/',
@@ -73,6 +75,7 @@ def subcmd_init_parser(parser, subparser):
                            help=u'Use a project template instead of making a '
                                 u'blank project from an Ansible Container project '
                                 u'from Ansible Galaxy.')
+
 
 def subcmd_build_parser(parser, subparser):
     subparser.add_argument('--flatten', action='store_true',
@@ -111,6 +114,7 @@ def subcmd_build_parser(parser, subparser):
                                 u'caution.', default=u'', nargs='*')
     subcmd_common_parsers(parser, subparser, 'build')
 
+
 def subcmd_run_parser(parser, subparser):
     subparser.add_argument('service', action='store',
                            help=u'The specific services you want to run',
@@ -125,6 +129,7 @@ def subcmd_run_parser(parser, subparser):
                            default=False, dest='remove_orphans')
     subcmd_common_parsers(parser, subparser, 'run')
 
+
 def subcmd_stop_parser(parser, subparser):
     subparser.add_argument('service', action='store',
                            help=u'The specific services you want to stop',
@@ -133,13 +138,16 @@ def subcmd_stop_parser(parser, subparser):
                            help=u'Force stop running containers',
                            dest='force')
 
+
 def subcmd_restart_parser(parser, subparser):
     subparser.add_argument('service', action='store',
                            help=u'The specific services you want to restart',
                            nargs='*')
 
+
 def subcmd_help_parser(parser, subparser):
     return
+
 
 def subcmd_push_parser(parser, subparser):
     subparser.add_argument('--username', action='store',
@@ -157,10 +165,15 @@ def subcmd_push_parser(parser, subparser):
                                  u'including the namespace. If passing a URL, an example would be: '
                                  u'"https://registry.example.com:5000/myproject"'),
                            dest='push_to', default=None)
+    subparser.add_argument('--tag', action='store',
+                           help=u'Tag the images before pushing.',
+                           dest='tag', default=None)
     subcmd_common_parsers(parser, subparser, 'push')
+
 
 def subcmd_version_parser(parser, subparser):
     return
+
 
 def subcmd_shipit_parser(parser, subparser):
     se_subparser = subparser.add_subparsers(title='shipit-engine', dest='shipit_engine')
@@ -170,12 +183,14 @@ def subcmd_shipit_parser(parser, subparser):
         engine_obj.add_options(engine_parser)
     subcmd_common_parsers(parser, subparser, 'shipit')
 
+
 def subcmd_install_parser(parser, subparser):
     subparser.add_argument('roles', nargs='+', action='store')
 
+
 def subcmd_import_parser(parser, subparser):
     # Commenting out until we can solidify the "import" interface
-    #subparser.add_argument('--dockerfile', action='store',
+    # subparser.add_argument('--dockerfile', action='store',
     #                       help=u"Name of the file to import. Defaults to 'Dockerfile'.",
     #                       dest='dockerfile_name', default='Dockerfile')
     subparser.add_argument('--bundle-files', action='store_true',
@@ -186,6 +201,7 @@ def subcmd_import_parser(parser, subparser):
                                 u'use this flag.', default=False)
     subparser.add_argument('import_from', action='store',
                            help=u'Path to project/context to import.')
+
 
 def commandline():
     parser = argparse.ArgumentParser(description=u'Build, orchestrate, run, and '
