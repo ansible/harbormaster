@@ -243,5 +243,6 @@ def commandline():
         if args.debug:
             logger.exception(e)
         else:
-            logger.error('Execution failed with {}'.format(type(e)))
+            msg = str(e) if str(e) else type(e)
+            logger.error('Execution failed with {}'.format(msg))
         sys.exit(1)
