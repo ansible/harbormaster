@@ -106,6 +106,10 @@ class Service(BaseShipItObject):
     def _port_in_list(port, ports):
         found = False
         for p in ports:
+            # Handle cases where the port value is port/protocol
+            if isinstance(p, str) and '/' in port:
+                p = p.split('/')[0]
+
             if p['port'] == int(port):
                 found = True
                 break
