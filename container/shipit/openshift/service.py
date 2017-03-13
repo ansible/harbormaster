@@ -108,7 +108,13 @@ class Service(BaseShipItObject):
         for p in ports:
             # Handle cases where the port value is port/protocol
             if isinstance(p, str) and '/' in port:
+                logger.warning('Adding a protocol to a port is not supported: %s', p)
                 p = p.split('/')[0]
+
+            # Handle cases where a port range was passed in
+            if isinstance(p, str) and '-' in port:
+                logger.warning('Port ranges are not supported: %s', p)
+                p = p.split('-')[0]
 
             if p['port'] == int(port):
                 found = True
