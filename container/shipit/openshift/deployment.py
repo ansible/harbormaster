@@ -236,7 +236,7 @@ class Deployment(BaseShipItObject):
             elif key in ('ports', 'expose'):
                 if not container.get('ports'):
                     container['ports'] = []
-                self._get_ports(value, request_type, container['ports'])
+                self._get_ports(value, container['ports'])
             elif key == 'privileged':
                 container['securityContext']['privileged'] = value
             elif key == 'read_only':
@@ -357,41 +357,23 @@ class Deployment(BaseShipItObject):
                 break
         return claim_name
 
-    def _get_ports(self, ports, type, existing_ports):
+    @staticmethod
+    def _get_ports(ports, existing_ports):
         '''
         Determine the list of ports to expose from the container, and add to existing ports.
-
-        :param: ports: list of port mappings
-        :param: type: 'config' or 'task'
-        :param: existing_ports: list of existing or already discovered ports
-        :return: None
         '''
-        for port in ports:
-            if isinstance(port, string_types) and ':' in port:
-                parts = port.split(':')
-                if not self._port_exists(parts[1], existing_ports):
-                    if type == 'config':
-                        existing_ports.append(dict(containerPort=int(parts[1])))
-                    else:
-                        existing_ports.append(int(parts[1]))
-            else:
-                if not self._port_exists(port, existing_ports):
-                    if type == 'config':
-                        existing_ports.append(dict(containerPort=int(port)))
-                    else:
-                        existing_ports.append(int(port))
+        def _port_exists(port, protocol):
+            found = [p for p in existing_ports if p['containerPort'] == int(port) and p['protocol'] == protocol]
+            return len(found) > 0
 
-    @staticmethod
-    def _port_exists(port, ports):
-        found = False
-        for p in ports:
-            if isinstance(p, dict) and p.get('containerPort') == int(port):
-                found = True
-                break
-            elif isinstance(p, int) and p == int(port):
-                found = True
-                break
-        return found
+        for port in ports:
+            protocol = 'TCP'
+            if isinstance(port, string_types) and '/' in port:
+                port, protocol = port.split('/') 
+            if isinstance(port, string_types) and ':' in port:
+                _, port = port.split(':')
+            if not _port_exists(port, protocol):
+                existing_ports.append(dict(containerPort=int(port), protocol=protocol.upper()))
 
     @staticmethod
     def _env_vars_to_task(env_vars):

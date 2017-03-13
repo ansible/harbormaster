@@ -172,8 +172,6 @@ class DeploymentManager(object):
         for container in self.containers:
             if container.get('env'):
                 container['env'] = self._env_to_list(container['env'])
-            if container.get('ports'):
-                container['ports'] = self._port_to_container_ports(container['ports'])
 
         template = dict(
             apiVersion="v1",
@@ -214,12 +212,6 @@ class DeploymentManager(object):
             ))
         return result
 
-    @staticmethod
-    def _port_to_container_ports(ports):
-        result = []
-        for port in ports:
-            result.append(dict(containerPort=port))
-        return result
 
 #The following will be included by `ansble-container shipit` when cloud modules are copied into the role library path.
 #include--> oso_api.py

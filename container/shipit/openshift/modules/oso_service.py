@@ -205,8 +205,7 @@ class OSOServiceManager(object):
             if not port.get('name'):
                 port['name'] = "port%s" % count
                 count += 1
-            if not port.get('type'):
-                port['type'] = "TCP"
+
 
 #The following will be included by `ansble-container shipit` when cloud modules are copied into the role library path.
 #include--> oso_api.py

@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import
 from collections import OrderedDict
+from six import string_types
 
 from ..base_engine import BaseShipItObject
 
@@ -85,29 +86,32 @@ class Service(BaseShipItObject):
 
         return template
 
-    def _get_ports(self, service):
-        # TODO - handle port ranges
+    @staticmethod
+    def _get_ports(service):
+
         ports = []
+
+        def _port_in_list(port, protocol):
+            found = [p for p in ports if p['port'] == int(port) and p['protocol'] == protocol]
+            return len(found) > 0
+
+        def _append_port(port, protocol):
+            if not _port_in_list(port, protocol):
+                ports.append(dict(port=int(port), targetPort=int(port), protocol=protocol, name='port-%s-%s' % (port, protocol.upper())))
+
         for port in service.get('ports', []):
-            if isinstance(port, str) and ':' in port:
-                parts = port.split(':')
-                if not self._port_in_list(parts[0], ports):
-                    ports.append(dict(port=int(parts[0]), targetPort=int(parts[1]), name='port-%s' % parts[0]))
-            else:
-                if not self._port_in_list(port, ports):
-                    ports.append(dict(port=int(port), targetPort=int(port), name='port-%s' % port))
+            protocol = 'TCP'
+            if isinstance(port, string_types) and '/' in port:
+                port, protocol = port.split('/')
+            if isinstance(port, string_types) and ':' in port:
+                _, port = port.split(':')
+            _append_port(port, protocol)
 
         for port in service.get('expose', []):
-            if not self._port_in_list(port, ports):
-                ports.append(dict(port=int(port), targetPort=int(port), name='port-%s' % port))
-        return ports
+            protocol = 'TCP'
+            if isinstance(port, string_types) and '/' in port:
+                port, protocol = port.split('/')
+            _append_port(port, protocol)
 
-    @staticmethod
-    def _port_in_list(port, ports):
-        found = False
-        for p in ports:
-            if p['port'] == int(port):
-                found = True
-                break
-        return found
+        return ports
 
