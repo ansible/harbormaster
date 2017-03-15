@@ -2,3 +2,4 @@ Jinja2>=2.8
 PyYAML>=3.11
 six
 requests
+ruamel.yaml
