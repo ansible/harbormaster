@@ -75,7 +75,7 @@ def commandline():
     containers_config = decoding_fn(args.config)
     conductor_config = AnsibleContainerConductorConfig(containers_config)
 
-    logger.debug('Starting Ansible Container Conductor: %s' % args.command,
+    logger.debug('Starting Ansible Container Conductor: %s', args.command,
         services=conductor_config.services)
     getattr(core, args.command)(args.engine, args.project_name,
                                 conductor_config.services,

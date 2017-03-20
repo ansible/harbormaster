@@ -116,7 +116,7 @@ def apply_role_to_container(role, container_id, service_name, engine,
 def build(engine_name, project_name, services, cache=True,
           python_interpreter=None, ansible_options='', debug=False, **kwargs):
     engine = load_engine(['BUILD'], engine_name, project_name, services)
-    logger.info(u'%s integration engine loaded. Build starting.' %
+    logger.info(u'%s integration engine loaded. Build starting.',
         engine.display_name, project=project_name)
 
     for service_name, service in services.iteritems():
@@ -124,8 +124,8 @@ def build(engine_name, project_name, services, cache=True,
         cur_image_id = engine.get_image_id_by_tag(service['from'])
         # the fingerprint hash tracks cacheability
         fingerprint_hash = hashlib.sha256('%s::' % cur_image_id)
-        logger.debug(u'Base fingerprint hash = %s', service=service_name,
-                     hash=fingerprint_hash.hexdigest())
+        logger.debug(u'Base fingerprint hash = %s', fingerprint_hash.hexdigest(),
+                     service=service_name, hash=fingerprint_hash.hexdigest())
         cache_busted = not cache
 
         cur_container_id = engine.get_container_id_for_service(service_name)
@@ -148,8 +148,8 @@ def build(engine_name, project_name, services, cache=True,
                         logger.debug(u'Cached layer found for service',
                                      service=service_name, fingerprint=fingerprint_hash.hexdigest())
                         cur_image_id = cached_image_id
-                        logger.info(u'Applied role from cache', service=service_name,
-                                    role=role)
+                        logger.info(u'Applied role %s from cache', role,
+                                    service=service_name, role=role)
                         continue
                     else:
                         cache_busted = True
@@ -241,7 +241,7 @@ def stop(engine_name, project_name, services, **kwargs):
     for service_name in services:
         container_id = engine.get_container_id_for_service(service_name)
         if container_id:
-            logger.debug(u'Stopping %s...' % service_name)
+            logger.debug(u'Stopping %s...', service_name)
             engine.stop_container(container_id)
     logger.info(u'All services stopped.')
 
@@ -253,7 +253,7 @@ def deploy(engine_name, project_name, services, repository_data, playbook_dest, 
 
     # Verify all images are built
     for service_name in services:
-        logger.info(u'Verifying image for %s' % service_name)
+        logger.info(u'Verifying image for %s', service_name)
         image_id = engine.get_latest_image_id_for_service(service_name)
         if not image_id:
             logger.error(u'Missing image. Run "ansible-container build" '
@@ -272,8 +272,8 @@ def deploy(engine_name, project_name, services, repository_data, playbook_dest, 
     try:
         with open(os.path.join(playbook_dest, '%s.yml' % project_name), 'w') as ofs:
             yaml.safe_dump(playbook, ofs)
-    except OSError, e:
-        logger.error(u'Failure writing deployment playbook', exc_info=e)
+    except OSError:
+        logger.error(u'Failure writing deployment playbook', exc_info=True)
         raise
 
 

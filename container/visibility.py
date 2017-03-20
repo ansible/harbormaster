@@ -11,7 +11,8 @@ from ruamel import ordereddict
 from structlog import wrap_logger
 from structlog.processors import JSONRenderer
 from structlog.dev import ConsoleRenderer
-from structlog.stdlib import filter_by_level
+from structlog.stdlib import filter_by_level, add_logger_name
+from structlog.stdlib import BoundLogger, PositionalArgumentsFormatter
 from structlog.processors import format_exc_info, TimeStamper
 
 logging.basicConfig(
@@ -67,12 +68,15 @@ def getLogger(name):
     return wrap_logger(
         logging.getLogger(name),
         processors=[
+            PositionalArgumentsFormatter(),
             filter_by_level,
+            add_logger_name,
             add_caller_info,
             #local_var_info,
             unorder_dict,
             TimeStamper(fmt="ISO", utc=False),
             format_exc_info,
             alternate_dev_formatter()
-        ]
+        ],
+        wrapper_class=BoundLogger,
     )

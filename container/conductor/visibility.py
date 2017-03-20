@@ -6,13 +6,15 @@ from __future__ import absolute_import
 import inspect
 import logging
 import sys
+import json
 
 from ruamel import ordereddict
 
 from structlog import wrap_logger
 from structlog.processors import JSONRenderer
 from structlog.dev import ConsoleRenderer
-from structlog.stdlib import filter_by_level
+from structlog.stdlib import filter_by_level, add_logger_name
+from structlog.stdlib import BoundLogger, PositionalArgumentsFormatter
 from structlog.processors import format_exc_info, TimeStamper
 
 logging.basicConfig(
@@ -30,25 +32,12 @@ def local_var_info(logger, call_name, event_dict):
     })
     return event_dict
 
-def _unroll_odict(od):
-    """Takes an ordereddict and rebuilds it as a regular dict
-
-    Only used in DEBUG mode, because logs below DEBUG are encoded
-    as JSON anyway."""
-    cleaned = {}
-    for key, value in od.items():
-        if isinstance(value, ordereddict.ordereddict):
-            cleaned[key] = _unroll_odict(value)
-        else:
-            cleaned[key] = value
-    return cleaned
-
 def unorder_dict(logger, call_name, event_dict):
     if logger.getEffectiveLevel() > logging.DEBUG:
         return event_dict
     for key, value in event_dict.items():
         if isinstance(value, ordereddict.ordereddict):
-            event_dict[key] = _unroll_odict(value)
+            event_dict[key] = json.dumps(value)
     return event_dict
 
 def add_caller_info(logger, call_name, event_dict):
@@ -81,12 +70,15 @@ def getLogger(name):
     return wrap_logger(
         logging.getLogger(name),
         processors=[
+            PositionalArgumentsFormatter(),
             filter_by_level,
+            add_logger_name,
             add_caller_info,
             #local_var_info,
             unorder_dict,
             TimeStamper(fmt="ISO", utc=False),
             format_exc_info,
             alternate_dev_formatter()
-        ]
+        ],
+        wrapper_class=BoundLogger,
     )

@@ -193,7 +193,7 @@ class Engine(BaseEngine):
         if params.get('devel'):
             from container import conductor
             conductor_path = os.path.dirname(conductor.__file__)
-            logger.debug(u"Binding conductor at %s into conductor container" % conductor_path)
+            logger.debug(u"Binding conductor at %s into conductor container", conductor_path)
             volumes[conductor_path] = {'bind': '/_ansible/conductor/conductor', 'mode': 'rw'}
 
         if command in ('login', 'push') and params.get('config_path'):
@@ -490,8 +490,9 @@ class Engine(BaseEngine):
 
             logger.debug('Context manifest:')
             for tarinfo_obj in tarball.getmembers():
-                logger.debug('tarball item: %s (%s bytes)' % (tarinfo_obj.name, tarinfo_obj.size),
-                    file=tarinfo_obj.name, bytes=tarinfo_obj.size, terse=True)
+                logger.debug('tarball item: %s (%s bytes)', tarinfo_obj.name,
+                             tarinfo_obj.size, file=tarinfo_obj.name,
+                             bytes=tarinfo_obj.size, terse=True)
             tarball.close()
             tarball_file.close()
             tarball_file = open(tarball_path, 'rb')
@@ -507,6 +508,10 @@ class Engine(BaseEngine):
                         line_json = json.loads(line)
                         if 'stream' in line_json:
                             line = line_json['stream']
+                        elif line_json.get('status') == 'Downloading':
+                            # skip over lines that give spammy byte-by-byte
+                            # progress of downloads
+                            continue
                     except ValueError:
                         pass
                     # this bypasses the fancy colorized logger for things that

@@ -112,7 +112,7 @@ class AnsibleContainerConfig(Mapping):
             raise AnsibleContainerConfigException(
                 u'Variables file "%s" not found. (I looked in "%s" for it.)' % (
                     filename, dirname))
-        logger.debug("Use variable file: %s" % abspath, file=abspath)
+        logger.debug("Use variable file: %s", abspath, file=abspath)
 
         if os.path.splitext(abspath)[-1].lower().endswith(('yml', 'yaml')):
             try:

@@ -37,9 +37,9 @@ class MakeTempDir(object):
             logger.debug('Cleaning up temporary directory',
                 path=self.temp_dir)
             shutil.rmtree(self.temp_dir)
-        except Exception as e:
+        except Exception:
             logger.error('Failure cleaning up temp space', path=self.temp_dir,
-                exc_info=e)
+                    exc_info=True)
 
 conductor_dir = os.path.normpath(os.path.dirname(__file__))
 

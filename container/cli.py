@@ -249,32 +249,32 @@ def commandline():
 
     try:
         getattr(core, u'cmdrun_{}'.format(args.subcommand))(**vars(args))
-    except exceptions.AnsibleContainerAlreadyInitializedException as e:
+    except exceptions.AnsibleContainerAlreadyInitializedException:
         logger.error('Ansible Container is already initialized', exc_info=True)
         sys.exit(1)
-    except exceptions.AnsibleContainerNotInitializedException as e:
+    except exceptions.AnsibleContainerNotInitializedException:
         logger.error('No Ansible Container project data found - do you need to '
                 'run "ansible-container init"?', exc_info=True)
         sys.exit(1)
-    except exceptions.AnsibleContainerNoAuthenticationProvidedException as e:
+    except exceptions.AnsibleContainerNoAuthenticationProvidedException:
         logger.error('No authentication provided, unable to continue', exc_info=True)
         sys.exit(1)
     except conductor_exc.AnsibleContainerConductorException as e:
         logger.error('Failure in conductor container: %s' % e.message, exc_info=True)
         sys.exit(1)
-    except exceptions.AnsibleContainerNoMatchingHosts as e:
+    except exceptions.AnsibleContainerNoMatchingHosts:
         logger.error('No matching service found in ansible/container.yml', exc_info=True)
         sys.exit(1)
-    except exceptions.AnsibleContainerHostNotTouchedByPlaybook as e:
+    except exceptions.AnsibleContainerHostNotTouchedByPlaybook:
         logger.error('The requested service(s) is not referenced in ansible/main.yml. Nothing to build.', exc_info=True)
         sys.exit(1)
     except exceptions.AnsibleContainerConfigException as e:
         logger.error('Invalid container.yml: {}'.format(e.message))
-    except requests.exceptions.ConnectionError as e:
+    except requests.exceptions.ConnectionError:
         logger.error('Could not connect to container host. Check your docker config', exc_info=True)
     except Exception as e:
         if args.debug:
-            logger.exception('Unknown exception %s' % str(e), exc_info=True)
+            logger.exception('Unknown exception %s' % e, exc_info=True)
         else:
             logger.error('Unknown exception', exc_info=True)
         sys.exit(1)
