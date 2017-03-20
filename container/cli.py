@@ -107,6 +107,8 @@ def subcmd_build_parser(parser, subparser):
     subparser.add_argument('--services', action='store',
                            help=u'Rather than perform an orchestrated build, only build specific services.',
                            nargs='+', dest='service', default=None)
+    subparser.add_argument('--use-vault-password-file', action='store_true',
+                           help=u'Use ansible_vault_password.txt from ansible folder', dest='use_vault_password_file',default=False)
     subparser.add_argument('ansible_options', action='store',
                            help=u'Provide additional commandline arguments to '
                                 u'Ansible in executing your playbook. If you '

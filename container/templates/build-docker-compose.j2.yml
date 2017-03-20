@@ -2,7 +2,7 @@ ansible-container:
   # If no $DOCKER_HOST then we need to run privileged so we can access /var/run/docker.sock
   {% if not env.DOCKER_HOST %}privileged: true{% endif %}
   image: "{{ builder_img_id }}"
-  command: "/usr/local/bin/builder.sh /usr/bin/ansible-playbook {% if params.debug %}-vvv{% endif %} -i /etc/ansible/ansible-container-inventory.py -c docker {{ params.ansible_options | join(' ')  }} main.yml"
+  command: "/usr/local/bin/builder.sh /usr/bin/ansible-playbook {% if params.debug %}-vvv{% endif %} -i /etc/ansible/ansible-container-inventory.py -c docker {% if params.use_vault_password_file %} --vault-password-file /ansible-container/ansible/ansible_vault_password.txt{% endif %} {{ params.ansible_options | join(' ')  }} main.yml"
   environment:
     {% if env.DOCKER_HOST %}- DOCKER_HOST{% else %}- DOCKER_HOST=unix:///var/run/docker.sock{% endif %}
     {% if env.DOCKER_TLS_VERIFY %}- DOCKER_TLS_VERIFY{% endif %}
