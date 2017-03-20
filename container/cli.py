@@ -14,6 +14,7 @@ from . import core
 from . import config
 from . import exceptions
 from .utils import load_shipit_engine, AVAILABLE_SHIPIT_ENGINES
+from .conductor import exceptions as conductor_exc
 
 from logging import config
 LOGGING = {
@@ -257,6 +258,9 @@ def commandline():
         sys.exit(1)
     except exceptions.AnsibleContainerNoAuthenticationProvidedException as e:
         logger.error('No authentication provided, unable to continue', exc_info=True)
+        sys.exit(1)
+    except conductor_exc.AnsibleContainerConductorException as e:
+        logger.error('Failure in conductor container: %s' % e.message, exc_info=True)
         sys.exit(1)
     except exceptions.AnsibleContainerNoMatchingHosts as e:
         logger.error('No matching service found in ansible/container.yml', exc_info=True)

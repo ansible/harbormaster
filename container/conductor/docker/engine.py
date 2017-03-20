@@ -317,9 +317,10 @@ class Engine(BaseEngine):
                 '%s:latest' % self.image_name_for_service(service_name))
         except docker_errors.ImageNotFound:
             images = self.client.images.list(name=self.image_name_for_service(service_name))
-            logger.debug("Could not ':latest' image, searching for "
-                "other tags with same image name",
-                image_name=self.image_name_for_service(service_name))
+            logger.debug("Could not find the latest image for service, "
+                "searching for other tags with same image name",
+                image_name=self.image_name_for_service(service_name),
+                service=service_name)
 
             if not images:
                 return None
