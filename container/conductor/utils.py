@@ -14,9 +14,13 @@ from distutils import dir_util
 
 from jinja2 import Environment, FileSystemLoader
 from ruamel import yaml, ordereddict
-from ansible.playbook.role.include import RoleInclude
-from ansible.vars import VariableManager
-from ansible.parsing.dataloader import DataLoader
+try:
+    from ansible.playbook.role.include import RoleInclude
+    from ansible.vars import VariableManager
+    from ansible.parsing.dataloader import DataLoader
+    HAS_ANSIBLE = True
+except ImportError:
+    HAS_ANSIBLE = False
 
 from .exceptions import AnsibleContainerConductorException
 
@@ -163,6 +167,8 @@ def create_role_from_templates(role_name=None, role_path=None,
 
 
 def resolve_role_to_path(role_name):
+    if not HAS_ANSIBLE:
+        raise ImportError('Unable to import Ansible python API')
     loader, variable_manager = DataLoader(), VariableManager()
     role_obj = RoleInclude.load(data=role_name, play=None,
                                 variable_manager=variable_manager,
