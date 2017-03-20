@@ -168,7 +168,6 @@ def cmdrun_run(base_path, project_name, engine_name, var_file=None, cache=True,
         logger.error(msg, engine=engine_obj.display_name)
         raise Exception(msg)
 
-    print(engine_obj.services)
     for service in engine_obj.services:
         if not engine_obj.service_is_running(service):
             logger.debug(u'Service not running, will be started by `run`'
