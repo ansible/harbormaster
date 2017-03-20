@@ -48,6 +48,9 @@ setup(
         'pytest>=3',
         'docker>=2.1'
     ],
+    extras_require={
+        'docker': ['docker>=2.1'],
+    },
     dependency_links=[
         'git+https//github.com/ansible/ansible'
     ],
