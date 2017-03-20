@@ -373,24 +373,32 @@ class Engine(BaseEngine):
     def generate_orchestration_playbook(self, repository_data=None):
         """If repository_data is specified, presume to pull images from that
         repository. If not, presume the images are already present."""
-        tasks = []
+        munged_services = {}
 
         for service_name, service in self.services.items():
             image = self.get_latest_image_for_service(service_name)
             runit = {
-                'docker_container': {
-                    'name': service_name,
-                    'image': image.tags[0],
-                }
-
+                'image': image.tags[0],
             }
-            logger.debug('Adding new play task', service=service_name, task=runit)
-            tasks.append(runit)
+            logger.debug('Adding new service to definition',
+                service=service_name, definition=runit)
+            munged_services[service_name] = runit
 
         playbook = [{
             'hosts': 'localhost',
             'gather_facts': False,
-            'tasks': tasks
+            'tasks': [
+                {
+                    'docker_service': {
+                        'project_name': self.project_name,
+                        'state': state,
+                        'definition': {
+                            'version': '2',
+                            'services': munged_services,
+                        }
+                    }
+                } for state in ('absent', 'present')
+            ]
         }]
         logger.debug('Created playbook to run project', playbook=playbook)
         return playbook
