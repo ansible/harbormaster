@@ -76,7 +76,11 @@ class AnsibleContainerConfig(Mapping):
         defaults = config.setdefault('defaults', ordereddict.ordereddict())
         if self.var_file:
             defaults.update(self._get_variables_from_file(), relax=True)
-        defaults.update(self._get_environment_variables(), relax=True)
+        logger.debug('The default type is', defaults=str(type(defaults)), config=str(type(config)))
+        if type(defaults) == ordereddict.ordereddict:
+            defaults.update(self._get_environment_variables(), relax=True)
+        else:
+            defaults.update(self._get_environment_variables())
         logger.debug(u'Resolved template variables', template_vars=defaults)
 
     def _get_environment_variables(self):
