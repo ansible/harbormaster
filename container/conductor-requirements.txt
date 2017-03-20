@@ -1,2 +1,3 @@
 git+https://github.com/docker/docker-py#egg=docker
 structlog[dev]
+docker-compose
