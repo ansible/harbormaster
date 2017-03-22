@@ -4,13 +4,14 @@ from __future__ import absolute_import
 
 import logging
 import os
-import subprocess
-import shlex
 import select
-import yaml
+import shlex
+import subprocess
 
+import yaml
 from six import string_types, text_type
-from ..exceptions import AnsibleContainerShipItException
+
+from container.common.exceptions import AnsibleContainerShipItException
 
 logger = logging.getLogger(__name__)
 

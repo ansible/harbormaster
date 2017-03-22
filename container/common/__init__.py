@@ -5,6 +5,3 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
-class AnsibleContainerConductorException(Exception):
-    pass

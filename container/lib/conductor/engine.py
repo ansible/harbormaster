@@ -1,33 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-from .visibility import getLogger
+from container.common.visibility import getLogger
 logger = getLogger(__name__)
-
-CAPABILITIES = dict(
-    BUILD='building container images',
-    BUILD_CONDUCTOR='building the Conductor image',
-    DEPLOY='pushing and orchestrating containers remotely',
-    IMPORT='importing as Ansible Container project',
-    LOGIN='authenticate with registry',
-    PUSH='push images to registry',
-    RUN='orchestrating containers locally',
- )
 
 class BaseEngine(object):
     """
     Interface class for implementations of various container engine integrations
     into Ansible Container.
     """
-
-    # Capabilities of engine implementations
-    CAP_BUILD_CONDUCTOR = False
-    CAP_BUILD = False
-    CAP_DEPLOY = False
-    CAP_IMPORT = False
-    CAP_LOGIN = False
-    CAP_PUSH = False
-    CAP_RUN = False
 
     def __init__(self, project_name, services, debug=False, selinux=True,
                  **kwargs):

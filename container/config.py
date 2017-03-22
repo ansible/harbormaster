@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-from .visibility import getLogger
+from container.common.visibility import getLogger
 logger = getLogger(__name__)
 
 import os
@@ -9,9 +9,9 @@ import json
 import six
 
 from collections import Mapping
-from .exceptions import AnsibleContainerConfigException
-
 from ruamel import yaml, ordereddict
+
+from .common.exceptions import AnsibleContainerConfigException
 
 # TODO: Actually do some schema validation
 

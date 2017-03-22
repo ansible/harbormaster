@@ -1,14 +1,13 @@
+import os
 import shutil
 import tempfile
-from os import path
 import unittest
-import os
-import yaml
-import json
+from os import path
 
-from container.config import AnsibleContainerConfig
-from container.exceptions import AnsibleContainerConfigException
 from container import __version__
+from container.common.exceptions import AnsibleContainerConfigException
+from container.config import AnsibleContainerConfig
+
 
 class TestAnsibleContainerConfig(unittest.TestCase):
 

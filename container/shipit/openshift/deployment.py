@@ -3,15 +3,15 @@
 
 from __future__ import absolute_import
 
-
 import logging
 import re
 import shlex
 from collections import OrderedDict
+
 from six import string_types
 
+from container.common.exceptions import AnsibleContainerMissingPersistentVolumeClaim
 from ..base_engine import BaseShipItObject
-from container.exceptions import AnsibleContainerMissingPersistentVolumeClaim
 
 logger = logging.getLogger(__name__)
 

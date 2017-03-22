@@ -1,4 +1,5 @@
 recursive-include container/templates *
+recursive-include container/lib *
 include *.txt
 include *.md
 include LICENSE

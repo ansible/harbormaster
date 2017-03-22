@@ -4,7 +4,7 @@ from __future__ import absolute_import
 import logging
 plainLogger = logging.getLogger(__name__)
 
-from .visibility import getLogger
+from container.common.visibility import getLogger
 logger = getLogger(__name__)
 
 import os
@@ -16,7 +16,7 @@ import subprocess
 
 import yaml
 
-from .loader import load_engine
+from container.common.loader import load_engine
 from .utils import get_role_fingerprint
 
 

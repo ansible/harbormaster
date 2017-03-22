@@ -21,8 +21,8 @@ try:
 except ImportError:
     raise ImportError('This engine requires you "pip install \'ruamel.yaml>=0.13.14\'" to import projects.')
 
-from ..exceptions import AnsibleContainerConductorException
-from ..utils import create_role_from_templates
+from ..common.exceptions import AnsibleContainerConductorException
+from ..common.utils import create_role_from_templates
 
 # Known issues:
 # * In a Dockerfile, ENV and ARG params don't apply to directives before their

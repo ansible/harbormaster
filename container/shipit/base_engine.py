@@ -12,7 +12,7 @@ import glob
 from .constants import SHIPIT_PATH, SHIPIT_PLAYBOOK_PREFIX, SHIPIT_ROLES_DIR
 from collections import OrderedDict
 from .utils import represent_odict
-from ..utils import create_path
+from container.common.utils import create_path
 from container.conductor.utils import create_role_from_templates
 
 

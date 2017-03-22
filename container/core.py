@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function
 
-import logging
-
-from .visibility import getLogger
+from container.common.visibility import getLogger
 logger = getLogger(__name__)
 
 import getpass
@@ -18,12 +16,12 @@ import time
 import requests
 from six.moves.urllib.parse import urljoin
 
-from .exceptions import AnsibleContainerException, \
-                        AnsibleContainerAlreadyInitializedException,\
-                        AnsibleContainerRegistryAttributeException
-from .utils import *
+from .common.exceptions import AnsibleContainerException, \
+    AnsibleContainerAlreadyInitializedException,\
+    AnsibleContainerRegistryAttributeException
+from .common.utils import *
+from .common.loader import load_engine
 from . import __version__
-from .conductor.loader import load_engine
 
 REMOVE_HTTP = re.compile('^https?://')
 DEFAULT_CONDUCTOR_BASE = 'centos:7'
@@ -102,7 +100,8 @@ def cmdrun_init(base_path, project=None, **kwargs):
                                         os.path.basename(base_path))
         }
         for tmpl_filename in os.listdir(template_dir):
-            jinja_render_to_temp(os.path.join('init', tmpl_filename),
+            jinja_render_to_temp(template_dir,
+                                 tmpl_filename,
                                  base_path,
                                  tmpl_filename.replace('.j2', ''),
                                  **context)
@@ -162,11 +161,6 @@ def cmdrun_run(base_path, project_name, engine_name, var_file=None, cache=True,
     engine_obj = load_engine(['RUN'],
                              engine_name, project_name or os.path.basename(base_path),
                              config['services'], **kwargs)
-    if not engine_obj.CAP_RUN:
-        msg = u'{} does not support building the Conductor image.'.format(
-            engine_obj.display_name)
-        logger.error(msg, engine=engine_obj.display_name)
-        raise Exception(msg)
 
     for service in engine_obj.services:
         if not engine_obj.service_is_running(service):

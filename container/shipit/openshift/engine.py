@@ -2,16 +2,16 @@
 
 from __future__ import absolute_import
 
+import json
 import logging
 import os.path
-import json
 
-from container.utils import create_path
-from ..base_engine import BaseShipItEngine
+from container.common.utils import create_path
 from .deployment import Deployment
 from .pvc import Pvc
 from .route import Route
 from .service import Service
+from ..base_engine import BaseShipItEngine
 from ..constants import SHIPIT_PATH, SHIPIT_CONFIG_PATH
 
 logger = logging.getLogger(__name__)

@@ -32,10 +32,10 @@ RUN ( test -f /_ansible/build/ansible-requirements.txt && pip install --no-cache
     ( test -f /_ansible/build/ansible.cfg && cp /_ansible/build/ansible.cfg /etc/ansible/ansible.cfg || true)
 
 # The COPY here will break cache if the version of conductor changed
-COPY /conductor-src /_ansible/conductor
-RUN cd /_ansible/conductor && \
-    pip install --no-cache-dir -r requirements.txt && \
-    python setup.py develop
+COPY /container-src /_ansible/container
+RUN cd /_ansible/container/lib && \
+    pip install --no-cache-dir -r conductor-requirements.txt && \
+    python conductor-setup.py install
 VOLUME /usr
 
 

@@ -1,49 +1,18 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-from .visibility import getLogger
+from container.common.visibility import getLogger
 logger = getLogger(__name__)
 
 import os
-import importlib
-import tempfile
-import shutil
 import hashlib
-from datetime import datetime
-from distutils import dir_util
 
 from jinja2 import Environment, FileSystemLoader
 from ruamel import yaml, ordereddict
-try:
-    from ansible.playbook.role.include import RoleInclude
-    from ansible.vars import VariableManager
-    from ansible.parsing.dataloader import DataLoader
-    HAS_ANSIBLE = True
-except ImportError:
-    HAS_ANSIBLE = False
+from ansible.playbook.role.include import RoleInclude
+from ansible.vars import VariableManager
+from ansible.parsing.dataloader import DataLoader
 
-from .exceptions import AnsibleContainerConductorException
-
-class MakeTempDir(object):
-    temp_dir = None
-
-    def __enter__(self):
-        self.temp_dir = tempfile.mkdtemp()
-        logger.debug('Using temporary directory', path=self.temp_dir)
-        return os.path.realpath(self.temp_dir)
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        try:
-            logger.debug('Cleaning up temporary directory',
-                path=self.temp_dir)
-            shutil.rmtree(self.temp_dir)
-        except Exception:
-            logger.error('Failure cleaning up temp space', path=self.temp_dir,
-                    exc_info=True)
-
-conductor_dir = os.path.normpath(os.path.dirname(__file__))
-
-make_temp_dir = MakeTempDir
 
 def jinja_render_to_temp(templates_path, template_file, temp_dir, dest_file, **context):
     j2_env = Environment(loader=FileSystemLoader(templates_path))
@@ -123,52 +92,7 @@ def metadata_to_image_config(metadata):
     return config
 
 
-def create_role_from_templates(role_name=None, role_path=None,
-                               project_name=None, description=None):
-    '''
-    Create a new role with initial files from templates.
-    :param role_name: Name of the role
-    :param role_path: Full path to the role
-    :param project_name: Name of the project, or the base path name.
-    :param description: One line description of the role.
-    :return: None
-    '''
-    context = locals()
-    templates_path = os.path.join(conductor_dir, 'templates', 'role')
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%s')
-
-    logger.debug('Role template location', path=templates_path)
-    for rel_path, templates in [(os.path.relpath(path, templates_path), files)
-                                for (path, _, files) in os.walk(templates_path)]:
-        target_dir = os.path.join(role_path, rel_path)
-        dir_util.mkpath(target_dir)
-        for template in templates:
-            template_rel_path = os.path.join(rel_path, template)
-            target_name = template.replace('.j2', '')
-            target_path = os.path.join(target_dir, target_name)
-            if os.path.exists(target_path):
-                backup_path = u'%s_%s' % (target_path, timestamp)
-                logger.debug(u'Found existing file. Backing target to backup',
-                    target=target_path, backup=backup_path)
-                os.rename(target_path, backup_path)
-            logger.debug("Rendering template for %s/%s" % (target_dir, template))
-            jinja_render_to_temp(templates_path,
-                                 template_rel_path,
-                                 target_dir,
-                                 target_name,
-                                 **context)
-
-    new_file_name = "main_{}.yml".format(datetime.today().strftime('%y%m%d%H%M%S'))
-    new_tasks_file = os.path.join(role_path, 'tasks', new_file_name)
-    tasks_file = os.path.join(role_path, 'tasks', 'main.yml')
-
-    if os.path.exists(tasks_file):
-        os.rename(tasks_file, new_tasks_file)
-
-
 def resolve_role_to_path(role_name):
-    if not HAS_ANSIBLE:
-        raise ImportError('Unable to import Ansible python API')
     loader, variable_manager = DataLoader(), VariableManager()
     role_obj = RoleInclude.load(data=role_name, play=None,
                                 variable_manager=variable_manager,

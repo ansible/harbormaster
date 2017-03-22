@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-from .visibility import getLogger
+from container.common.visibility import getLogger
 logger = getLogger(__name__)
 
 
 class AnsibleContainerException(Exception):
+    pass
+
+class AnsibleContainerConductorException(Exception):
     pass
 
 class AnsibleContainerNotInitializedException(AnsibleContainerException):
