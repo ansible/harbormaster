@@ -1,5 +1,10 @@
 # tasks/main.yml
 --- 
+- name: Remove task.output
+  file:
+    path: ./task.output
+    state: absent
+
 - name: Make temporary workspace
   tempfile:
     path: "{{ lookup('env', 'TMPDIR')|default(omit) }}"
@@ -50,7 +55,7 @@
   shell: >
     ansible-container --debug --project-path
     {{ item.1.path|quote }}/test-{{ item.0.name|quote }} import
-    {{ item.1.path|quote }}/{{ item.0.name|quote }} >task.output 2>&1 
+    {{ item.1.path|quote }}/{{ item.0.name|quote }} >>task.output 2>&1 
   with_together:
     - "{{ distros }}"
     - "{{ tempdirs.results }}"
@@ -58,10 +63,10 @@
   ignore_errors: yes
   tags: always
 
-- include: show-output.yml output_file=./task.output return_code="{{ output.results[0].rc }}"
+- include: show-output.yml output_file=./task.output registered_output="{{ output }}"
 
 - name: Validate import
-  shell: pytest tests/validate_import.py >task.output 2>&1
+  shell: pytest tests/validate_import.py >>task.output 2>&1
   environment:
     TO_AC: "{{ item.1.path|quote }}/test-{{ item.0.name|quote }}"
     DISTRO_DATA: "{{ item.0|to_json }}"
@@ -73,12 +78,12 @@
   tags:
     - validate_import
 
-- include: show-output.yml output_file=./task.output return_code="{{ output.results[0].rc }}"
+- include: show-output.yml output_file=./task.output registered_output="{{ output }}"
 
 - name: Run ansible-container build
   shell: >
     ansible-container --debug --project-path
-    {{ item.1.path|quote }}/test-{{ item.0.name|quote }} build --no-cache >task.output 2>&1
+    {{ item.1.path|quote }}/test-{{ item.0.name|quote }} build --no-cache >>task.output 2>&1
   with_together:
     - "{{ distros }}"
     - "{{ tempdirs.results }}"
@@ -88,10 +93,10 @@
     - build
     - build_no_validate
 
-- include: show-output.yml output_file=./task.output return_code="{{ output.results[0].rc }}"
+- include: show-output.yml output_file=./task.output registered_output="{{ output }}"
 
 - name: Validate build
-  shell: pytest tests/validate_build.py >task.output 2>&1
+  shell: pytest tests/validate_build.py >>task.output 2>&1
   environment:
     TO_AC: "{{ item.1.path|quote }}/test-{{ item.0.name|quote }}"
     DISTRO_DATA: "{{ item.0|to_json }}"
@@ -104,4 +109,4 @@
     - build
     - validate_build
 
-- include: show-output.yml output_file=./task.output return_code="{{ output.results[0].rc }}"
+- include: show-output.yml output_file=./task.output registered_output="{{ output }}"

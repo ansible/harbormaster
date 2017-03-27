@@ -326,7 +326,7 @@ class DockerfileParser(object):
                 if comments:
                     task['name'] = u' '.join(comments)
                 task['get_url'] = CommentedMap([
-                    ('url', src_spec), ('dest', dest), ('mode', 0600)])
+                    ('url', src_spec), ('dest', dest), ('mode', 0600), ('validate_certs', 'no')])
                 tasks.append(task)
             else:
                 real_path = os.path.join(self.path, src_spec)

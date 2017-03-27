@@ -21,14 +21,16 @@ distros:
     httpd_bin: "/usr/sbin/apache2"
     httpd_user: "apache"
 
-  - name: "alpine"
-    base_image: "alpine:3.5"
-    package_update_command: "apk update"
-    httpd_install_command: "apk add apache2"
-    httpd_conf_src: "alpine35/httpd.conf"
-    httpd_conf_dest: "/etc/apache2/httpd.conf"
-    httpd_pageroot: "/var/www/localhost/htdocs/"
-    httpd_bin: "/usr/sbin/httpd"
-    httpd_user: "apache"
+# Synchronize module not quite working on Alpine
+
+#  - name: "alpine"
+#    base_image: "alpine:3.5"
+#    package_update_command: "apk update"
+#    httpd_install_command: "apk add tar apache2"
+#    httpd_conf_src: "alpine35/httpd.conf"
+#    httpd_conf_dest: "/etc/apache2/httpd.conf"
+#    httpd_pageroot: "/var/www/localhost/htdocs/"
+#    httpd_bin: "/usr/sbin/httpd"
+#    httpd_user: "apache"
 
 
