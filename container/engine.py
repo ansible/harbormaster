@@ -80,7 +80,7 @@ class BaseEngine(object):
         raise NotImplementedError()
 
     @host_only
-    def run_conductor(self, command, config, base_path, params):
+    def run_conductor(self, command, config, base_path, params, engine_name=None, volumes=None):
         raise NotImplementedError()
 
     def service_is_running(self, service):
@@ -98,7 +98,7 @@ class BaseEngine(object):
     def inspect_container(self, container_id):
         raise NotImplementedError()
 
-    def delete_container(self, container_id):
+    def delete_container(self, container_id, remove_volumes=False):
         raise NotImplementedError()
 
     def get_container_id_for_service(self, service_name):
@@ -126,9 +126,14 @@ class BaseEngine(object):
         raise NotImplementedError()
 
     @conductor_only
-    def generate_orchestration_playbook(self, repository_data=None):
-        """If repository_data is specified, presume to pull images from that
-        repository. If not, presume the images are already present."""
+    def generate_orchestration_playbook(self, url=None, namespace=None, local_images=True):
+        """
+        Generate an Ansible playbook to orchestrate services.
+        :param url: registry URL where images will be pulled from
+        :param namespace: registry namespace
+        :param local_images: bypass pulling images, and use local copies
+        :return: playbook dict
+        """
         raise NotImplementedError()
 
     @conductor_only

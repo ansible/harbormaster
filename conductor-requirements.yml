@@ -1,0 +1,2 @@
+- src: ansible.kubernetes-modules
+  name: kubernetes-modules

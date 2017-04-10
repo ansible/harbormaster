@@ -15,7 +15,7 @@ from ruamel import yaml
 import container
 if container.ENV == 'conductor':
     from ansible.template import Templar
-from .exceptions import AnsibleContainerConfigException
+from .exceptions import AnsibleContainerConfigException, AnsibleContainerNotInitializedException
 from .utils import get_metadata_from_role, get_defaults_from_role
 
 # TODO: Actually do some schema validation
@@ -53,6 +53,8 @@ class AnsibleContainerConfig(Mapping):
         assert env in ['dev', 'prod']
         try:
             config = yaml.round_trip_load(open(self.config_path))
+        except IOError:
+            raise AnsibleContainerNotInitializedException()
         except yaml.YAMLError as exc:
             raise AnsibleContainerConfigException(u"Parsing container.yml - %s" % unicode(exc))
 

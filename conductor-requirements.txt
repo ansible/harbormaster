@@ -1,4 +1,5 @@
-git+https://github.com/ansible/ansible.git@v2.3.0.0-0.1.rc1#egg=2.3.3.0
+git+https://github.com/ansible/ansible.git@v2.3.0.0-0.1.rc1#egg=ansible-2.3.0.0
+git+https://github.com/openshift/openshift-restclient-python.git@master#egg=openshift-1.0.0
 PyYAML>=3.12
 docker-compose>=1.7
 requests>=2.13

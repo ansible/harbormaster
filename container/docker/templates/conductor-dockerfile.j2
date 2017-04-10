@@ -17,6 +17,9 @@ RUN apk add --no-cache -U python2-dev git rsync libffi libffi-dev openssl openss
 {% endif %}
 
 ADD https://get.docker.com/builds/Linux/x86_64/docker-{{ docker_version }}.tgz /tmp/docker.tgz
+ADD https://raw.githubusercontent.com/ansible/ansible/devel/lib/ansible/module_utils/k8s_common.py /usr/lib/python2.7/site-packages/ansible/module_utils/k8s_common.py
+ADD https://raw.githubusercontent.com/ansible/ansible/devel/lib/ansible/module_utils/openshift_common.py /usr/lib/python2.7/site-packages/ansible/module_utils/openshift_common.py
+
 COPY /contrib/get-pip.py /get-pip.py
 RUN python /get-pip.py && \
     mkdir -p /etc/ansible/roles /_ansible/src && \
@@ -25,7 +28,7 @@ RUN python /get-pip.py && \
 
 # The COPY here will break cache if the requirements or ansible.cfg has changed
 COPY /build-src /_ansible/build
-RUN ( test -f /_ansible/build/ansible-requirements.txt && pip install --no-cache-dir -r /_ansible/build/requirements.txt || true ) && \
+RUN ( test -f /_ansible/build/ansible-requirements.txt && pip install --no-cache-dir -r /_ansible/build/ansible-requirements.txt || true ) && \
     ( test -f /_ansible/build/requirements.yml && ansible-galaxy install -r /_ansible/build/requirements.yml || true ) && \
     ( test -f /_ansible/build/ansible.cfg && cp /_ansible/build/ansible.cfg /etc/ansible/ansible.cfg || true)
 
@@ -33,7 +36,8 @@ RUN ( test -f /_ansible/build/ansible-requirements.txt && pip install --no-cache
 COPY /container-src /_ansible/container
 RUN cd /_ansible && \
     pip install -r container/conductor-build/conductor-requirements.txt && \
-    PYTHONPATH=. LC_ALL="en_US.UTF-8" python container/conductor-build/setup.py develop -v
+    PYTHONPATH=. LC_ALL="en_US.UTF-8" python container/conductor-build/setup.py develop -v && \
+    ansible-galaxy install -p /etc/ansible/roles -r container/conductor-build/conductor-requirements.yml
 VOLUME /usr
 
 

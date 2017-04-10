@@ -17,6 +17,7 @@ import container
 from . import core
 from . import config
 from . import exceptions
+from .core import DEFAULT_DEPLOYMENT_PATH
 from container.config import AnsibleContainerConductorConfig
 
 from logging import config
@@ -59,8 +60,7 @@ class HostCommand(object):
                           # 'purge': 'Delete all Ansible Container instances, volumes, and images',
                           # FIXME: implement status command
                           # 'status': 'Query the status of your project's containers/images',
-                          # FIXME: implement deploy command
-                          # 'deploy': 'Deploy your built images into production'
+                          'deploy': 'Deploy your built images into production'
                           }
 
     def subcmd_common_parsers(self, parser, subparser, cmd):
@@ -76,6 +76,26 @@ class HostCommand(object):
             subparser.add_argument('--roles-path', action='store', default=None,
                                    help=u'Specify a local path containing roles you want to '
                                         u'use in the Conductor.')
+
+        if cmd in ('deploy', 'push'):
+            subparser.add_argument('--username', action='store',
+                               help=u'If authentication with the registry is required, provide a valid username.',
+                               dest='username', default=None)
+            subparser.add_argument('--email', action='store',
+                                   help=(u'If authentication with the registry requires an email address, provide a '
+                                         u'valid email address'),
+                                   dest='email', default=None)
+            subparser.add_argument('--password', action='store',
+                                   help=u'If authentication with the registry is required, provide a valid password.',
+                                   dest='password', default=None)
+            subparser.add_argument('--push-to', action='store',
+                                   help=(u'Name of a registry defined in container.yml or the actual URL of the registry, '
+                                         u'including the namespace. If passing a URL, an example would be: '
+                                         u'"https://registry.example.com:5000/myproject"'),
+                                   dest='push_to', default=None)
+            subparser.add_argument('--tag', action='store',
+                                   help=u'Tag the images before pushing.',
+                                   dest='tag', default=None)
 
 
     def subcmd_init_parser(self, parser, subparser):
@@ -99,7 +119,7 @@ class HostCommand(object):
                                     u'previously built image for your hosts. Disable '
                                     u'that with this flag.',
                                dest='purge_last', default=True)
-        subparser.add_argument('--save-build-container', action='store_true',
+        subparser.add_argument('--save-conductor-container', action='store_true',
                                help=u'Leave the Ansible Builder Container intact upon build completion. '
                                     u'Use for debugging and testing.', default=False)
         subparser.add_argument('--no-cache', action='store_false',
@@ -125,6 +145,18 @@ class HostCommand(object):
                                     u'caution.', default=u'', nargs='*')
         self.subcmd_common_parsers(parser, subparser, 'build')
 
+    def subcmd_deploy_parser(self, parser, subparser):
+        # subparser.add_argument('service', action='store',
+        #                        help=u'The specific services you want to deploy',
+        #                        nargs='*')
+        subparser.add_argument('--output-path', action='store',
+                               help=u'Path where deployment artifacts will be written. '
+                                    u'Defaults to {}'.format(DEFAULT_DEPLOYMENT_PATH),
+                               default=DEFAULT_DEPLOYMENT_PATH, dest='deployment_output_path')
+        subparser.add_argument('--local-images', action='store_true',
+                               help=u'Prevents images from being pushed to the default registry',
+                               default=False, dest='local_images')
+        self.subcmd_common_parsers(parser, subparser, 'deploy')
 
     def subcmd_run_parser(self, parser, subparser):
         subparser.add_argument('service', action='store',
@@ -161,43 +193,13 @@ class HostCommand(object):
         return
 
     def subcmd_push_parser(self, parser, subparser):
-        subparser.add_argument('--username', action='store',
-                               help=u'If authentication with the registry is required, provide a valid username.',
-                               dest='username', default=None)
-        subparser.add_argument('--email', action='store',
-                               help=(u'If authentication with the registry requires an email address, provide a '
-                                     u'valid email address'),
-                               dest='email', default=None)
-        subparser.add_argument('--password', action='store',
-                               help=u'If authentication with the registry is required, provide a valid password.',
-                               dest='password', default=None)
-        subparser.add_argument('--push-to', action='store',
-                               help=(u'Name of a registry defined in container.yml or the actual URL of the registry, '
-                                     u'including the namespace. If passing a URL, an example would be: '
-                                     u'"https://registry.example.com:5000/myproject"'),
-                               dest='push_to', default=None)
-        subparser.add_argument('--tag', action='store',
-                               help=u'Tag the images before pushing.',
-                               dest='tag', default=None)
         self.subcmd_common_parsers(parser, subparser, 'push')
-
 
     def subcmd_version_parser(self, parser, subparser):
         return
 
-
-    # def subcmd_shipit_parser(self, parser, subparser):
-    #     se_subparser = subparser.add_subparsers(title='shipit-engine', dest='shipit_engine')
-    #     for engine_name, engine in AVAILABLE_SHIPIT_ENGINES.items():
-    #         engine_parser = se_subparser.add_parser(engine_name, help=engine['help'])
-    #         engine_obj = load_shipit_engine(engine['cls'], base_path=os.getcwd())
-    #         engine_obj.add_options(engine_parser)
-    #     self.subcmd_common_parsers(parser, subparser, 'shipit')
-
-
     def subcmd_install_parser(self, parser, subparser):
         subparser.add_argument('roles', nargs='+', action='store')
-
 
     def subcmd_import_parser(self, parser, subparser):
         # Commenting out until we can solidify the "import" interface
@@ -261,28 +263,33 @@ class HostCommand(object):
         try:
             getattr(core, u'hostcmd_{}'.format(args.subcommand))(**vars(args))
         except exceptions.AnsibleContainerAlreadyInitializedException:
-            logger.error('Ansible Container is already initialized', exc_info=True)
+            logger.error('Ansible Container is already initialized', exc_info=False)
             sys.exit(1)
         except exceptions.AnsibleContainerNotInitializedException:
             logger.error('No Ansible Container project data found - do you need to '
-                    'run "ansible-container init"?', exc_info=True)
+                    'run "ansible-container init"?', exc_info=False)
             sys.exit(1)
         except exceptions.AnsibleContainerNoAuthenticationProvidedException:
-            logger.error('No authentication provided, unable to continue', exc_info=True)
+            logger.error('No authentication provided, unable to continue', exc_info=False)
             sys.exit(1)
         except exceptions.AnsibleContainerConductorException as e:
-            logger.error('Failure in conductor container: %s' % e, exc_info=True)
+            logger.error('Failure in conductor container: %s' % e, exc_info=False)
             sys.exit(1)
         except exceptions.AnsibleContainerNoMatchingHosts:
-            logger.error('No matching service found in ansible/container.yml', exc_info=True)
+            logger.error('No matching service found in ansible/container.yml', exc_info=False)
             sys.exit(1)
         except exceptions.AnsibleContainerHostNotTouchedByPlaybook:
-            logger.error('The requested service(s) is not referenced in ansible/main.yml. Nothing to build.', exc_info=True)
+            logger.error('The requested service(s) is not referenced in ansible/main.yml. Nothing to build.',
+                         exc_info=False)
+            sys.exit(1)
+        except exceptions.AnsibleContainerDockerConnectionRefused:
+            logger.error('The connection to Docker was refused. Check your Docker environment configuration.',
+                         exc_info=False)
             sys.exit(1)
         except exceptions.AnsibleContainerConfigException as e:
             logger.error('Invalid container.yml: {}'.format(e))
         except requests.exceptions.ConnectionError:
-            logger.error('Could not connect to container host. Check your docker config', exc_info=True)
+            logger.error('Could not connect to container host. Check your docker config', exc_info=False)
         except Exception as e:
             if args.debug:
                 logger.exception('Unknown exception %s' % e, exc_info=True)
@@ -333,7 +340,8 @@ def conductor_commandline():
     logger.debug('Starting Ansible Container Conductor: %s', args.command,
         services=conductor_config.services)
     getattr(core, 'conductorcmd_%s' % args.command)(
-        args.engine, args.project_name,
+        args.engine,
+        args.project_name,
         conductor_config.services,
         volume_data=conductor_config.volumes,
         repository_data=conductor_config.registries,

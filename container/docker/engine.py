@@ -36,6 +36,7 @@ try:
     import docker
     from docker import errors as docker_errors
     from docker.utils.ports import build_port_bindings
+    from docker.errors import DockerException
 except ImportError:
     raise ImportError('Use of this engine requires you "pip install \'docker>=2.1\'" first.')
 
@@ -99,7 +100,15 @@ class Engine(BaseEngine):
     @property
     def client(self):
         if not self._client:
-            self._client = docker.from_env(version='auto')
+            try:
+                self._client = docker.from_env(version='auto')
+            except DockerException as exc:
+                if 'Connection refused' in str(exc):
+                    raise exceptions.AnsibleContainerDockerConnectionRefused()
+                else:
+                    raise
+            except:
+                raise
         return self._client
 
     @property
@@ -167,7 +176,7 @@ class Engine(BaseEngine):
 
     @log_runs
     @host_only
-    def run_conductor(self, command, config, base_path, params):
+    def run_conductor(self, command, config, base_path, params, engine_name=None, volumes=None):
         image_id = self.get_latest_image_id_for_service('conductor')
         if image_id is None:
             raise exceptions.AnsibleContainerConductorException(
@@ -175,7 +184,15 @@ class Engine(BaseEngine):
                     u"`ansible-container build` first")
         serialized_params = base64.b64encode(json.dumps(params).encode("utf-8")).decode()
         serialized_config = base64.b64encode(json.dumps(config).encode("utf-8")).decode()
-        volumes = {base_path: {'bind': '/src', 'mode': 'ro'}}
+
+        if not volumes:
+            volumes = {}
+        volumes[base_path] = {'bind': '/src', 'mode': 'ro'}
+
+        if params.get('deployment_output_path'):
+            deployment_path = params['deployment_output_path']
+            volumes[deployment_path] = {'bind': deployment_path, 'mode': 'rw'}
+
         environ = {}
         if os.environ.get('DOCKER_HOST'):
             environ['DOCKER_HOST'] = os.environ['DOCKER_HOST']
@@ -203,12 +220,15 @@ class Engine(BaseEngine):
             volumes[config_path] = {'bind': config_path,
                                     'mode': 'rw'}
 
+        if not engine_name:
+            engine_name = __name__.rsplit('.', 2)[-2]
+
         run_kwargs = dict(
             name=self.container_name_for_service('conductor'),
             command=['conductor',
                      command,
                      '--project-name', self.project_name,
-                     '--engine', __name__.rsplit('.', 2)[-2],
+                     '--engine', engine_name,
                      '--params', serialized_params,
                      '--config', serialized_config,
                      '--encoding', 'b64json'],
@@ -254,7 +274,7 @@ class Engine(BaseEngine):
                 logger.info('Conductor terminated. Cleaning up.',
                             save_container=False, conductor_id=conductor_id,
                             command_rc=exit_code)
-                self.delete_container(conductor_id)
+                self.delete_container(conductor_id, remove_volumes=True)
             if exit_code:
                 raise exceptions.AnsibleContainerException(
                     u'Conductor exited with status %s' % exit_code)
@@ -295,13 +315,13 @@ class Engine(BaseEngine):
         except docker_errors.APIError:
             return None
 
-    def delete_container(self, container_id):
+    def delete_container(self, container_id, remove_volumes=False):
         try:
             to_delete = self.client.containers.get(container_id)
         except docker_errors.APIError:
             pass
         else:
-            to_delete.remove()
+            to_delete.remove(v=remove_volumes)
 
     def get_container_id_for_service(self, service_name):
         try:
@@ -412,9 +432,14 @@ class Engine(BaseEngine):
         image_obj.tag(self.image_name_for_service(service_name), 'latest')
 
     @conductor_only
-    def generate_orchestration_playbook(self, repository_data=None):
-        """If repository_data is specified, presume to pull images from that
-        repository. If not, presume the images are already present."""
+    def generate_orchestration_playbook(self, url=None, namespace=None, local_images=True, **kwargs):
+        """
+        Generate an Ansible playbook to orchestrate services.
+        :param url: registry URL where images will be pulled from
+        :param namespace: registry namespace
+        :param local_images: bypass pulling images, and use local copies
+        :return: playbook dict
+        """
         return self._generate_service_playbook(('destroy', 'start'))
 
     @conductor_only
@@ -556,6 +581,8 @@ class Engine(BaseEngine):
                             arcname='container-src/conductor-build/setup.py')
                 tarball.add(os.path.join(package_dir, 'conductor-requirements.txt'),
                             arcname='container-src/conductor-build/conductor-requirements.txt')
+                tarball.add(os.path.join(package_dir, 'conductor-requirements.yml'),
+                            arcname='container-src/conductor-build/conductor-requirements.yml')
 
             utils.jinja_render_to_temp(TEMPLATES_PATH,
                                        'conductor-dockerfile.j2', temp_dir,
@@ -592,8 +619,14 @@ class Engine(BaseEngine):
                             # skip over lines that give spammy byte-by-byte
                             # progress of downloads
                             continue
+                        elif 'errorDetail' in line_json:
+                            raise exceptions.AnsibleContainerException(
+                                "Error building conductor image: {0}".format(line_json['errorDetail']['message']))
                     except ValueError:
                         pass
+                    except exceptions.AnsibleContainerException:
+                        raise
+
                     # this bypasses the fancy colorized logger for things that
                     # are just STDOUT of a process
                     plainLogger.debug(text.to_text(line_json.get('stream', json.dumps(line_json))).rstrip())
