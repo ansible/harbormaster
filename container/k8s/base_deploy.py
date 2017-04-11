@@ -70,7 +70,7 @@ class K8sBaseDeploy(object):
         self._namespace_display_name = namespace_display_name
 
     @abstractmethod
-    def get_namespace_task(self, state='present'):
+    def get_namespace_task(self, state='present', tags=[]):
         pass
 
     def get_services_templates(self):
@@ -129,7 +129,7 @@ class K8sBaseDeploy(object):
                                     templates.append(new_service)
         return templates
 
-    def get_service_tasks(self):
+    def get_service_tasks(self, tags=[]):
         module_name='k8s_v1_service'
         tasks = CommentedSeq()
         for template in self.get_services_templates():
@@ -142,6 +142,8 @@ class K8sBaseDeploy(object):
                     task[module_name][key] = self._auth[key]
             task[module_name]['force'] = template.pop('force', False)
             task[module_name]['resource_definition'] = template
+            if tags:
+                task['tags'] = copy.copy(tags)
             tasks.append(task)
         if self._services:
             # Remove an services where state is 'absent'
@@ -156,6 +158,8 @@ class K8sBaseDeploy(object):
                     if self._auth:
                         for key in self._auth:
                             task[module_name][key] = self._auth[key]
+                    if tags:
+                        task['tags'] = copy.copy(tags)
                     tasks.append(task)
         return tasks
 
@@ -288,7 +292,7 @@ class K8sBaseDeploy(object):
                     if isinstance(value, string_types):
                         container['command'] = shlex.split(value)
                     else:
-                        container['command'] = value
+                        container['command'] = copy.copy(value)
                 elif key == 'environment':
                     expanded_vars = self.expand_env_vars(value)
                     if expanded_vars:
@@ -362,18 +366,23 @@ class K8sBaseDeploy(object):
                     for key, value in pod.items():
                         if key == 'securityContext':
                             template['spec']['template']['spec'][key] = value
-                        else:
+                        elif key != 'replicas' or (key == 'replicas' and engine_state != 'stop'):
+                            # Leave replicas at 0 when engine_state is 'stop'
                             template['spec'][key] = value
 
                 templates.append(template)
         return templates
 
     @abstractmethod
-    def get_deployment_tasks(self, module_name=None, engine_state=None):
+    def get_deployment_tasks(self, module_name=None, engine_state=None, tags=[]):
         tasks = CommentedSeq()
         for template in self.get_deployment_templates(engine_state=engine_state):
             task = CommentedMap()
-            task['name'] = 'Create deployment'
+            if engine_state is None:
+                task_name = 'Create deployment, and scale replicas up'
+            else:
+                task_name = 'Stop running containers by scaling replicas down to 0'
+            task['name'] = task_name
             task[module_name] = CommentedMap()
             task[module_name]['state'] = 'present'
             if self._auth:
@@ -381,6 +390,8 @@ class K8sBaseDeploy(object):
                     task[module_name][key] = self._auth[key]
             task[module_name]['force'] = template.pop('force', False)
             task[module_name]['resource_definition'] = template
+            if tags:
+                task['tags'] = copy.copy(tags)
             tasks.append(task)
         if engine_state != 'stop':
             for name, service_config in self._services.items():
@@ -394,6 +405,8 @@ class K8sBaseDeploy(object):
                             task[module_name][key] = self._auth[key]
                     task[module_name]['name'] = name
                     task[module_name]['namespace'] = self._namespace_name
+                    if tags:
+                        task['tags'] = copy.copy(tags)
                     tasks.append(task)
         return tasks
 
@@ -439,10 +452,9 @@ class K8sBaseDeploy(object):
                     if vol_config[self.CONFIG_KEY].get('state', 'present') == 'present':
                         volume = _volume_to_pvc(volname, vol_config[self.CONFIG_KEY])
                         templates.append(volume)
-
         return templates
 
-    def get_pvc_tasks(self):
+    def get_pvc_tasks(self, tags=[]):
         module_name='k8s_v1_persistent_volume_claim'
         tasks = CommentedSeq()
         for template in self.get_pvc_templates():
@@ -455,6 +467,8 @@ class K8sBaseDeploy(object):
                     task[module_name][key] = self._auth[key]
             task[module_name]['force'] = template.pop('force', False)
             task[module_name]['resource_definition'] = template
+            if tags:
+                task['tags'] = copy.copy(tags)
             tasks.append(task)
         if self._volumes:
             # Remove any volumes where state is 'absent'
@@ -470,6 +484,8 @@ class K8sBaseDeploy(object):
                         if self._auth:
                             for key in self._auth:
                                 task[module_name][key] = self._auth[key]
+                        if tags:
+                            task['tags'] = copy.copy(tags)
                         tasks.append(task)
         return tasks
 
@@ -635,3 +651,4 @@ class K8sBaseDeploy(object):
                     target[src_key_camel].append(element)
         else:
             target[src_key_camel] = src_value
+

@@ -162,24 +162,28 @@ def hostcmd_deploy(base_path, project_name, engine_name, var_file=None,
     logger.debug('Got extra args to `deploy` command', arguments=kwargs)
     config = get_config(base_path, var_file=var_file, engine_name=engine_name)
     local_images = kwargs.get('local_images')
-    output_path = kwargs.get('deployment_output_path') or config.deployment_path
+    output_path = kwargs.pop('deployment_output_path', None) or config.deployment_path
 
     engine_obj = load_engine(['LOGIN', 'PUSH', 'DEPLOY'],
                              engine_name, project_name or os.path.basename(base_path),
                              config['services'], **kwargs)
-    params = dict()
+
+    params = {
+        'deployment_output_path': os.path.normpath(os.path.expanduser(output_path)),
+        'host_user_uid': os.getuid(),
+        'host_user_gid': os.getgid(),
+    }
+    if config.get('settings', {}).get('k8s_auth'):
+        params['k8s_auth'] = config['settings']['k8s_auth']
+    if config.get('volumes'):
+        params['volumes'] = config['volumes']
     if kwargs:
         params.update(kwargs)
-
-    params['deployment_output_path'] = os.path.normpath(os.path.expanduser(output_path))
 
     if not local_images:
         url, namespace = push_images(base_path, engine_obj, config, save_conductor=False, **params)
         params['url'] = url
         params['namespace'] = namespace
-
-    if config.get('settings', {}).get('k8s_auth'):
-        params['k8s_auth'] = config['settings']['k8s_auth']
 
     engine_obj.await_conductor_command(
         'deploy', dict(config), base_path, params,
@@ -236,6 +240,12 @@ def hostcmd_destroy(base_path, project_name, engine_name, var_file=None, cache=T
         'host_user_uid': os.getuid(),
         'host_user_gid': os.getgid(),
     }
+    if config.get('settings', {}).get('k8s_auth'):
+        params['k8s_auth'] = config['settings']['k8s_auth']
+    if config.get('volumes'):
+        params['volumes'] = config['volumes']
+    if kwargs:
+        params.update(kwargs)
     params.update(kwargs)
 
     engine_obj.await_conductor_command(
@@ -255,6 +265,12 @@ def hostcmd_stop(base_path, project_name, engine_name, force=False, services=[],
         'host_user_uid': os.getuid(),
         'host_user_gid': os.getgid(),
     }
+    if config.get('settings', {}).get('k8s_auth'):
+        params['k8s_auth'] = config['settings']['k8s_auth']
+    if config.get('volumes'):
+        params['volumes'] = config['volumes']
+    if kwargs:
+        params.update(kwargs)
     params.update(kwargs)
 
     engine_obj.await_conductor_command(
@@ -274,6 +290,12 @@ def hostcmd_restart(base_path, project_name, engine_name, force=False, services=
         'host_user_uid': os.getuid(),
         'host_user_gid': os.getgid(),
     }
+    if config.get('settings', {}).get('k8s_auth'):
+        params['k8s_auth'] = config['settings']['k8s_auth']
+    if config.get('volumes'):
+        params['volumes'] = config['volumes']
+    if kwargs:
+        params.update(kwargs)
     params.update(kwargs)
 
     engine_obj.await_conductor_command(
@@ -363,57 +385,6 @@ def push_images(base_path, engine_obj, config, save_conductor=False, **kwargs):
         'push', dict(config), base_path, push_params, save_container=save_conductor)
 
     return url, namespace
-
-# def hostcmd_shipit(base_path, engine_name, pull_from=None, **kwargs):
-#     assert_initialized(base_path)
-#     engine_args = kwargs.copy()
-#     engine_args.update(locals())
-#     engine_obj = load_engine(**engine_args)
-#     shipit_engine_name = kwargs.pop('shipit_engine')
-#     project_name = os.path.basename(base_path).lower()
-#     local_images = kwargs.get('local_images')
-#
-#     # determine the registry url and namespace the cluster will use to pull images
-#     config = engine_obj.config
-#     url = None
-#     namespace = None
-#     if not local_images:
-#         if not pull_from:
-#             url = engine_obj.default_registry_url
-#         elif config.get('registries', {}).get(pull_from):
-#             url = config['registries'][pull_from].get('url')
-#             namespace = config['registries'][pull_from].get('namespace')
-#             if not url:
-#                 raise AnsibleContainerRegistryAttributeException("Registry %s missing required attribute 'url'."
-#                                                                  % pull_from)
-#             pull_from = None  # pull_from is now resolved to a url/namespace
-#         if url and not namespace:
-#             # try to get the username for the url from the container engine
-#             try:
-#                 namespace = engine_obj.registry_login(url=url)
-#             except Exception as exc:
-#                 if "Error while fetching server API version" in str(exc):
-#                     msg = "Cannot connect to the Docker daemon. Is the daemon running?"
-#                 else:
-#                     msg = "Unable to determine namespace for registry %s. Error: %s. Either authenticate with the " \
-#                           "registry or provide a namespace for the registry in container.yml" % (url, str(exc))
-#                 raise AnsibleContainerRegistryAttributeException(msg)
-#
-#     config = engine_obj.get_config_for_shipit(pull_from=pull_from, url=url, namespace=namespace)
-#
-#     shipit_engine_obj = load_shipit_engine(AVAILABLE_SHIPIT_ENGINES[shipit_engine_name]['cls'],
-#                                            config=config,
-#                                            base_path=base_path,
-#                                            project_name=project_name)
-#
-#     # create the role and sample playbook
-#     shipit_engine_obj.run()
-#     logger.info('Role %s created.' % project_name)
-#
-#     if kwargs.get('save_config'):
-#         # generate and save the configuration templates
-#         config_path = shipit_engine_obj.save_config()
-#         logger.info('Saved configuration to %s' % config_path)
 
 
 @host_only
@@ -736,7 +707,7 @@ def conductorcmd_restart(engine_name, project_name, services, **kwargs):
     logger.info(u'Engine integration loaded. Preparing to restart containers.',
                 engine=engine.display_name)
     playbook = engine.generate_orchestration_playbook(**kwargs)
-    rc = run_playbook(playbook, engine, services, tags=['restart'])
+    rc = run_playbook(playbook, engine, services, tags=['restart'], **kwargs)
     logger.info(u'All services restarted.', playbook_rc=rc)
 
 
@@ -746,7 +717,7 @@ def conductorcmd_stop(engine_name, project_name, services, **kwargs):
     logger.info(u'Engine integration loaded. Preparing to stop all containers.',
                 engine=engine.display_name)
     playbook = engine.generate_orchestration_playbook(**kwargs)
-    rc = run_playbook(playbook, engine, services, tags=['stop'])
+    rc = run_playbook(playbook, engine, services, tags=['stop'], **kwargs)
     logger.info(u'All services stopped.', playbook_rc=rc)
 
 
@@ -757,13 +728,12 @@ def conductorcmd_destroy(engine_name, project_name, services, **kwargs):
                 u'containers and built images.',
                 engine=engine.display_name)
     playbook = engine.generate_orchestration_playbook(**kwargs)
-    rc = run_playbook(playbook, engine, services, tags=['destroy'])
+    rc = run_playbook(playbook, engine, services, tags=['destroy'], **kwargs)
     logger.info(u'All services destroyed.', playbook_rc=rc)
-
 
 @conductor_only
 def conductorcmd_deploy(engine_name, project_name, services, **kwargs):
-    engine = load_engine(['DEPLOY'], engine_name, project_name, services)
+    engine = load_engine(['DEPLOY'], engine_name, project_name, services, **kwargs)
     logger.info(u'Engine integration loaded. Preparing deploy.',
                 engine=engine.display_name)
 
@@ -775,6 +745,9 @@ def conductorcmd_deploy(engine_name, project_name, services, **kwargs):
             logger.error(u'Missing image. Run "ansible-container build" '
                          u'to (re)create it.', service=service_name)
             raise RuntimeError(u'Run failed.')
+
+    logger.debug("conductorcmd_deploy", kwargs=kwargs)
+
     deployment_output_path = kwargs.get('deployment_output_path')
     playbook = engine.generate_orchestration_playbook(**kwargs)
 

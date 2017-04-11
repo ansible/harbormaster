@@ -42,12 +42,11 @@ class Engine(K8sBaseEngine):
 
     @conductor_only
     def generate_orchestration_playbook(self, url=None, namespace=None, local_images=True, **kwargs):
-        playbook = self._generate_orchestration_playbook(url=url,
-                                                         namespace=namespace,
-                                                         local_images=local_images,
-                                                         state='present',
-                                                         **kwargs)
-        routes = self.deploy.get_route_tasks()
+        playbook = super(Engine, self).generate_orchestration_playbook(url=url,
+                                                                       namespace=namespace,
+                                                                       local_images=local_images,
+                                                                       **kwargs)
+        routes = self.deploy.get_route_tasks(tags=['start'])
         if routes:
             playbook[0]['tasks'].extend(routes)
         return playbook

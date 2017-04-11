@@ -96,7 +96,7 @@ class AnsibleContainerConfig(Mapping):
                 # For docker replace all attributes with just those for docker
                 for vol_key in list(config['volumes'].keys()):
                     if 'docker' in config['volumes'][vol_key]:
-                        docker_settings = copy.deepcopy(config['volumes'][vol_key])
+                        docker_settings = copy.deepcopy(config['volumes'][vol_key]['docker'])
                         config['volumes'][vol_key] = docker_settings
             elif self.engine_name in ('openshift', 'k8s'):
                 # For openshift/k8s remove unrelated attributes

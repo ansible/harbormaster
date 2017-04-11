@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
-
 from __future__ import absolute_import
 
-import string_utils
+import copy
 
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from six import string_types
 
 from ..k8s.base_deploy import K8sBaseDeploy
-from container import exceptions
+
 from container.utils.visibility import getLogger
+
 logger = getLogger(__name__)
 
 """
@@ -22,10 +22,10 @@ class Deploy(K8sBaseDeploy):
 
     CONFIG_KEY = 'openshift'
 
-    def get_namespace_task(self, state='present'):
+    def get_namespace_task(self, state='present', tags=[]):
         task = CommentedMap()
         module_name = 'openshift_v1_project'
-        task_name = 'Create project' if state == 'present' else 'Remove project'
+        task_name = 'Create project' if state == 'present' else 'Destroy the application by removing project'
         task['name'] = '{} {}'.format(task_name, self._namespace_name)
         task[module_name] = CommentedMap()
         task[module_name]['name'] = self._namespace_name
@@ -35,6 +35,8 @@ class Deploy(K8sBaseDeploy):
             if self._namespace_description:
                 task[module_name]['description'] = self._namespace_description
         task[module_name]['state'] = state
+        if tags:
+            task['tags'] = copy.copy(tags)
         return task
 
     def get_deployment_templates(self, default_api=None, defualt_kind=None, default_strategy=None, engine_state=None):
@@ -43,9 +45,10 @@ class Deploy(K8sBaseDeploy):
                                                             default_strategy='Rolling',
                                                             engine_state=engine_state)
 
-    def get_deployment_tasks(self, module_name=None, engine_state=None):
+    def get_deployment_tasks(self, module_name=None, engine_state=None, tags=[]):
         return super(Deploy, self).get_deployment_tasks(module_name='openshift_v1_deployment_config',
-                                                        engine_state=engine_state)
+                                                        engine_state=engine_state,
+                                                        tags=tags)
 
     def get_route_templates(self):
         """
@@ -110,7 +113,7 @@ class Deploy(K8sBaseDeploy):
 
         return templates
 
-    def get_route_tasks(self):
+    def get_route_tasks(self, tags=[]):
         module_name = 'openshift_v1_route'
         tasks = []
         for template in self.get_route_templates():
@@ -123,6 +126,8 @@ class Deploy(K8sBaseDeploy):
                     task[module_name][key] = self._auth[key]
             task[module_name]['force'] = template.pop('force', False)
             task[module_name]['resource_definition'] = template
+            if tags:
+                task['tags'] = copy.copy(tags)
             tasks.append(task)
         for name, service_config in self._services.items():
             # Remove routes where state is 'absent'
@@ -135,5 +140,7 @@ class Deploy(K8sBaseDeploy):
                         task[module_name][key] = self._auth[key]
                 task[module_name]['name'] = name
                 task[module_name]['namespace'] = self._namespace_name
+                if tags:
+                    task['tags'] = copy.copy(tags)
                 tasks.append(task)
         return tasks

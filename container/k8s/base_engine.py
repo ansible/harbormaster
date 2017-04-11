@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 
 import os
-import ruamel
+
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 from six import add_metaclass
@@ -42,6 +42,7 @@ class K8sBaseEngine(DockerEngine):
         self.volumes = kwargs.pop('volumes', None)
         logger.debug("Volume for k8s", volumes=self.volumes)
         super(K8sBaseEngine, self).__init__(project_name, services, debug, selinux=selinux, **kwargs)
+        logger.debug("Volume for k8s", volumes=self.volumes)
 
     @property
     @abstractproperty
@@ -79,33 +80,6 @@ class K8sBaseEngine(DockerEngine):
 
     @conductor_only
     def generate_orchestration_playbook(self, url=None, namespace=None, local_images=True, **kwargs):
-        return self._generate_orchestration_playbook(url=url,
-                                                     namespace=namespace,
-                                                     local_images=local_images,
-                                                     state='present',
-                                                     **kwargs)
-    @conductor_only
-    def generate_destroy_playbook(self, url=None, namespace=None, local_images=True, **kwargs):
-        return self._generate_orchestration_playbook(url=url,
-                                                     namespace=namespace,
-                                                     local_images=local_images,
-                                                     state='destroy',
-                                                     **kwargs)
-    def generate_stop_playbook(self, url=None, namespace=None, local_images=True, **kwargs):
-        return self._generate_orchestration_playbook(url=url,
-                                                     namespace=namespace,
-                                                     local_images=local_images,
-                                                     state='stop',
-                                                     **kwargs)
-
-    def generate_restart_playbook(self, url=None, namespace=None, local_images=True, **kwargs):
-        return self._generate_orchestration_playbook(url=url,
-                                                     namespace=namespace,
-                                                     local_images=local_images,
-                                                     state='restart',
-                                                     **kwargs)
-
-    def _generate_orchestration_playbook(self, url=None, namespace=None, local_images=True, state=None, **kwargs):
         """
         Generate an Ansible playbook to orchestrate services.
         :param url: registry URL where images will be pulled from
@@ -124,34 +98,26 @@ class K8sBaseEngine(DockerEngine):
             self.k8s_client.set_authorization(kwargs['auth'])
 
         play = CommentedMap()
-        play['name'] = 'Deploy {} to {}'.format(self.project_name, self.display_name)
+        play['name'] = 'Manage the lifecycle of {} on {}'.format(self.project_name, self.display_name)
         play['hosts'] = 'localhost'
         play['gather_facts'] = 'no'
         play['connection'] = 'local'
         play['roles'] = CommentedSeq()
         play['tasks'] = CommentedSeq()
-
-        role = """
-        # Include Ansible Kubernetes and OpenShift modules
-        role: kubernetes-modules
-        """
-        role_yaml = ruamel.yaml.round_trip_load(role)
-        play['roles'].append(role_yaml)
-
-        if state == 'destroy':
-            play['tasks'].append(self.deploy.get_namespace_task(state='absent'))
-        elif state == 'present':
-            play['tasks'].append(self.deploy.get_namespace_task(state='present'))
-            play['tasks'].extend(self.deploy.get_service_tasks())
-            play['tasks'].extend(self.deploy.get_deployment_tasks())
-            play['tasks'].extend(self.deploy.get_pvc_tasks())
-        elif state == 'stop':
-            play['tasks'].extend(self.deploy.get_deployment_tasks(engine_state='stop'))
-        elif state == 'restart':
-            # Stop running containers by setting replicas to 0
-            play['tasks'].extend(self.deploy.get_deployment_tasks(engine_state='stop'))
-            # Restart containers by moving replicas back to config settings
-            play['tasks'].extend(self.deploy.get_deployment_tasks())
+        role = CommentedMap([
+            ('role', 'kubernetes-modules')
+        ])
+        play['roles'].append(role)
+        play.yaml_set_comment_before_after_key(
+            'roles', before='Include Ansible Kubernetes and OpenShift modules', indent=4)
+        play.yaml_set_comment_before_after_key('tasks', before='Tasks for setting the application state. '
+                                               'Valid tags include: start, stop, restart, destroy', indent=4)
+        play['tasks'].append(self.deploy.get_namespace_task(state='present', tags=['start']))
+        play['tasks'].append(self.deploy.get_namespace_task(state='absent', tags=['destroy']))
+        play['tasks'].extend(self.deploy.get_service_tasks(tags=['start']))
+        play['tasks'].extend(self.deploy.get_deployment_tasks(engine_state='stop', tags=['stop', 'restart']))
+        play['tasks'].extend(self.deploy.get_deployment_tasks(tags=['start', 'restart']))
+        play['tasks'].extend(self.deploy.get_pvc_tasks(tags=['start']))
 
         playbook = CommentedSeq()
         playbook.append(play)
