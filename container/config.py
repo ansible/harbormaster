@@ -38,9 +38,10 @@ class AnsibleContainerConfig(Mapping):
     base_path = None
 
     @container.host_only
-    def __init__(self, base_path, var_file=None):
+    def __init__(self, base_path, var_file=None, engine_name=None):
         self.base_path = base_path
         self.var_file = var_file
+        self.engine_name = engine_name
         self.config_path = path.join(self.base_path, 'container.yml')
         self.set_env('prod')
 
@@ -82,6 +83,11 @@ class AnsibleContainerConfig(Mapping):
                 dev_overrides = service_config.pop('dev_overrides', {})
                 if env == 'dev':
                     service_config.update(dev_overrides)
+            if self.engine_name not in ('openshift', 'k8s'):
+                if 'k8s' in service_config:
+                    del service_config['k8s']
+                if 'openshift' in service_config:
+                    del service_config['openshift']
 
         self._resolve_defaults(config)
 
@@ -195,7 +201,6 @@ class AnsibleContainerConductorConfig(Mapping):
     def __init__(self, container_config):
         self._config = container_config
         self._templar = Templar(loader=None, variables={})
-
         self._process_defaults()
         self._process_top_level_sections()
         self._process_services()

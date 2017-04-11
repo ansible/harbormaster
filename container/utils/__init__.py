@@ -35,11 +35,11 @@ conductor_dir = os.path.dirname(container.__file__)
 make_temp_dir = MakeTempDir
 
 
-def get_config(base_path, var_file=None):
+def get_config(base_path, var_file=None, engine_name=None):
     # To avoid circular import
     from ..config import AnsibleContainerConfig
 
-    return AnsibleContainerConfig(base_path, var_file=var_file)
+    return AnsibleContainerConfig(base_path, var_file=var_file, engine_name=engine_name)
 
 
 def assert_initialized(base_path):

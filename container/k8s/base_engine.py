@@ -118,6 +118,7 @@ class K8sBaseEngine(DockerEngine):
         role = """
         # Include Ansible Kubernetes and OpenShift modules
         role: kubernetes-modules
+        install_python_requirements: yes
         """
         role_yaml = ruamel.yaml.round_trip_load(role)
         play['roles'].append(role_yaml)

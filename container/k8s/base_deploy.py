@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 
 import copy
+import os
 import re
 import shlex
 
@@ -283,7 +284,7 @@ class K8sBaseDeploy(object):
                 elif key == 'stdin_open':
                     container['stdin'] = value
                 elif key == 'volumes':
-                    vols, vol_mounts = self.kube_volumes(value)
+                    vols, vol_mounts = self.get_k8s_volumes(value)
                     if vol_mounts:
                         container['volumeMounts'] = vol_mounts
                     if vols:
@@ -492,7 +493,7 @@ class K8sBaseDeploy(object):
     DOCKER_VOL_PERMISSIONS = ['rw', 'ro', 'z', 'Z']
 
     @classmethod
-    def kube_volumes(cls, docker_volumes):
+    def get_k8s_volumes(cls, docker_volumes):
         """ Given an array of Docker volumes return a set of volumes and a set of volumeMounts """
         volumes = []
         volume_mounts = []
@@ -524,6 +525,7 @@ class K8sBaseDeploy(object):
                     continue
                 elif re.match(r'[~./]', source):
                     # Source is a host path. We'll assume it exists on the host machine?
+                    source = os.path.abspath(os.path.normpath(os.path.expanduser(source)))
                     volumes.append(dict(
                         name=name,
                         hostPath=dict(

@@ -120,7 +120,7 @@ def hostcmd_init(base_path, project=None, **kwargs):
 @host_only
 def hostcmd_build(base_path, project_name, engine_name, var_file=None,
                  **kwargs):
-    config = get_config(base_path, var_file=var_file)
+    config = get_config(base_path, var_file=var_file, engine_name=engine_name)
     engine_obj = load_engine(['BUILD', 'RUN'],
                              engine_name, project_name or os.path.basename(base_path),
                              config['services'], **kwargs)
@@ -159,7 +159,7 @@ def hostcmd_deploy(base_path, project_name, engine_name, var_file=None,
                    cache=True, **kwargs):
     assert_initialized(base_path)
     logger.debug('Got extra args to `deploy` command', arguments=kwargs)
-    config = get_config(base_path, var_file=var_file)
+    config = get_config(base_path, var_file=var_file, engine_name=engine_name)
     local_images = kwargs.get('local_images')
     output_path = kwargs.get('deployment_output_path') or config.deployment_path
 
@@ -189,7 +189,7 @@ def hostcmd_run(base_path, project_name, engine_name, var_file=None, cache=True,
                 **kwargs):
     assert_initialized(base_path)
     logger.debug('Got extra args to `run` command', arguments=kwargs)
-    config = get_config(base_path, var_file=var_file)
+    config = get_config(base_path, var_file=var_file, engine_name=engine_name)
 
     engine_obj = load_engine(['RUN'],
                              engine_name, project_name or os.path.basename(base_path),
@@ -216,7 +216,7 @@ def hostcmd_destroy(base_path, project_name, engine_name, var_file=None, cache=T
                   **kwargs):
     assert_initialized(base_path)
     logger.debug('Got extra args to `destroy` command', arguments=kwargs)
-    config = get_config(base_path, var_file=var_file)
+    config = get_config(base_path, var_file=var_file, engine_name=engine_name)
 
     engine_obj = load_engine(['RUN'],
                              engine_name, project_name or os.path.basename(base_path),
@@ -238,7 +238,7 @@ def hostcmd_destroy(base_path, project_name, engine_name, var_file=None, cache=T
 @host_only
 def hostcmd_stop(base_path, project_name, engine_name, force=False, services=[],
                  **kwargs):
-    config = get_config(base_path)
+    config = get_config(base_path, engine_name=engine_name)
     engine_obj = load_engine(['RUN'],
                              engine_name, project_name or os.path.basename(base_path),
                              config['services'], **kwargs)
@@ -251,7 +251,7 @@ def hostcmd_stop(base_path, project_name, engine_name, force=False, services=[],
 @host_only
 def hostcmd_restart(base_path, project_name, engine_name, force=False, services=[],
                     **kwargs):
-    config = get_config(base_path)
+    config = get_config(base_path, engine_name=engine_name)
     engine_obj = load_engine(['RUN'],
                              engine_name, project_name or os.path.basename(base_path),
                              config['services'], **kwargs)
@@ -269,7 +269,7 @@ def hostcmd_push(base_path, project_name, engine_name, var_file=None, **kwargs):
     registry, pass username and/or password. If you exclude password, you will be prompted.
     """
     assert_initialized(base_path)
-    config = get_config(base_path, var_file=var_file)
+    config = get_config(base_path, var_file=var_file, engine_name=engine_name)
 
     engine_obj = load_engine(['LOGIN', 'PUSH'],
                              engine_name, project_name or os.path.basename(base_path),
