@@ -196,8 +196,6 @@ def hostcmd_run(base_path, project_name, engine_name, var_file=None, cache=True,
                              engine_name, project_name or os.path.basename(base_path),
                              config['services'], **kwargs)
 
-    # If you ran build with --save-build-container, then you're broken without first removing
-    #  the old build container.
     remove_existing_container(engine_obj, 'conductor', remove_volumes=True)
 
     params = {
@@ -224,14 +222,18 @@ def hostcmd_destroy(base_path, project_name, engine_name, var_file=None, cache=T
     engine_obj = load_engine(['RUN'],
                              engine_name, project_name or os.path.basename(base_path),
                              config['services'], **kwargs)
-    if not engine_obj.CAP_RUN:
-        msg = u'{} does not support this command.'.format(
-            engine_obj.display_name)
-        logger.error(msg, engine=engine_obj.display_name)
-        raise Exception(msg)
+
+    remove_existing_container(engine_obj, 'conductor', remove_volumes=True)
+
+    params = {
+        'deployment_output_path': config.deployment_path,
+        'host_user_uid': os.getuid(),
+        'host_user_gid': os.getgid(),
+    }
+    params.update(kwargs)
 
     engine_obj.await_conductor_command(
-        'destroy', dict(config), base_path, kwargs,
+        'destroy', dict(config), base_path, params,
         save_container=config.get('settings', {}).get('save_conductor_container', False))
 
 @host_only
@@ -735,7 +737,7 @@ def conductorcmd_destroy(engine_name, project_name, services, **kwargs):
 
     playbook = engine.generate_destroy_playbook()
 
-    for service in services:
+    for service in services + ['conductor']:
         image_name = engine.image_name_for_service(service)
         for image in engine.client.images.list(name=image_name):
             logger.debug('Found image for service', tags=image.tags, id=image.short_id)
@@ -744,11 +746,12 @@ def conductorcmd_destroy(engine_name, project_name, services, **kwargs):
                 playbook[0][u'tasks'].append({
                     u'docker_image': {
                         u'name': tag,
-                        u'state': u'absent'
+                        u'state': u'absent',
+                        u'force': u'yes'
                     }
                 })
 
-    rc = run_playbook(playbook, engine, {})
+    rc = run_playbook(playbook, engine, {}, **kwargs)
     logger.info(u'All services destroyed.', playbook_rc=rc)
 
 

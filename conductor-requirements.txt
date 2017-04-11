@@ -6,3 +6,4 @@ requests>=2.13
 ruamel.yaml>=0.14.2
 six>=1.10
 structlog[dev]>=16.1
+python-string-utils>=0.6.0

@@ -76,6 +76,20 @@ class K8sBaseEngine(DockerEngine):
 
     @conductor_only
     def generate_orchestration_playbook(self, url=None, namespace=None, local_images=True, **kwargs):
+        return self._generate_orchestration_playbook(url=url,
+                                                     namespace=namespace,
+                                                     local_images=local_images,
+                                                     state='present',
+                                                     **kwargs)
+    @conductor_only
+    def generate_destroy_playbook(self, url=None, namespace=None, local_images=True, **kwargs):
+        return self._generate_orchestration_playbook(url=url,
+                                                     namespace=namespace,
+                                                     local_images=local_images,
+                                                     state='destroy',
+                                                     **kwargs)
+
+    def _generate_orchestration_playbook(self, url=None, namespace=None, local_images=True, state=None, **kwargs):
         """
         Generate an Ansible playbook to orchestrate services.
         :param url: registry URL where images will be pulled from
@@ -92,6 +106,7 @@ class K8sBaseEngine(DockerEngine):
 
         if kwargs.get('k8s_auth'):
             self.k8s_client.set_authorization(kwargs['auth'])
+
         play = CommentedMap()
         play['name'] = 'Deploy {} to {}'.format(self.project_name, self.display_name)
         play['hosts'] = 'localhost'
@@ -107,9 +122,12 @@ class K8sBaseEngine(DockerEngine):
         role_yaml = ruamel.yaml.round_trip_load(role)
         play['roles'].append(role_yaml)
 
-        play['tasks'].append(self.deploy.get_namespace_task())
-        play['tasks'].extend(self.deploy.get_service_tasks())
-        play['tasks'].extend(self.deploy.get_deployment_tasks())
+        if state == 'destroy':
+            play['tasks'].append(self.deploy.get_namespace_task(state='absent'))
+        elif state == 'present':
+            play['tasks'].append(self.deploy.get_namespace_task(state='present'))
+            play['tasks'].extend(self.deploy.get_service_tasks())
+            play['tasks'].extend(self.deploy.get_deployment_tasks())
 
         playbook = CommentedSeq()
         playbook.append(play)

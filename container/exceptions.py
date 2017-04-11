@@ -41,6 +41,9 @@ class AnsibleContainerRegistryNotFoundException(AnsibleContainerException):
 class AnsibleContainerRegistryAttributeException(AnsibleContainerException):
     pass
 
+class AnsibleContainerMissingImage(AnsibleContainerException):
+    pass
+
 class AnsibleContainerMissingRegistryName(AnsibleContainerException):
     pass
 
@@ -50,13 +53,8 @@ class AnsibleContainerNoMatchingHosts(AnsibleContainerException):
 class AnsibleContainerHostNotTouchedByPlaybook(AnsibleContainerException):
     pass
 
-class AnsibleContainerShipItException(AnsibleContainerException):
-
-    def __init__(self, msg, stdout=None, stderr=None):
-        self.stderr = stderr
-        self.stdout = stdout
-
-        Exception.__init__(self, msg)
+class AnsibleContainerDeployException(AnsibleContainerException):
+    pass
 
 class AnsibleContainerFilterException(AnsibleContainerException):
     pass

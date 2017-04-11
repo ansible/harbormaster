@@ -23,6 +23,7 @@ to deploy the services.
 class K8sBaseDeploy(object):
 
     DEFAULT_API_VERSION = 'v1'
+    CONFIG_KEY = 'k8s'
 
     def __init__(self, services=None, project_name=None, volumes=None, auth=None, namespace_name=None, 
                  namespace_description=None, namespace_display_name=None):
@@ -75,8 +76,8 @@ class K8sBaseDeploy(object):
         def _create_service(name, service):
             template = CommentedMap()
             state = 'present'
-            if service.get('k8s', {}).get('state'):
-                state = service['k8s']['state']
+            if service.get(self.CONFIG_KEY, {}).get('state'):
+                state = service[self.CONFIG_KEY]['state']
             if state == 'present':
                 ports = self.get_service_ports(service)
                 if ports:
@@ -182,6 +183,9 @@ class K8sBaseDeploy(object):
         'options',
         'volume_driver',
         'volumes_from',   # TODO: figure out how to map?
+        'roles',
+        'k8s',
+        'openshift',
     ]
 
     DOCKER_TO_KUBE_CAPABILITY_MAPPING = dict(
@@ -290,8 +294,8 @@ class K8sBaseDeploy(object):
                     container[key] = value
 
             # Translate options:
-            if service.get('k8s'):
-                for key, value in service['k8s'].items():
+            if service.get(self.CONFIG_KEY):
+                for key, value in service[self.CONFIG_KEY].items():
                     if key == 'seLinuxOptions':
                         container['securityContext']['seLinuxOptions'] = value
                     elif key == 'runAsNonRoot':
@@ -365,7 +369,7 @@ class K8sBaseDeploy(object):
             tasks.append(task)
         for name, service_config in self._services.items():
             # Include any services where k8s.state is 'absent'
-            if service_config.get('k8s', {}).get('state', 'present') == 'absent':
+            if service_config.get(self.CONFIG_KEY, {}).get('state', 'present') == 'absent':
                 task['name'] = 'Remove deployment'
                 task[module_name] = CommentedMap()
                 task[module_name]['state'] = 'absent'
@@ -415,8 +419,8 @@ class K8sBaseDeploy(object):
         templates = CommentedSeq()
         if self.volumes:
             for volname, vol_config in self._volumes.items():
-                if 'k8s' in vol_config:
-                    volume = _volume_to_pvc(vol_config['k8s'])
+                if self.CONFIG_KEY in vol_config:
+                    volume = _volume_to_pvc(vol_config[self.CONFIG_KEY])
                     templates.append(volume)
 
         return templates

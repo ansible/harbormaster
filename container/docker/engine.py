@@ -251,7 +251,6 @@ class Engine(BaseEngine):
         )
 
         logger.debug('Docker run:', image=image_id, params=run_kwargs)
-
         try:
             container_obj = self.client.containers.run(
                 image_id,
@@ -276,18 +275,15 @@ class Engine(BaseEngine):
                 time.sleep(0.1)
         finally:
             exit_code = self.service_exit_code('conductor')
-            if save_container:
-                logger.info('Conductor terminated. Preserving as requested.',
-                            save_container=True, conductor_id=conductor_id,
-                            command_rc=exit_code)
-            else:
-                logger.info('Conductor terminated. Cleaning up.',
-                            save_container=False, conductor_id=conductor_id,
-                            command_rc=exit_code)
+            msg = 'Preserving as requested.' if save_container else 'Cleaning up.'
+            logger.info('Conductor terminated. {}'.format(msg), save_container=save_container,
+                        conductor_id=conductor_id, command_rc=exit_code)
+            if not save_container:
                 self.delete_container(conductor_id, remove_volumes=True)
             if exit_code:
-                raise exceptions.AnsibleContainerException(
-                    u'Conductor exited with status %s' % exit_code)
+                raise exceptions.AnsibleContainerConductorException(
+                    u'Conductor exited with status %s' % exit_code
+                )
 
     def service_is_running(self, service):
         try:
@@ -399,9 +395,10 @@ class Engine(BaseEngine):
             logger.info(u'Verifying service image', service=service_name)
             image_id = self.get_latest_image_id_for_service(service_name)
             if image_id is None:
-                logger.error(u'Missing image! Run "ansible-container build" '
-                             u'to (re)create it.', service=service_name)
-                raise RuntimeError(u'Run failed. Try running ansible-container build.')
+                raise exceptions.AnsibleContainerMissingImage(
+                    u"Missing image for service '{}'. Run 'ansible-container build' to (re)create it."
+                    .format(service_name)
+                )
 
     def get_build_stamp_for_image(self, image_id):
         build_stamp = None

@@ -272,7 +272,7 @@ class HostCommand(object):
             logger.error('No authentication provided, unable to continue', exc_info=False)
             sys.exit(1)
         except exceptions.AnsibleContainerConductorException as e:
-            logger.error('Failure in conductor container: %s' % e, exc_info=False)
+            logger.error(str(e), exc_info=False)
             sys.exit(1)
         except exceptions.AnsibleContainerNoMatchingHosts:
             logger.error('No matching service found in ansible/container.yml', exc_info=False)
@@ -286,9 +286,14 @@ class HostCommand(object):
                          exc_info=False)
             sys.exit(1)
         except exceptions.AnsibleContainerConfigException as e:
-            logger.error('Invalid container.yml: {}'.format(e))
+            logger.error('Invalid container.yml: {}'.format(e), exc_info=False)
+            sys.exit(1)
         except requests.exceptions.ConnectionError:
             logger.error('Could not connect to container host. Check your docker config', exc_info=False)
+            sys.exit(1)
+        except exceptions.AnsibleContainerMissingImage as e:
+            logger.error(str(e), exc_info=False)
+            sys.exit(1)
         except Exception as e:
             if args.debug:
                 logger.exception('Unknown exception %s' % e, exc_info=True)

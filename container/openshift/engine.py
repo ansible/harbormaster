@@ -4,6 +4,8 @@ from __future__ import absolute_import
 from .deploy import Deploy
 from ..k8s.base_engine import K8sBaseEngine
 
+from container import conductor_only
+
 from container.utils.visibility import getLogger
 logger = getLogger(__name__)
 
@@ -20,7 +22,6 @@ class Engine(K8sBaseEngine):
 
     @property
     def deploy(self):
-        logger.debug('HERE!!')
         if not self._deploy:
             self._deploy = Deploy(self.services, self.project_name,
                                   namespace_name=self.namespace_name,
@@ -37,3 +38,16 @@ class Engine(K8sBaseEngine):
     def run_conductor(self, command, config, base_path, params, engine_name=None, volumes=None):
         engine_name = __name__.rsplit('.', 2)[-2]
         return super(Engine, self).run_conductor(command, config, base_path, params, engine_name=engine_name)
+
+    @conductor_only
+    def generate_orchestration_playbook(self, url=None, namespace=None, local_images=True, **kwargs):
+        playbook = self._generate_orchestration_playbook(url=url,
+                                                         namespace=namespace,
+                                                         local_images=local_images,
+                                                         state='present',
+                                                         **kwargs)
+        routes = self.deploy.get_route_tasks()
+        if routes:
+            playbook[0]['tasks'].extend(routes)
+        return playbook
+

@@ -30,7 +30,7 @@ class Engine(K8sBaseEngine):
 
     def run_conductor(self, command, config, base_path, params, engine_name=None, volumes=None):
         engine_name = __name__.rsplit('.', 2)[-2]
-        super(Engine, self).run_conductor(command, config, base_path, params, engine_name=engine_name)
+        return super(Engine, self).run_conductor(command, config, base_path, params, engine_name=engine_name)
 
     # def _create_ks8_object(self, api_version, kind, request):
     #     name = request.get('metadata', {}).get('name')
