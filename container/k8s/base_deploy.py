@@ -5,6 +5,7 @@ import copy
 import os
 import re
 import shlex
+import string_utils
 
 from abc import ABCMeta, abstractmethod
 
@@ -310,18 +311,31 @@ class K8sBaseDeploy(object):
             # Translate options:
             if service.get(self.CONFIG_KEY):
                 for key, value in service[self.CONFIG_KEY].items():
-                    if key == 'seLinuxOptions':
-                        container['securityContext']['seLinuxOptions'] = value
-                    elif key == 'runAsNonRoot':
-                        container['securityContext']['runAsNonRoot'] = value
-                    elif key == 'runAsUser':
-                        container['securityContext']['runAsUser'] = value
-                    elif key == 'replicas':
-                        pod['replicas'] = value
-                    elif key == 'state':
-                        pod['state'] = value
+                    if key == 'deployment':
+                        for deployment_key, deployment_value in value.items():
+                            if key in ('replicas', 'strategy'):
+                                # pod level attributes
+                                _copy_attribute(pod, deployment_key, deployment_value)
+                            else:
+                                # container level attributes
+                                _copy_attribute(container, deployment_key, deployment_value)
 
             return container, volumes, pod
+
+        def _copy_attribute(target, src_key, src_value):
+            """ copy values from src_value to target[src_key], converting src_key and sub keys to camel case """
+            src_key_camel = string_utils.snake_case_to_camel(src_key, upper_case_first=False)
+            if isinstance(src_value, dict):
+                target[src_key_camel] = {}
+                for key, value in src_value.items():
+                    camel_key = string_utils.snake_case_to_camel(key, upper_case_first=False)
+                    if isinstance(value, dict):
+                        target[src_key_camel][camel_key] = {}
+                        _copy_attribute(target[src_key_camel], key, value)
+                    else:
+                        target[src_key_camel][camel_key] = value
+            else:
+                target[src_key_camel] = src_value
 
         templates = CommentedSeq()
         for name, service_config in self._services.items():
@@ -333,10 +347,7 @@ class K8sBaseDeploy(object):
                 ('service', name)
             ])
 
-            state = 'present'
-            if pod.get('state'):
-                state = pod.pop('state')
-
+            state = service_config.get(self.CONFIG_KEY, {}).get('state', 'present')
             if state == 'present':
                 template = CommentedMap()
                 template['apiVersion'] = default_api
