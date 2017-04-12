@@ -97,6 +97,13 @@ class K8sBaseEngine(DockerEngine):
                                                      state='stop',
                                                      **kwargs)
 
+    def generate_restart_playbook(self, url=None, namespace=None, local_images=True, **kwargs):
+        return self._generate_orchestration_playbook(url=url,
+                                                     namespace=namespace,
+                                                     local_images=local_images,
+                                                     state='restart',
+                                                     **kwargs)
+
     def _generate_orchestration_playbook(self, url=None, namespace=None, local_images=True, state=None, **kwargs):
         """
         Generate an Ansible playbook to orchestrate services.
@@ -139,6 +146,11 @@ class K8sBaseEngine(DockerEngine):
             play['tasks'].extend(self.deploy.get_pvc_tasks())
         elif state == 'stop':
             play['tasks'].extend(self.deploy.get_deployment_tasks(engine_state='stop'))
+        elif state == 'restart':
+            # Stop running containers by setting replicas to 0
+            play['tasks'].extend(self.deploy.get_deployment_tasks(engine_state='stop'))
+            # Restart containers by moving replicas back to config settings
+            play['tasks'].extend(self.deploy.get_deployment_tasks())
 
         playbook = CommentedSeq()
         playbook.append(play)

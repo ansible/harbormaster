@@ -268,9 +268,15 @@ def hostcmd_restart(base_path, project_name, engine_name, force=False, services=
     engine_obj = load_engine(['RUN'],
                              engine_name, project_name or os.path.basename(base_path),
                              config['services'], **kwargs)
+    params = {
+        'deployment_output_path': config.deployment_path,
+        'host_user_uid': os.getuid(),
+        'host_user_gid': os.getgid(),
+    }
+    params.update(kwargs)
 
     engine_obj.await_conductor_command(
-        'restart', dict(config), base_path, kwargs,
+        'restart', dict(config), base_path, params,
         save_container=config.get('settings', {}).get('save_conductor_container', False))
 
 
@@ -725,8 +731,8 @@ def conductorcmd_restart(engine_name, project_name, services, **kwargs):
     engine = load_engine(['RUN'], engine_name, project_name, services, **kwargs)
     logger.info(u'Engine integration loaded. Preparing to restart containers.',
                 engine=engine.display_name)
-    playbook = engine.generate_restart_playbook()
-    rc = run_playbook(playbook, engine, {})
+    playbook = engine.generate_restart_playbook(**kwargs)
+    rc = run_playbook(playbook, engine, {}, **kwargs)
     logger.info(u'All services restarted.', playbook_rc=rc)
 
 
