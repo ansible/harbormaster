@@ -30,6 +30,7 @@ class BaseEngine(object):
     CAP_LOGIN = False
     CAP_PUSH = False
     CAP_RUN = False
+    CAP_VERSION = False
 
     def __init__(self, project_name, services, debug=False, selinux=True,
                  **kwargs):
@@ -68,6 +69,10 @@ class BaseEngine(object):
     @property
     def auth_config_path(self):
         """Path to config file where the engine stores registry authentication"""
+        raise NotImplementedError()
+
+    @host_only
+    def print_version_info(self):
         raise NotImplementedError()
 
     @conductor_only

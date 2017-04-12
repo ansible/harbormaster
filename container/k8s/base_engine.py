@@ -28,6 +28,7 @@ class K8sBaseEngine(DockerEngine):
     CAP_LOGIN = True
     CAP_PUSH = True
     CAP_RUN = True
+    CAP_VERSION = False
 
     display_name = u'K8s'
 

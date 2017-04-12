@@ -15,6 +15,7 @@ import os
 import re
 import ruamel
 import shutil
+import sys
 import subprocess
 import tarfile
 import time
@@ -429,18 +430,17 @@ def hostcmd_install(base_path, engine_name, roles=[], **kwargs):
 
 
 @host_only
-def hostcmd_version(base_path, engine_name, debug=False, **kwargs):
-    # FIXME: Refactor for Mk.II
-    # print('Ansible Container, version', __version__)
-    # if debug:
-    #     print(u', '.join(os.uname()))
-    #     print(sys.version, sys.executable)
-    #     assert_initialized(base_path)
-    #     engine_args = kwargs.copy()
-    #     engine_args.update(locals())
-    #     engine_obj = load_engine(**engine_args)
-    #     engine_obj.print_version_info()
-    pass
+def hostcmd_version(base_path, project_name, engine_name, **kwargs):
+    print('Ansible Container, version', __version__)
+    if kwargs.get('debug', False):
+        print(u', '.join(os.uname()))
+        print(sys.version, sys.executable)
+        assert_initialized(base_path)
+        engine_obj = load_engine(['VERSION'],
+                                 engine_name,
+                                 project_name or os.path.basename(base_path),
+                                 {}, **kwargs)
+        engine_obj.print_version_info()
 
 
 @host_only

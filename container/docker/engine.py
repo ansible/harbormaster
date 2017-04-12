@@ -89,6 +89,7 @@ class Engine(BaseEngine):
     CAP_LOGIN = True
     CAP_PUSH = True
     CAP_RUN = True
+    CAP_VERSION = True
 
     COMPOSE_WHITELIST = (
         'links', 'depends_on', 'cap_add', 'cap_drop', 'command', 'devices',
@@ -163,6 +164,11 @@ class Engine(BaseEngine):
             new_ports = build_port_bindings(to_return.get('ports'))
             to_return['ports'] = new_ports
         return to_return
+
+    @host_only
+    def print_version_info(self):
+        print(json.dumps(self.client.info(), indent=2))
+        print(json.dumps(self.client.version(), indent=2))
 
     @log_runs
     @conductor_only
