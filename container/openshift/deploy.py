@@ -37,13 +37,15 @@ class Deploy(K8sBaseDeploy):
         task[module_name]['state'] = state
         return task
 
-    def get_deployment_templates(self, default_api=None, defualt_kind=None, default_strategy=None):
+    def get_deployment_templates(self, default_api=None, defualt_kind=None, default_strategy=None, engine_state=None):
         return super(Deploy, self).get_deployment_templates(default_api='v1',
                                                             default_kind='deployment_config',
-                                                            default_strategy='Rolling')
+                                                            default_strategy='Rolling',
+                                                            engine_state=engine_state)
 
-    def get_deployment_tasks(self, module_name=None):
-        return super(Deploy, self).get_deployment_tasks(module_name='openshift_v1_deployment_config')
+    def get_deployment_tasks(self, module_name=None, engine_state=None):
+        return super(Deploy, self).get_deployment_tasks(module_name='openshift_v1_deployment_config',
+                                                        engine_state=engine_state)
 
     def get_route_templates(self):
         """

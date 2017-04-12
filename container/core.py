@@ -249,8 +249,15 @@ def hostcmd_stop(base_path, project_name, engine_name, force=False, services=[],
                              engine_name, project_name or os.path.basename(base_path),
                              config['services'], **kwargs)
 
+    params = {
+        'deployment_output_path': config.deployment_path,
+        'host_user_uid': os.getuid(),
+        'host_user_gid': os.getgid(),
+    }
+    params.update(kwargs)
+
     engine_obj.await_conductor_command(
-        'stop', dict(config), base_path, kwargs,
+        'stop', dict(config), base_path, params,
         save_container=config.get('settings', {}).get('save_conductor_container', False))
 
 
@@ -728,8 +735,8 @@ def conductorcmd_stop(engine_name, project_name, services, **kwargs):
     engine = load_engine(['RUN'], engine_name, project_name, services, **kwargs)
     logger.info(u'Engine integration loaded. Preparing to stop all containers.',
                 engine=engine.display_name)
-    playbook = engine.generate_stop_playbook()
-    rc = run_playbook(playbook, engine, {})
+    playbook = engine.generate_stop_playbook(**kwargs)
+    rc = run_playbook(playbook, engine, {}, **kwargs)
     logger.info(u'All services stopped.', playbook_rc=rc)
 
 
@@ -740,9 +747,9 @@ def conductorcmd_destroy(engine_name, project_name, services, **kwargs):
                 u'containers and built images.',
                 engine=engine.display_name)
 
-    playbook = engine.generate_destroy_playbook()
+    playbook = engine.generate_destroy_playbook(**kwargs)
 
-    for service in services + ['conductor']:
+    for service in list(services.keys()) + ['conductor']:
         image_name = engine.image_name_for_service(service)
         for image in engine.client.images.list(name=image_name):
             logger.debug('Found image for service', tags=image.tags, id=image.short_id)

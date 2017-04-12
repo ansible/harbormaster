@@ -90,6 +90,12 @@ class K8sBaseEngine(DockerEngine):
                                                      local_images=local_images,
                                                      state='destroy',
                                                      **kwargs)
+    def generate_stop_playbook(self, url=None, namespace=None, local_images=True, **kwargs):
+        return self._generate_orchestration_playbook(url=url,
+                                                     namespace=namespace,
+                                                     local_images=local_images,
+                                                     state='stop',
+                                                     **kwargs)
 
     def _generate_orchestration_playbook(self, url=None, namespace=None, local_images=True, state=None, **kwargs):
         """
@@ -131,6 +137,8 @@ class K8sBaseEngine(DockerEngine):
             play['tasks'].extend(self.deploy.get_service_tasks())
             play['tasks'].extend(self.deploy.get_deployment_tasks())
             play['tasks'].extend(self.deploy.get_pvc_tasks())
+        elif state == 'stop':
+            play['tasks'].extend(self.deploy.get_deployment_tasks(engine_state='stop'))
 
         playbook = CommentedSeq()
         playbook.append(play)

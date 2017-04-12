@@ -24,10 +24,12 @@ class Deploy(K8sBaseDeploy):
         task['k8s_v1_namespace']['state'] = state
         return task
 
-    def get_deployment_templates(self, default_api=None, defualt_kind=None, default_strategy=None):
+    def get_deployment_templates(self, default_api=None, defualt_kind=None, default_strategy=None, engine_state=None):
         return super(Deploy, self).get_deployment_templates(default_api='extensions/v1beta1',
                                                             default_kind='deployment',
-                                                            default_strategy='RollingUpdate')
+                                                            default_strategy='RollingUpdate',
+                                                            engine_state=engine_state)
 
-    def get_deployment_tasks(self, module_name=None):
-        return super(Deploy, self).get_deployment_tasks(module_name='k8s_v1beta1_deployment')
+    def get_deployment_tasks(self, module_name=None, engine_state=None):
+        return super(Deploy, self).get_deployment_tasks(module_name='k8s_v1beta1_deployment',
+                                                        engine_state=engine_state)

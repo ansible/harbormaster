@@ -123,7 +123,6 @@ class K8sBaseDeploy(object):
         return templates
 
     def get_service_tasks(self):
-        # TODO Support state 'absent'
         module_name='k8s_v1_service'
         tasks = CommentedSeq()
         for template in self.get_services_templates():
@@ -137,6 +136,20 @@ class K8sBaseDeploy(object):
             task[module_name]['force'] = template.pop('force', False)
             task[module_name]['resource_definition'] = template
             tasks.append(task)
+        if self._services:
+            # Remove an services where state is 'absent'
+            for name, service in self._services.items():
+                if service.get(self.CONFIG_KEY, {}).get('state', 'present') == 'absent':
+                    task = CommentedMap()
+                    task['name'] = 'Remove service'
+                    task[module_name] = CommentedMap()
+                    task[module_name]['state'] = 'absent'
+                    task[module_name]['name'] = name
+                    task[module_name]['namespace'] = self._namespace_name
+                    if self._auth:
+                        for key in self._auth:
+                            task[module_name][key] = self._auth[key]
+                    tasks.append(task)
         return tasks
 
     IGNORE_DIRECTIVES = [
@@ -230,7 +243,7 @@ class K8sBaseDeploy(object):
     )
 
     @abstractmethod
-    def get_deployment_templates(self, default_api=None, default_kind=None, default_strategy=None):
+    def get_deployment_templates(self, default_api=None, default_kind=None, default_strategy=None, engine_state=None):
 
         def _service_to_container(name, service):
             container = CommentedMap()
@@ -340,7 +353,8 @@ class K8sBaseDeploy(object):
                 template['spec']['template']['spec'] = CommentedMap([
                     ('containers', [container])    # TODO: allow multiple pods in a container
                 ])
-                template['spec']['replicas'] = 1
+                # When the engine requests a 'stop', set replicas to 0, stopping all containers
+                template['spec']['replicas'] = 1 if not engine_state == 'stop' else 0
                 template['spec']['strategy'] = CommentedMap([('type', default_strategy)])
 
                 if volumes:
@@ -357,9 +371,9 @@ class K8sBaseDeploy(object):
         return templates
 
     @abstractmethod
-    def get_deployment_tasks(self, module_name=None):
+    def get_deployment_tasks(self, module_name=None, engine_state=None):
         tasks = CommentedSeq()
-        for template in self.get_deployment_templates():
+        for template in self.get_deployment_templates(engine_state=engine_state):
             task = CommentedMap()
             task['name'] = 'Create deployment'
             task[module_name] = CommentedMap()
@@ -370,18 +384,19 @@ class K8sBaseDeploy(object):
             task[module_name]['force'] = template.pop('force', False)
             task[module_name]['resource_definition'] = template
             tasks.append(task)
-        for name, service_config in self._services.items():
-            # Include any services where k8s.state is 'absent'
-            if service_config.get(self.CONFIG_KEY, {}).get('state', 'present') == 'absent':
-                task['name'] = 'Remove deployment'
-                task[module_name] = CommentedMap()
-                task[module_name]['state'] = 'absent'
-                if self._auth:
-                    for key in self._auth:
-                        task[module_name][key] = self._auth[key]
-                task[module_name]['name'] = name
-                task[module_name]['namespace'] = self._namespace_name
-                tasks.append(task)
+        if engine_state != 'stop':
+            for name, service_config in self._services.items():
+                # Remove deployment for any services where state is 'absent'
+                if service_config.get(self.CONFIG_KEY, {}).get('state', 'present') == 'absent':
+                    task['name'] = 'Remove deployment'
+                    task[module_name] = CommentedMap()
+                    task[module_name]['state'] = 'absent'
+                    if self._auth:
+                        for key in self._auth:
+                            task[module_name][key] = self._auth[key]
+                    task[module_name]['name'] = name
+                    task[module_name]['namespace'] = self._namespace_name
+                    tasks.append(task)
         return tasks
 
     def get_pvc_templates(self):
@@ -444,7 +459,7 @@ class K8sBaseDeploy(object):
             task[module_name]['resource_definition'] = template
             tasks.append(task)
         if self._volumes:
-            # Remove any volumes marked as 'absent'
+            # Remove any volumes where state is 'absent'
             for volname, vol_config in self._volumes.items():
                 if self.CONFIG_KEY in vol_config:
                     if vol_config[self.CONFIG_KEY].get('state', 'present') == 'absent':
