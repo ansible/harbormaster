@@ -38,6 +38,8 @@ class K8sBaseEngine(DockerEngine):
         self.namespace_name = kwargs.pop('namespace_name', project_name)
         self.namespace_display_name = kwargs.pop('namespace_display_name', None)
         self.namespace_description = kwargs.pop('namespace_description', None)
+        self.volumes = kwargs.pop('volumes', None)
+        logger.debug("Volume for k8s", volumes=self.volumes)
         super(K8sBaseEngine, self).__init__(project_name, services, debug, selinux=selinux, **kwargs)
 
     @property
@@ -118,7 +120,6 @@ class K8sBaseEngine(DockerEngine):
         role = """
         # Include Ansible Kubernetes and OpenShift modules
         role: kubernetes-modules
-        install_python_requirements: yes
         """
         role_yaml = ruamel.yaml.round_trip_load(role)
         play['roles'].append(role_yaml)
@@ -129,6 +130,7 @@ class K8sBaseEngine(DockerEngine):
             play['tasks'].append(self.deploy.get_namespace_task(state='present'))
             play['tasks'].extend(self.deploy.get_service_tasks())
             play['tasks'].extend(self.deploy.get_deployment_tasks())
+            play['tasks'].extend(self.deploy.get_pvc_tasks())
 
         playbook = CommentedSeq()
         playbook.append(play)

@@ -191,6 +191,8 @@ def hostcmd_run(base_path, project_name, engine_name, var_file=None, cache=True,
     logger.debug('Got extra args to `run` command', arguments=kwargs)
     config = get_config(base_path, var_file=var_file, engine_name=engine_name)
 
+    logger.debug('hostcmd_run configuration', config=config.__dict__)
+
     engine_obj = load_engine(['RUN'],
                              engine_name, project_name or os.path.basename(base_path),
                              config['services'], **kwargs)
@@ -204,8 +206,12 @@ def hostcmd_run(base_path, project_name, engine_name, var_file=None, cache=True,
     }
     if config.get('settings', {}).get('k8s_auth'):
         params['k8s_auth'] = config['settings']['k8s_auth']
+    if config.get('volumes'):
+        params['volumes'] = config['volumes']
     if kwargs:
         params.update(kwargs)
+
+    logger.debug('Params passed to conductor for run', params=params)
 
     engine_obj.await_conductor_command(
         'run', dict(config), base_path, params,
@@ -600,7 +606,7 @@ def apply_role_to_container(role, container_id, service_name, engine,
 @conductor_only
 def conductorcmd_build(engine_name, project_name, services, cache=True,
           python_interpreter=None, ansible_options='', debug=False, **kwargs):
-    engine = load_engine(['BUILD'], engine_name, project_name, services)
+    engine = load_engine(['BUILD'], engine_name, project_name, services, **kwargs)
     logger.info(u'%s integration engine loaded. Build starting.',
         engine.display_name, project=project_name)
 
@@ -695,7 +701,7 @@ def conductorcmd_build(engine_name, project_name, services, cache=True,
 
 @conductor_only
 def conductorcmd_run(engine_name, project_name, services, **kwargs):
-    engine = load_engine(['RUN'], engine_name, project_name, services)
+    engine = load_engine(['RUN'], engine_name, project_name, services, **kwargs)
     logger.info(u'Engine integration loaded. Preparing run.',
                 engine=engine.display_name)
 
@@ -709,7 +715,7 @@ def conductorcmd_run(engine_name, project_name, services, **kwargs):
 
 @conductor_only
 def conductorcmd_restart(engine_name, project_name, services, **kwargs):
-    engine = load_engine(['RUN'], engine_name, project_name, services)
+    engine = load_engine(['RUN'], engine_name, project_name, services, **kwargs)
     logger.info(u'Engine integration loaded. Preparing to restart containers.',
                 engine=engine.display_name)
     playbook = engine.generate_restart_playbook()
@@ -719,7 +725,7 @@ def conductorcmd_restart(engine_name, project_name, services, **kwargs):
 
 @conductor_only
 def conductorcmd_stop(engine_name, project_name, services, **kwargs):
-    engine = load_engine(['RUN'], engine_name, project_name, services)
+    engine = load_engine(['RUN'], engine_name, project_name, services, **kwargs)
     logger.info(u'Engine integration loaded. Preparing to stop all containers.',
                 engine=engine.display_name)
     playbook = engine.generate_stop_playbook()
@@ -729,7 +735,7 @@ def conductorcmd_stop(engine_name, project_name, services, **kwargs):
 
 @conductor_only
 def conductorcmd_destroy(engine_name, project_name, services, **kwargs):
-    engine = load_engine(['RUN'], engine_name, project_name, services)
+    engine = load_engine(['RUN'], engine_name, project_name, services, **kwargs)
     logger.info(u'Engine integration loaded. Preparing to stop+delete all '
                 u'containers and built images.',
                 engine=engine.display_name)

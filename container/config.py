@@ -7,6 +7,7 @@ logger = getLogger(__name__)
 from io import BytesIO
 import os
 from os import path
+import copy
 import json
 import six
 
@@ -88,6 +89,21 @@ class AnsibleContainerConfig(Mapping):
                     del service_config['k8s']
                 if 'openshift' in service_config:
                     del service_config['openshift']
+
+        if config.get('volumes'):
+            # Adjust volumes based on engine_name
+            if self.engine_name == 'docker':
+                # For docker replace all attributes with just those for docker
+                for vol_key in list(config['volumes'].keys()):
+                    if 'docker' in config['volumes'][vol_key]:
+                        docker_settings = copy.deepcopy(config['volumes'][vol_key])
+                        config['volumes'][vol_key] = docker_settings
+            elif self.engine_name in ('openshift', 'k8s'):
+                # For openshift/k8s remove unrelated attributes
+                for vol_key in config['volumes'].keys():
+                    for engine_key in list(config['volumes'][vol_key].keys()):
+                        if engine_key != self.engine_name:
+                            del config['volumes'][vol_key][engine_key]
 
         self._resolve_defaults(config)
 

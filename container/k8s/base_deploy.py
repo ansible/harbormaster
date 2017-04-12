@@ -76,14 +76,13 @@ class K8sBaseDeploy(object):
         """ Generate a service configuration """
         def _create_service(name, service):
             template = CommentedMap()
-            state = 'present'
-            if service.get(self.CONFIG_KEY, {}).get('state'):
-                state = service[self.CONFIG_KEY]['state']
+            state = service.get(self.CONFIG_KEY, {}).get('state', 'present')
             if state == 'present':
                 ports = self.get_service_ports(service)
                 if ports:
                     template['apiVersion'] = self.DEFAULT_API_VERSION
                     template['kind'] = 'Service'
+                    template['force'] = service.get(self.CONFIG_KEY, {}).get('service', {}).get('force', False)
                     labels = CommentedMap([
                         ('app', self._namespace_name),
                         ('service', name)
@@ -135,6 +134,7 @@ class K8sBaseDeploy(object):
             if self._auth:
                 for key in self._auth:
                     task[module_name][key] = self._auth[key]
+            task[module_name]['force'] = template.pop('force', False)
             task[module_name]['resource_definition'] = template
             tasks.append(task)
         return tasks
@@ -328,6 +328,7 @@ class K8sBaseDeploy(object):
                 template = CommentedMap()
                 template['apiVersion'] = default_api
                 template['kind'] = default_kind
+                template['force'] = service_config.get(self.CONFIG_KEY, {}).get('deployment', {}).get('force', False)
                 template['metadata'] = CommentedMap([
                     ('name', name),
                     ('labels', copy.deepcopy(labels)),
@@ -366,6 +367,7 @@ class K8sBaseDeploy(object):
             if self._auth:
                 for key in self._auth:
                     task[module_name][key] = self._auth[key]
+            task[module_name]['force'] = template.pop('force', False)
             task[module_name]['resource_definition'] = template
             tasks.append(task)
         for name, service_config in self._services.items():
@@ -383,48 +385,80 @@ class K8sBaseDeploy(object):
         return tasks
 
     def get_pvc_templates(self):
-        def _volume_to_pvc(claim):
-            template = None
-            if claim.get('type') == 'persistent':
-                template = CommentedMap()
-                template['apiVersion'] = 'v1'
-                template = CommentedMap()
-                template['apiVersion'] = self.DEFAULT_API_VERSION
-                template['kind'] = "PersistentVolumeClaim"
-                template['metadata'] = {'name': claim['claim_name']}
-                template['spec'] = CommentedMap()
-                template['spec']['requested']['storage'] = '1Gi'
-                if claim.get('access_modes'):
-                    template['spec']['accessModes'] = claim['access_modes']
-                if claim.get('storage'):
-                    template['spec']['requested']['storage'] = claim['storage']
-                if claim.get('storage_class'):
-                    if not template['metadata'].get('annotations'):
-                        template['metadata']['annotations'] = {}
-                    template['metadata']['annotations']['storageClass'] = claim['storage_class']  #TODO verify this syntax
-                if claim.get('selector'):
-                    if claim['selector'].get('match_labels'):
-                        if not template['spec'].get('selector'):
-                            template['spec']['selector'] = dict()
-                        template['spec']['selector']['matchLabels'] = claim['match_labels']
-                    if claim['selector'].get('match_expressions'):
-                        if not template['spec'].get('selector'):
-                            template['spec']['selector'] = dict()
-                        template['spec']['selector']['matchExpressions'] = claim['match_expressions']
-            elif claim.get('type') == 'volatile':
-                pass
-                #TODO figure out volatile storage
-
+        def _volume_to_pvc(claim_name, claim):
+            template = CommentedMap()
+            template['force'] = claim.get('force', False)
+            template['apiVersion'] = 'v1'
+            template = CommentedMap()
+            template['apiVersion'] = self.DEFAULT_API_VERSION
+            template['kind'] = "PersistentVolumeClaim"
+            template['metadata'] = CommentedMap([
+                ('name', claim_name),
+                ('namespace', self._namespace_name)
+            ])
+            template['spec'] = CommentedMap()
+            template['spec']['resources'] = {'requests': {'storage': '1Gi'}}
+            if claim.get('volume_name'):
+                template['spec']['volumeName'] = claim['volume_name']
+            if claim.get('access_modes'):
+                template['spec']['accessModes'] = claim['access_modes']
+            if claim.get('requested_storage'):
+                template['spec']['resources']['requests']['storage'] = claim['requested_storage']
+            if claim.get('storage_class'):
+                if not template['metadata'].get('annotations'):
+                    template['metadata']['annotations'] = {}
+                template['metadata']['annotations']['storageClass'] = claim['storage_class']  #TODO verify this syntax
+            if claim.get('selector'):
+                if claim['selector'].get('match_labels'):
+                    if not template['spec'].get('selector'):
+                        template['spec']['selector'] = dict()
+                    template['spec']['selector']['matchLabels'] = claim['match_labels']
+                if claim['selector'].get('match_expressions'):
+                    if not template['spec'].get('selector'):
+                        template['spec']['selector'] = dict()
+                    template['spec']['selector']['matchExpressions'] = claim['match_expressions']
             return template
 
         templates = CommentedSeq()
-        if self.volumes:
+        if self._volumes:
             for volname, vol_config in self._volumes.items():
                 if self.CONFIG_KEY in vol_config:
-                    volume = _volume_to_pvc(vol_config[self.CONFIG_KEY])
-                    templates.append(volume)
+                    if vol_config[self.CONFIG_KEY].get('state', 'present') == 'present':
+                        volume = _volume_to_pvc(volname, vol_config[self.CONFIG_KEY])
+                        templates.append(volume)
 
         return templates
+
+    def get_pvc_tasks(self):
+        module_name='k8s_v1_persistent_volume_claim'
+        tasks = CommentedSeq()
+        for template in self.get_pvc_templates():
+            task = CommentedMap()
+            task['name'] = 'Create PVC'
+            task[module_name] = CommentedMap()
+            task[module_name]['state'] = 'present'
+            if self._auth:
+                for key in self._auth:
+                    task[module_name][key] = self._auth[key]
+            task[module_name]['force'] = template.pop('force', False)
+            task[module_name]['resource_definition'] = template
+            tasks.append(task)
+        if self._volumes:
+            # Remove any volumes marked as 'absent'
+            for volname, vol_config in self._volumes.items():
+                if self.CONFIG_KEY in vol_config:
+                    if vol_config[self.CONFIG_KEY].get('state', 'present') == 'absent':
+                        task = CommentedMap()
+                        task['name'] = 'Remove PVC'
+                        task[module_name] = CommentedMap()
+                        task[module_name]['name'] = volname
+                        task[module_name]['namespace'] = self._namespace_name
+                        task[module_name]['state'] = 'absent'
+                        if self._auth:
+                            for key in self._auth:
+                                task[module_name][key] = self._auth[key]
+                        tasks.append(task)
+        return tasks
 
     @staticmethod
     def get_service_ports(service):
@@ -513,7 +547,6 @@ class K8sBaseDeploy(object):
             else:
                 destination = vol
 
-            named = False
             if destination:
                 # slugify the destination to create a name
                 name = re.sub(r'\/', '-', destination)
@@ -533,9 +566,14 @@ class K8sBaseDeploy(object):
                         )
                     ))
                 else:
-                    # Named volume. The volume should be defined elsewhere.
+                    # Named volume. A PVC *should* get created for this volume.
                     name = source
-                    named = True
+                    volumes.append(dict(
+                        name=name,
+                        persistentVolumeClaim=dict(
+                            claimName=name
+                        )
+                    ))
             else:
                 # Volume with no source, a.k.a emptyDir
                 volumes.append(dict(
@@ -545,11 +583,10 @@ class K8sBaseDeploy(object):
                     ),
                 ))
 
-            if not named:
-                volume_mounts.append(dict(
-                    mountPath=destination,
-                    name=name,
-                    readOnly=(True if permissions == 'ro' else False)
-                ))
+            volume_mounts.append(dict(
+                mountPath=destination,
+                name=name,
+                readOnly=(True if permissions == 'ro' else False)
+            ))
 
         return volumes, volume_mounts

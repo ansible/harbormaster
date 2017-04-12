@@ -80,6 +80,7 @@ class Deploy(K8sBaseDeploy):
                 template = CommentedMap()
                 template['apiVersoin'] = self.DEFAULT_API_VERSION,
                 template['kind'] = 'Route'
+                template['force'] = options.get('force', False)
                 template['metadata'] = CommentedMap([
                     ('name', route_name),
                     ('namespace', self._namespace_name),
@@ -129,10 +130,10 @@ class Deploy(K8sBaseDeploy):
             task['name'] = 'Create route'
             task[module_name] = CommentedMap()
             task[module_name]['state'] = 'present'
-            task[module_name]['force'] = 'yes'
             if self._auth:
                 for key in self._auth:
                     task[module_name][key] = self._auth[key]
+            task[module_name]['force'] = template.pop('force', False)
             task[module_name]['resource_definition'] = template
             tasks.append(task)
         for name, service_config in self._services.items():

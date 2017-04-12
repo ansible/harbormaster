@@ -24,6 +24,7 @@ class Engine(K8sBaseEngine):
     def deploy(self):
         if not self._deploy:
             self._deploy = Deploy(self.services, self.project_name,
+                                  volumes=self.volumes,
                                   namespace_name=self.namespace_name,
                                   namespace_description=self.namespace_description,
                                   namespace_display_name=self.namespace_display_name)
@@ -50,4 +51,3 @@ class Engine(K8sBaseEngine):
         if routes:
             playbook[0]['tasks'].extend(routes)
         return playbook
-
