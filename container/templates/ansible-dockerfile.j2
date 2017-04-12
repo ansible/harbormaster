@@ -30,3 +30,7 @@ ADD ansible.cfg /etc/ansible/ansible.cfg
 # Let's ease the transition on people using <9deb3eb code
 # by symlinking to the new place
 RUN ln -s /usr/bin/ansible-playbook /usr/local/bin/ansible-playbook
+
+# Install kubernetes-incubator/kompose
+ADD install-kompose.yml /etc/ansible/install-kompose.yml
+RUN ansible-galaxy install chouseknecht.kompose-install-role,master,kompose-install && /usr/bin/ansible-playbook /etc/ansible/install-kompose.yml

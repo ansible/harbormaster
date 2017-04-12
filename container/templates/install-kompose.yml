@@ -1,0 +1,13 @@
+- hosts: localhost
+  connection: local
+  roles:
+    - role: kompose-install  
+      kompose_dest: /usr/bin
+  tasks:
+    - name: Set kompose ownership and permissions
+      file:
+        path: /usr/bin/kompose
+        owner: root
+        group: root
+        mode: 0775
+

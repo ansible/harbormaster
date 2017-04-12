@@ -17,7 +17,7 @@ docker_version=$(docker version --format '{{json .}}' | python -c "import sys, j
 
 image_exists=$(docker images local-test:latest | wc -l)
 if [ "${image_exists}" -le 1 ]; then
-   ansible-container --project "${source_root}/test/local" --debug build --local-builder \
+   ansible-container --project "${source_root}/test/local" --debug build --local-builder --flatten \
      --with-variables ANSIBLE_CONTAINER_PATH="${source_root}"
 fi
 

@@ -143,7 +143,8 @@ class Engine(BaseEngine):
                         arcname='Dockerfile')
 
             for context_file in ['builder.sh', 'ansible-container-inventory.py',
-                                 'ansible.cfg', 'wait_on_host.py', 'ac_galaxy.py']:
+                                 'ansible.cfg', 'wait_on_host.py', 'ac_galaxy.py',
+                                 'install-kompose.yml']:
                 tarball.add(os.path.join(jinja_template_path(), context_file),
                             arcname=context_file)
 
