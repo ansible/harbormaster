@@ -313,12 +313,8 @@ class K8sBaseDeploy(object):
                 for key, value in service[self.CONFIG_KEY].items():
                     if key == 'deployment':
                         for deployment_key, deployment_value in value.items():
-                            if key in ('replicas', 'strategy'):
-                                # pod level attributes
+                            if deployment_key != 'force':
                                 _copy_attribute(pod, deployment_key, deployment_value)
-                            else:
-                                # container level attributes
-                                _copy_attribute(container, deployment_key, deployment_value)
 
             return container, volumes, pod
 
@@ -334,6 +330,17 @@ class K8sBaseDeploy(object):
                         _copy_attribute(target[src_key_camel], key, value)
                     else:
                         target[src_key_camel][camel_key] = value
+            elif isinstance(src_value, list):
+                target[src_key_camel] = []
+                for element in src_value:
+                    if isinstance(element, dict):
+                        new_item = {}
+                        for key, value in element.items():
+                            camel_key = string_utils.snake_case_to_camel(key, upper_case_first=False)
+                            _copy_attribute(new_item, camel_key, value)
+                        target[src_key_camel].append(new_item)
+                    else:
+                        target[src_key_camel].append(element)
             else:
                 target[src_key_camel] = src_value
 
@@ -373,10 +380,10 @@ class K8sBaseDeploy(object):
 
                 if pod:
                     for key, value in pod.items():
-                        if key == 'replicas':
+                        if key == 'securityContext':
+                            template['spec']['template']['spec'][key] = value
+                        else:
                             template['spec'][key] = value
-                        elif key == 'strategy_type':
-                            template['spec']['strategy']['type'] = value
 
                 templates.append(template)
         return templates
