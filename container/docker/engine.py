@@ -481,6 +481,8 @@ class Engine(BaseEngine):
                     u'services': service_def,
                 }
             }
+            if self.volumes:
+                task_params[u'definition'][u'volumes'] = self.volumes
 
             if desired_state in {'restart', 'start', 'stop'}:
                 task_params[u'state'] = u'present'
@@ -490,11 +492,9 @@ class Engine(BaseEngine):
                     task_params[u'stopped'] = True
             elif desired_state == 'destroy':
                 task_params[u'state'] = u'absent'
+                task_params[u'remove_volumes'] = u'yes'
 
-            if desired_state == 'stop':
-                tasks.append({u'docker_service': task_params, u'tags': ['stop', 'destroy']})
-            else:
-                tasks.append({u'docker_service': task_params, u'tags': [desired_state]})
+            tasks.append({u'docker_service': task_params, u'tags': [desired_state]})
 
         playbook = [{
             u'hosts': u'localhost',

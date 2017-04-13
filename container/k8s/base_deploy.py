@@ -369,7 +369,6 @@ class K8sBaseDeploy(object):
                         elif key != 'replicas' or (key == 'replicas' and engine_state != 'stop'):
                             # Leave replicas at 0 when engine_state is 'stop'
                             template['spec'][key] = value
-
                 templates.append(template)
         return templates
 
