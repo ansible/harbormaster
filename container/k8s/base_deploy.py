@@ -97,11 +97,17 @@ class K8sBaseDeploy(object):
                         ('selector', copy.deepcopy(labels)),
                         ('ports', ports)
                     ])
-                    #TODO: should the type always be LoadBalancer?
-                    for port in template['spec']['ports']:
-                        if port['port'] != port['targetPort']:
-                            template['spec']['type'] = 'LoadBalancer'
-                            break
+                    # Translate options:
+                    if service.get(self.CONFIG_KEY):
+                        for key, value in service[self.CONFIG_KEY].items():
+                            if key == 'service':
+                                for service_key, service_value in value.items():
+                                    if service_key == 'force':
+                                        continue
+                                    elif service_key == 'metadata':
+                                        self.copy_attribute(template, service_key, service_value)
+                                    else:
+                                        self.copy_attribute(template['spec'], service_key, service_value)
             return template
 
         templates = CommentedSeq()
@@ -314,35 +320,9 @@ class K8sBaseDeploy(object):
                     if key == 'deployment':
                         for deployment_key, deployment_value in value.items():
                             if deployment_key != 'force':
-                                _copy_attribute(pod, deployment_key, deployment_value)
+                                self.copy_attribute(pod, deployment_key, deployment_value)
 
             return container, volumes, pod
-
-        def _copy_attribute(target, src_key, src_value):
-            """ copy values from src_value to target[src_key], converting src_key and sub keys to camel case """
-            src_key_camel = string_utils.snake_case_to_camel(src_key, upper_case_first=False)
-            if isinstance(src_value, dict):
-                target[src_key_camel] = {}
-                for key, value in src_value.items():
-                    camel_key = string_utils.snake_case_to_camel(key, upper_case_first=False)
-                    if isinstance(value, dict):
-                        target[src_key_camel][camel_key] = {}
-                        _copy_attribute(target[src_key_camel], key, value)
-                    else:
-                        target[src_key_camel][camel_key] = value
-            elif isinstance(src_value, list):
-                target[src_key_camel] = []
-                for element in src_value:
-                    if isinstance(element, dict):
-                        new_item = {}
-                        for key, value in element.items():
-                            camel_key = string_utils.snake_case_to_camel(key, upper_case_first=False)
-                            _copy_attribute(new_item, camel_key, value)
-                        target[src_key_camel].append(new_item)
-                    else:
-                        target[src_key_camel].append(element)
-            else:
-                target[src_key_camel] = src_value
 
         templates = CommentedSeq()
         for name, service_config in self._services.items():
@@ -497,17 +477,18 @@ class K8sBaseDeploy(object):
     def get_service_ports(service):
         ports = []
 
-        def _port_in_list(port, protocol):
-            found = [p for p in ports if p['port'] == int(port) and p['protocol'] == protocol]
+        def _port_in_list(host, container, protocol):
+            found = [p for p in ports if p['port'] == int(host) and
+                     p['targetPort'] == container and p['protocol'] == protocol]
             return len(found) > 0
 
-        def _append_port(port, protocol):
-            if not _port_in_list(port, protocol):
+        def _append_port(host, container, protocol):
+            if not _port_in_list(host, container, protocol):
                 ports.append(dict(
-                    port=int(port),
-                    targetPort=int(port),
+                    port=int(host),
+                    targetPort=int(container),
                     protocol=protocol,
-                    name='port-%s-%s' % (port, protocol.lower())
+                    name='port-%s-%s' % (host, protocol.lower())
                 ))
 
         for port in service.get('ports', []):
@@ -515,8 +496,10 @@ class K8sBaseDeploy(object):
             if isinstance(port, string_types) and '/' in port:
                 port, protocol = port.split('/')
             if isinstance(port, string_types) and ':' in port:
-                _, port = port.split(':')
-            _append_port(port, protocol)
+                host, container = port.split(':')
+            else:
+                host = container = port
+            _append_port(host, container, protocol)
 
         for port in service.get('expose', []):
             protocol = 'TCP'
@@ -623,3 +606,32 @@ class K8sBaseDeploy(object):
             ))
 
         return volumes, volume_mounts
+
+    @classmethod
+    def copy_attribute(cls, target, src_key, src_value):
+        """ copy values from src_value to target[src_key], converting src_key and sub keys to camel case """
+        src_key_camel = string_utils.snake_case_to_camel(src_key, upper_case_first=False)
+        if isinstance(src_value, dict):
+            if not target.get(src_key_camel):
+                target[src_key_camel] = {}
+            for key, value in src_value.items():
+                camel_key = string_utils.snake_case_to_camel(key, upper_case_first=False)
+                if isinstance(value, dict):
+                    target[src_key_camel][camel_key] = {}
+                    cls.copy_attribute(target[src_key_camel], key, value)
+                else:
+                    target[src_key_camel][camel_key] = value
+        elif isinstance(src_value, list):
+            if not target.get(src_key_camel):
+                target[src_key_camel] = []
+            for element in src_value:
+                if isinstance(element, dict):
+                    new_item = {}
+                    for key, value in element.items():
+                        camel_key = string_utils.snake_case_to_camel(key, upper_case_first=False)
+                        cls.copy_attribute(new_item, camel_key, value)
+                    target[src_key_camel].append(new_item)
+                else:
+                    target[src_key_camel].append(element)
+        else:
+            target[src_key_camel] = src_value

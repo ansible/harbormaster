@@ -7,6 +7,7 @@ from .visibility import getLogger
 logger = getLogger(__name__)
 
 from container.engine import CAPABILITIES
+from container import exceptions
 
 
 def load_engine(capabilities_needed, engine_name, project_name, services=[], **kwargs):
@@ -16,7 +17,7 @@ def load_engine(capabilities_needed, engine_name, project_name, services=[], **k
     engine_obj = mod.Engine(project_name, services, **kwargs)
     for capability in capabilities_needed:
         if not getattr(engine_obj, 'CAP_%s' % capability):
-            raise ValueError(u'The engine for %s does not support %s',
-                             engine_obj.display_name,
-                             CAPABILITIES[capability])
+            raise exceptions.AnsibleContainerEngineCapability(
+                u'The engine for %s does not support %s' % (engine_obj.display_name, CAPABILITIES[capability] )
+            )
     return engine_obj

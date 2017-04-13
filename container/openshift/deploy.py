@@ -59,15 +59,16 @@ class Deploy(K8sBaseDeploy):
                 if isinstance(port, string_types) and '/' in port:
                     port, protocol = port.split('/')
                 if isinstance(port, string_types) and ':' in port:
-                    _, port = port.split(':')
-                result.append({'port': port, 'protocol': protocol.lower()})
+                    host, container = port.split(':')
+                else:
+                    host = port
+                result.append({'port': host, 'protocol': protocol.lower()})
             return result
 
         templates = []
         for name, service_config in self._services.items():
-            options = service_config.get(self.CONFIG_KEY, {})
-            state = options.get('state', 'present')
-            hostname = options.get('hostname')
+            state = service_config.get(self.CONFIG_KEY, {}).get('state', 'present')
+            force = service_config.get(self.CONFIG_KEY, {}).get('force', False)
             published_ports = _get_published_ports(service_config)
 
             if state != 'present':
@@ -80,9 +81,9 @@ class Deploy(K8sBaseDeploy):
                     service=name
                 )
                 template = CommentedMap()
-                template['apiVersoin'] = self.DEFAULT_API_VERSION,
+                template['apiVersion'] = self.DEFAULT_API_VERSION
                 template['kind'] = 'Route'
-                template['force'] = options.get('force', False)
+                template['force'] = force
                 template['metadata'] = CommentedMap([
                     ('name', route_name),
                     ('namespace', self._namespace_name),
@@ -102,23 +103,8 @@ class Deploy(K8sBaseDeploy):
                     for route in service_config[self.CONFIG_KEY]['routes']:
                         if str(route.get('port')) == str(port['port']):
                             for key, value in route.items():
-                                if key == 'host':
-                                    template['spec']['host'] = value
-                                elif key == 'path':
-                                    template['spec']['path'] = value
-                                elif key == 'tls':
-                                    if not isinstance(value, dict):
-                                        raise exceptions.AnsibleContainerDeployException(
-                                            "Error parsing 'openshift' options for service {}. Expected key 'tls' "
-                                            "to be a dictionary or mapping."
-                                        )
-                                    template['spec']['tls'] = CommentedMap()
-                                    for tls_key, tls_value in value.items():
-                                        camel_key = string_utils.snake_case_to_camel(tls_key, upper_case_first=False)
-                                        template['spec']['tls'][camel_key] = tls_value
-
-                if hostname:
-                    template['spec']['host'] = hostname
+                                if key not in ('force', 'port'):
+                                    self.copy_attribute(template['spec'], key, value)
 
                 templates.append(template)
 
@@ -139,7 +125,7 @@ class Deploy(K8sBaseDeploy):
             task[module_name]['resource_definition'] = template
             tasks.append(task)
         for name, service_config in self._services.items():
-            # Include any routes where openshft.state is 'absent'
+            # Remove routes where state is 'absent'
             if service_config.get(self.CONFIG_KEY, {}).get('state', 'present') == 'absent':
                 task['name'] = 'Remove route'
                 task[module_name] = CommentedMap()

@@ -291,6 +291,9 @@ class HostCommand(object):
         except requests.exceptions.ConnectionError:
             logger.error('Could not connect to container host. Check your docker config', exc_info=False)
             sys.exit(1)
+        except exceptions.AnsibleContainerEngineCapability as e:
+            logger.error(str(e), exc_info=False)
+            sys.exit(1)
         except exceptions.AnsibleContainerMissingImage as e:
             logger.error(str(e), exc_info=False)
             sys.exit(1)
