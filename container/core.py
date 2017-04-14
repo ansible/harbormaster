@@ -30,6 +30,7 @@ from .exceptions import AnsibleContainerAlreadyInitializedException,\
 from .utils import *
 from . import __version__, host_only, conductor_only
 from container.utils.loader import load_engine
+from container.utils.galaxy import AnsibleContainerGalaxy
 
 REMOVE_HTTP = re.compile('^https?://')
 DEFAULT_CONDUCTOR_BASE = 'centos:7'
@@ -324,7 +325,7 @@ def hostcmd_push(base_path, project_name, engine_name, var_file=None, **kwargs):
 
 
 @host_only
-def push_images(base_path, engine_obj, config, save_conductor=False, **kwargs):
+def push_images(base_path, engine_obj, config, **kwargs):
     """ Pushes images to a Docker registry. Returns (url, namespace) used to push images. """
     config_path = kwargs.get('config_path', engine_obj.auth_config_path)
     username = kwargs.get('username')
@@ -333,6 +334,7 @@ def push_images(base_path, engine_obj, config, save_conductor=False, **kwargs):
     url = engine_obj.default_registry_url
     registry_name = engine_obj.default_registry_name
     namespace = None
+    save_conductor = config.get('settings', {}).get('save_conductor_container', False)
 
     if push_to:
         if config.get('registries', dict()).get(push_to):
@@ -380,25 +382,23 @@ def push_images(base_path, engine_obj, config, save_conductor=False, **kwargs):
     push_params['password'] = password
     push_params['url'] = url
     push_params['namespace'] = namespace
-
-    engine_obj.await_conductor_command(
-        'push', dict(config), base_path, push_params, save_container=save_conductor)
-
+    engine_obj.await_conductor_command('push', dict(config), base_path, push_params, save_container=save_conductor)
     return url, namespace
 
 
 @host_only
-def hostcmd_install(base_path, engine_name, roles=[], **kwargs):
-    # FIXME: Refactor for Mk.II
-    # assert_initialized(base_path)
-    # engine_args = kwargs.copy()
-    # engine_args.update(locals())
-    # engine_obj = load_engine(**engine_args)
-    #
-    # with make_temp_dir() as temp_dir:
-    #     engine_obj.orchestrate('install', temp_dir)
-    pass
-
+def hostcmd_install(base_path, project_name, engine_name, **kwargs):
+    assert_initialized(base_path)
+    config = get_config(base_path, engine_name=engine_name)
+    save_conductor = config.get('settings', {}).get('save_conductor_container', False)
+    engine_obj = load_engine(['INSTALL'],
+                             engine_name, project_name or os.path.basename(base_path),
+                             config['services'], **kwargs)
+    engine_obj.await_conductor_command('install',
+                                       dict(config),
+                                       base_path,
+                                       kwargs,
+                                       save_container=save_conductor)
 
 @host_only
 def hostcmd_version(base_path, project_name, engine_name, **kwargs):
@@ -761,10 +761,12 @@ def conductorcmd_deploy(engine_name, project_name, services, **kwargs):
 
 
 @conductor_only
-def conductorcmd_install(engine_name, project_name, services, role, **kwargs):
-    # FIXME: Port me from ac_galaxy.py
-    pass
-
+def conductorcmd_install(engine_name, project_name, services, **kwargs):
+    roles = kwargs.pop('roles', None)
+    logger.debug("Installing roles", roles=roles)
+    if roles:
+        galaxy = AnsibleContainerGalaxy()
+        galaxy.install(roles)
 
 @conductor_only
 def conductorcmd_push(engine_name, project_name, services, **kwargs):

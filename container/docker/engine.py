@@ -86,6 +86,7 @@ class Engine(BaseEngine):
     CAP_BUILD = True
     CAP_DEPLOY = True
     CAP_IMPORT = True
+    CAP_INSTALL = True
     CAP_LOGIN = True
     CAP_PUSH = True
     CAP_RUN = True
@@ -203,7 +204,8 @@ class Engine(BaseEngine):
 
         if not volumes:
             volumes = {}
-        volumes[base_path] = {'bind': '/src', 'mode': 'ro'}
+        permissions = 'ro' if command != 'install' else 'rw'
+        volumes[base_path] = {'bind': '/src', 'mode': permissions}
 
         if params.get('deployment_output_path'):
             deployment_path = params['deployment_output_path']

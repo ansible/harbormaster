@@ -27,6 +27,7 @@ class BaseEngine(object):
     CAP_BUILD = False
     CAP_DEPLOY = False
     CAP_IMPORT = False
+    CAP_INSTALL = False
     CAP_LOGIN = False
     CAP_PUSH = False
     CAP_RUN = False

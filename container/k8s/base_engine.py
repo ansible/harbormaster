@@ -25,6 +25,7 @@ class K8sBaseEngine(DockerEngine):
     CAP_BUILD = False
     CAP_DEPLOY = True
     CAP_IMPORT = False
+    CAP_INSTALL = False
     CAP_LOGIN = True
     CAP_PUSH = True
     CAP_RUN = True

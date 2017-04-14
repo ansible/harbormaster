@@ -68,4 +68,8 @@ class AnsibleContainerListHostsException(AnsibleContainerException):
 class AnsibleContainerEngineCapability(AnsibleContainerException):
     pass
 
+class AnsibleContainerGalaxyFatalException(AnsibleContainerException):
+    pass
 
+class AnsibleContainerGalaxyRoleException(AnsibleContainerException):
+    pass
