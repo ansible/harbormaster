@@ -28,9 +28,12 @@ from .exceptions import AnsibleContainerAlreadyInitializedException,\
                         AnsibleContainerRegistryAttributeException, \
                         AnsibleContainerException
 from .utils import *
-from . import __version__, host_only, conductor_only
+from . import __version__, host_only, conductor_only, ENV
 from container.utils.loader import load_engine
-from container.utils.galaxy import AnsibleContainerGalaxy
+
+if ENV == 'conductor':
+    from container.utils.galaxy import AnsibleContainerGalaxy
+
 
 REMOVE_HTTP = re.compile('^https?://')
 DEFAULT_CONDUCTOR_BASE = 'centos:7'
