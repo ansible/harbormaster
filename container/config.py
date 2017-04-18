@@ -48,16 +48,9 @@ class AnsibleContainerConfig(Mapping):
 
     @property
     def deployment_path(self):
-        return self.get('settings', {}).get(
-            'deployment_output_path',
-            path.normpath(
-                path.abspath(
-                    path.expanduser(
-                        path.join(self.base_path, 'ansible-deployment/')
-                    )
-                )
-            )
-        )
+        dep_path = self.get('settings', {}).get('deployment_output_path',
+                                                path.join(self.base_path, 'ansible-deployment/'))
+        return path.normpath(path.abspath(path.expanduser(dep_path)))
 
     def set_env(self, env):
         """
