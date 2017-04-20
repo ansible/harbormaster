@@ -26,7 +26,7 @@ that your  target containers will be built from. For example, if you're building
 container images based on Alpine Linux, it's a good idea to use Alpine Linux as
 your Conductor container base image as well, so that what the Conductor exports
 to your target containers contains ``apk`` and other binary dependencies you will
-like need.
+likely need.
 
 
 Dipping a Toe In - Starting from Scratch
