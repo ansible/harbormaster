@@ -586,6 +586,9 @@ def apply_role_to_container(role, container_id, service_name, engine, vars={},
          'roles': [role]}
     ]
 
+    if isinstance(role, dict) and role.get('gather_facts', None) is not None:
+        playbook[0]['gather_facts'] = role['gather_facts']
+
     container_metadata = engine.inspect_container(container_id)
     onbuild = container_metadata['Config']['OnBuild']
     # FIXME: Actually do stuff if onbuild is not null
