@@ -47,11 +47,11 @@ To disable these caches and ensure a clean rebuild, use this option.
 Define one or more environment variables in the Ansible Conductor container. Format each variable as a
 key=value string.
 
-.. option:: --python-interpreter PYTHON_INTERPRETER_PATH
+.. option:: --use-local-python
 
-Ansible Container uses the Python interpreter exported from the Conductor container
-into your target images for Ansible builds. If you wish to bring your own Python
-runtime, use this option to specify the path to it.
+Ansible Container will mount the ``/usr`` volume from the conductor container into the target container as ``/_usr``,
+and use the Python runtime from ``/_usr`` to run Ansible modules. Use this option to prevent this behavior, and force
+it to use the Python runtime found locally on the target container.
 
 .. option:: ansible_options
 
