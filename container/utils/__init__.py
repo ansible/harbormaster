@@ -232,9 +232,12 @@ def get_role_fingerprint(role_name):
 
     def get_dependencies_for_role(role_path):
         meta_main_path = os.path.join(role_path, 'meta', 'main.yml')
-        meta_main = yaml.safe_load(open(meta_main_path))
-        for dependency in meta_main.get('dependencies', []):
-            yield dependency.get('role', None)
+        if os.path.exists(meta_main_path):
+            meta_main = yaml.safe_load(open(meta_main_path))
+            for dependency in meta_main.get('dependencies', []):
+                yield dependency.get('role', None)
+        else:
+            yield None
 
     hash_obj = hashlib.sha256()
     hash_role(hash_obj, resolve_role_to_path(role_name))
