@@ -3,7 +3,7 @@ ENV ANSIBLE_CONTAINER=1
 {% set distro = conductor_base.split(':')[0] %}
 {% if distro in ["fedora", "centos"] %}
 RUN yum update -y && \
-    yum install -y epel-release   && \
+    {% if distro in ["centos"] %}yum install -y epel-release && \{% endif %}
     yum install -y gcc git python-devel rsync libffi-devel openssl-devel && \
     yum clean all
 {% elif distro in ["debian", "ubuntu"] %}
