@@ -473,8 +473,8 @@ def resolve_push_to(push_to, default_url):
 
 
 @conductor_only
-def run_playbook(playbook, engine, service_map, ansible_options='',
-                 python_interpreter=None, debug=False, deployment_output_path=None, tags=None, **kwargs):
+def run_playbook(playbook, engine, service_map, ansible_options='', local_python=False, debug=False,
+                 deployment_output_path=None, tags=None, **kwargs):
     uid, gid = kwargs.get('host_user_uid', 1), kwargs.get('host_user_gid', 1)
 
     try:
@@ -495,9 +495,14 @@ def run_playbook(playbook, engine, service_map, ansible_options='',
         inventory_path = os.path.join(output_dir, 'hosts')
         with open(inventory_path, 'w') as ofs:
             for service_name, container_id in service_map.items():
-                ofs.write('%s ansible_host="%s" ansible_python_interpreter="%s"\n' % (
-                    service_name, container_id,
-                    python_interpreter or engine.python_interpreter_path))
+                if not local_python:
+                    # Use Python runtime from conductor
+                    ofs.write('%s ansible_host="%s" ansible_python_interpreter="%s"\n' % (
+                        service_name, container_id, engine.python_interpreter_path))
+                else:
+                    # Use local Python runtime
+                    ofs.write('%s ansible_host="%s"\n' % (service_name, container_id))
+
 
         if not os.path.exists(os.path.join(output_dir, 'files')):
             os.mkdir(os.path.join(output_dir, 'files'))
@@ -578,20 +583,25 @@ def run_playbook(playbook, engine, service_map, ansible_options='',
 
 @conductor_only
 def apply_role_to_container(role, container_id, service_name, engine, vars={},
-                            python_interpreter=None, ansible_options='',
+                            local_python=False, ansible_options='',
                             debug=False):
     playbook = [
         {'hosts': service_name,
          'vars': vars,
-         'roles': [role]}
+         'roles': [role],
+         }
     ]
+
+    if isinstance(role, dict) and role.get('gather_facts', None) is not None:
+        # Allow disabling gather_facts at the role level
+        playbook[0]['gather_facts'] = role.get('gather_facts')
 
     container_metadata = engine.inspect_container(container_id)
     onbuild = container_metadata['Config']['OnBuild']
     # FIXME: Actually do stuff if onbuild is not null
 
-    rc = run_playbook(playbook, engine, {service_name: container_id},
-                      python_interpreter, ansible_options, debug)
+    rc = run_playbook(playbook, engine, {service_name: container_id}, ansible_options=ansible_options,
+                      local_python=local_python, debug=debug)
     if rc:
         logger.error('Error applying role!', playbook=playbook, engine=engine,
             exit_code=rc)
@@ -600,7 +610,7 @@ def apply_role_to_container(role, container_id, service_name, engine, vars={},
 
 @conductor_only
 def conductorcmd_build(engine_name, project_name, services, cache=True,
-          python_interpreter=None, ansible_options='', debug=False, **kwargs):
+          local_python=False, ansible_options='', debug=False, **kwargs):
     engine = load_engine(['BUILD'], engine_name, project_name, services, **kwargs)
     logger.info(u'%s integration engine loaded. Build starting.',
         engine.display_name, project=project_name)
@@ -647,32 +657,36 @@ def conductorcmd_build(engine_name, project_name, services, cache=True,
                             service=service_name,
                             fingerprint=fingerprint_hash.hexdigest(),
                         )
-
-                container_id = engine.run_container(
-                    cur_image_id,
-                    service_name,
+                run_kwargs = dict(
                     name=engine.container_name_for_service(service_name),
                     user='root',
                     working_dir='/',
                     command='sh -c "while true; do sleep 1; '
                             'done"',
-                    entrypoint=[],
-                    environment=dict(LD_LIBRARY_PATH='/_usr/lib:/_usr/local/lib',
-                                     CPATH='/_usr/include:/_usr/local/include',
-                                     PATH='/usr/local/sbin:/usr/local/bin:'
-                                          '/usr/sbin:/usr/bin:/sbin:/bin:'
-                                          '/_usr/sbin:/_usr/bin:'
-                                          '/_usr/local/sbin:/_usr/local/bin',
-                                     PYTHONPATH='/_usr/lib/python2.7'),
-                    volumes={engine.get_runtime_volume_id(): {'bind': '/_usr',
-                                                              'mode': 'ro'}})
+                    entrypoint=[]
+                )
+
+                if not local_python:
+                    # Use the conductor's Python runtime
+                    run_kwargs['environment'] = dict(
+                         LD_LIBRARY_PATH='/_usr/lib:/_usr/local/lib',
+                         CPATH='/_usr/include:/_usr/local/include',
+                         PATH='/usr/local/sbin:/usr/local/bin:'
+                              '/usr/sbin:/usr/bin:/sbin:/bin:'
+                              '/_usr/sbin:/_usr/bin:'
+                              '/_usr/local/sbin:/_usr/local/bin',
+                         PYTHONPATH='/_usr/lib/python2.7')
+                    run_kwargs['volumes'] = {engine.get_runtime_volume_id(): {'bind': '/_usr', 'mode': 'ro'}}
+
+                container_id = engine.run_container(cur_image_id, service_name, **run_kwargs)
+
                 while not engine.service_is_running(service_name):
                     time.sleep(0.2)
                 logger.debug('Container running', id=container_id)
 
                 rc = apply_role_to_container(role, container_id, service_name,
                                              engine, vars=dict(service['defaults']),
-                                             python_interpreter=python_interpreter,
+                                             local_python=local_python,
                                              ansible_options=ansible_options,
                                              debug=debug)
                 logger.debug('Playbook run finished.', exit_code=rc)

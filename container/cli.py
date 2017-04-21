@@ -126,15 +126,13 @@ class HostCommand(object):
                                     u'changes have been made necessitating rebuild. '
                                     u'You may disable layer caching with this flag.',
                                dest='cache', default=True)
-        subparser.add_argument('--python-interpreter', action='store',
-                               help=u'Ansible Container brings its own Python runtime '
-                                    u'into your target containers for Ansible to use. '
-                                    u'If you would like to bring your own Python runtime '
-                                    u'instead, use this to specify the path to that '
-                                    u'runtime.', dest='python_interpreter', default=None)
-        subparser.add_argument('--services', action='store',
-                               help=u'Rather than build all services, only build specific services.',
-                               nargs='+', dest='services_to_build', default=None)
+        subparser.add_argument('--use-local-python', action='store_true',
+                               help=u'Prevents Ansible Container from bringing its own Python runtime '
+                                    u'into target containers in order to run Ansible. Use when the target '
+                                    u'already has an installed Python runtime.',
+                               dest='local_python', default=False)
+        subparser.add_argument('--no-conductor-runtime', action='store_false',
+                               help=u'')
         subparser.add_argument('ansible_options', action='store',
                                help=u'Provide additional commandline arguments to '
                                     u'Ansible in executing your playbook. If you '

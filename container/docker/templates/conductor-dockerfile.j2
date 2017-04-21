@@ -10,6 +10,7 @@ RUN yum update -y && \
 RUN apt-get update -y && \
     apt-get install -y gcc python2.7 git python-dev rsync libffi-dev libssl-dev python-apt && \
     cd /usr/bin && \
+    rm -f lsb_release && \
     ln -fs python2.7 python && \
     apt-get clean
 {% elif distro in ["alpine"] %}
