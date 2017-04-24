@@ -216,6 +216,12 @@ class Engine(BaseEngine):
             deployment_path = params['deployment_output_path']
             volumes[deployment_path] = {'bind': deployment_path, 'mode': 'rw'}
 
+        roles_path = None
+        if params.get('roles_path'):
+            # User specified --roles-path
+            roles_path = os.path.normpath(os.path.abspath(os.path.expanduser(params.get('roles_path'))))
+            volumes[roles_path] = {'bind': roles_path, 'mode': 'ro'}
+
         environ = {}
         if os.environ.get('DOCKER_HOST'):
             environ['DOCKER_HOST'] = os.environ['DOCKER_HOST']
@@ -230,7 +236,10 @@ class Engine(BaseEngine):
             volumes['/var/run/docker.sock'] = {'bind': '/var/run/docker.sock',
                                                'mode': 'rw'}
 
-        environ['ANSIBLE_ROLES_PATH'] = '/src/roles:/etc/ansible/roles'
+        if roles_path:
+            environ['ANSIBLE_ROLES_PATH'] = "%s:/src/roles:/etc/ansible/roles" % roles_path
+        else:
+            environ['ANSIBLE_ROLES_PATH'] = '/src/roles:/etc/ansible/roles'
 
         if params.get('devel'):
             conductor_path = os.path.dirname(container.__file__)
