@@ -663,7 +663,8 @@ def conductorcmd_build(engine_name, project_name, services, cache=True,
                     working_dir='/',
                     command='sh -c "while true; do sleep 1; '
                             'done"',
-                    entrypoint=[]
+                    entrypoint=[],
+                    privileged=True
                 )
 
                 if not local_python:

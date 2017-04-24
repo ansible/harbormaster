@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 import os
 import json
 
-from ansible.template import Templar
+from ansible.vars import Templar
 from ruamel import yaml
 import docker
 
