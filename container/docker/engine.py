@@ -263,6 +263,9 @@ class Engine(BaseEngine):
             cap_add=['SYS_ADMIN']
         )
 
+        if command == 'build':
+            run_kwargs['privileged'] = True
+
         logger.debug('Docker run:', image=image_id, params=run_kwargs)
         try:
             container_obj = self.client.containers.run(
