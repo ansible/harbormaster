@@ -202,7 +202,6 @@ class Engine(BaseEngine):
             raise exceptions.AnsibleContainerConductorException(
                     u"Conductor container can't be found. Run "
                     u"`ansible-container build` first")
-        config['settings'] = dict(pwd=base_path, **config.get('settings', {}))
 
         serialized_params = base64.b64encode(json.dumps(params).encode("utf-8")).decode()
         serialized_config = base64.b64encode(json.dumps(config).encode("utf-8")).decode()

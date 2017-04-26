@@ -1,0 +1,28 @@
+- name: Make temporary workspace
+  tempfile:
+    path: "{{ lookup('env', 'TMPDIR')|default(omit, boolean=True) }}"
+    state: directory
+    suffix: acvars
+  register: actmpdir 
+
+- name: Show the tmp path
+  debug: msg="Temporary directory is {{ actmpdir.path }}"
+
+- name: Copy files to workspace
+  copy:
+    src: "{{ role_path }}/files/{{ item }}"
+    dest: "{{ actmpdir.path }}"   
+  with_items:
+  - container.yml
+  - vars.yml
+  - vars.txt
+
+- name: Test container/config.py 
+  shell: pytest tests/validate_config.py >>task.output 2>&1
+  environment:
+    PROJECT_PATH: "{{ actmpdir.path | quote }}"
+  register: output
+  ignore_errors: yes
+
+- include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"    
+

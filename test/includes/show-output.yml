@@ -14,6 +14,12 @@
 
 - name: Check status
   assert:
+    that: registered_output.rc == 0
+  when: registered_output.rc is defined
+
+- name: Check status
+  assert:
     that: "{{ item.rc == 0 }}"
   with_items:
-      - "{{ output.results }}"
+  - "{{ registered_output.results }}"
+  when: registered_output.results is defined

@@ -1,0 +1,21 @@
+version: '2'
+defaults:
+  web_image: apache:latest
+  web_ports: ['8080:80']
+  debug: 0
+  foo: bar
+  project_path: '/foo'
+services:
+  web:
+    image: "{{ web_image }}"
+    ports: "{{ web_ports }}"
+    command: ['sleep', '1d']
+    foo: "{{ foo }}"
+    dev_overrides:
+      environment:
+      - DEBUG="{{ debug }}"
+    volumes:
+    - $PWD/mysource:/mysource:rw
+    environment:
+    - project_path="{{ project_path }}"
+registries: {}

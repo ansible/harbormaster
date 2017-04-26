@@ -48,8 +48,8 @@ class AnsibleContainerConfig(Mapping):
 
     @property
     def deployment_path(self):
-        dep_path = self.get('settings', {}).get('deployment_output_path',
-                                                path.join(self.base_path, 'ansible-deployment/'))
+        dep_path = self.get('settings', yaml.compat.ordereddict()).get('deployment_output_path',
+                            path.join(self.base_path, 'ansible-deployment/'))
         return path.normpath(path.abspath(path.expanduser(dep_path)))
 
     def set_env(self, env):
@@ -97,6 +97,11 @@ class AnsibleContainerConfig(Mapping):
                     for engine_key in list(config['volumes'][vol_key].keys()):
                         if engine_key != self.engine_name:
                             del config['volumes'][vol_key][engine_key]
+
+        # Insure settings['pwd'] = base_path. Will be used later by conductor to resolve $PWD in volumes.
+        if config.get('settings', None) is None:
+            config['settings'] = yaml.compat.ordereddict()
+        config['settings']['pwd'] = self.base_path
 
         self._resolve_defaults(config)
 
@@ -259,8 +264,7 @@ class AnsibleContainerConductorConfig(Mapping):
 
     def _process_services(self):
         services = yaml.compat.ordereddict()
-        for service, service_data in self._config.get(
-                'services', yaml.compat.ordereddict()).items():
+        for service, service_data in self._config.get('services', yaml.compat.ordereddict()).items():
             logger.debug('Processing service...', service=service)
             processed = yaml.compat.ordereddict()
             service_defaults = self.defaults.copy()

@@ -23,7 +23,8 @@
     - restart_no_validate
     - stop
     - stop_no_validate
-- include: show-output.yml output_file=./task.output registered_output="{{ output }}"
+
+- include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"
 
 - name: Wait until built containers are running
   docker_container:
@@ -47,7 +48,8 @@
   tags:
     - restart
     - restart_no_validate
-- include: show-output.yml output_file=./task.output registered_output="{{ output }}"
+
+- include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"
 
 - name: Get new container start times
   docker_container:
@@ -84,7 +86,8 @@
     - run_no_validate
     - restart
     - restart_no_validate
-- include: show-output.yml output_file=./task.output registered_output="{{ output }}"
+
+- include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"
 
 - name: Ensure containers were stopped
   docker_container:

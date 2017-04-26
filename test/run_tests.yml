@@ -7,4 +7,5 @@
   roles:
     - validate-build-and-import
     - validate-start-stop-restart
+    - validate-config
 

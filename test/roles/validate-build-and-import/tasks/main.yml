@@ -63,7 +63,7 @@
   ignore_errors: yes
   tags: always
 
-- include: show-output.yml output_file=./task.output registered_output="{{ output }}"
+- include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"
 
 - name: Validate import
   shell: pytest tests/validate_import.py >>task.output 2>&1
@@ -78,7 +78,7 @@
   tags:
     - validate_import
 
-- include: show-output.yml output_file=./task.output registered_output="{{ output }}"
+- include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"
 
 - name: Run ansible-container build
   shell: >
@@ -93,7 +93,7 @@
     - build
     - build_no_validate
 
-- include: show-output.yml output_file=./task.output registered_output="{{ output }}"
+- include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"
 
 - name: Validate build
   shell: pytest tests/validate_build.py >>task.output 2>&1
@@ -109,4 +109,4 @@
     - build
     - validate_build
 
-- include: show-output.yml output_file=./task.output registered_output="{{ output }}"
+- include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"

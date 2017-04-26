@@ -1,0 +1,8 @@
+{
+  "debug": 1,
+  "web_ports": [
+    "8000:8000"
+  ],
+  "web_image": "python:2.7",
+  "foo": "baz"
+}
