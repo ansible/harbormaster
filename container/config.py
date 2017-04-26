@@ -111,6 +111,11 @@ class AnsibleContainerConfig(Mapping):
         :param config: Loaded YAML config
         :return: None
         """
+        if config.get('defaults'):
+            # convert config['defaults'] to an ordereddict()
+            tmp_defaults = yaml.compat.ordereddict()
+            tmp_defaults.update(copy.deepcopy(config['defaults']), relax=True)
+            config['defaults'] = tmp_defaults
         defaults = config.setdefault('defaults', yaml.compat.ordereddict())
         if self.var_file:
             defaults.update(self._get_variables_from_file(), relax=True)
@@ -160,7 +165,7 @@ class AnsibleContainerConfig(Mapping):
                 raise AnsibleContainerConfigException(u"YAML exception: %s" % unicode(exc))
         else:
             try:
-                config = json.loads(open(abspath))
+                config = json.load(open(abspath))
             except Exception as exc:
                 raise AnsibleContainerConfigException(u"JSON exception: %s" % unicode(exc))
         return six.iteritems(config)
