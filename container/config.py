@@ -278,7 +278,7 @@ class AnsibleContainerConductorConfig(Mapping):
             for role_spec in service_data.get('roles', []):
                 if isinstance(role_spec, dict):
                     # A role with parameters to run it with
-                    role_spec_copy = role_spec.copy()
+                    role_spec_copy = copy.deepcopy(role_spec)
                     role_name = role_spec_copy.pop('role')
                     role_args = role_spec_copy
                 else:

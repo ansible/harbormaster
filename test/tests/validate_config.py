@@ -10,6 +10,9 @@ import container
 from container.config import AnsibleContainerConfig, AnsibleContainerConductorConfig
 from container.exceptions import AnsibleContainerConfigException
 from ansible.vars import Templar
+from ansible.playbook.role.include import RoleInclude
+from ansible.vars import VariableManager
+from ansible.parsing.dataloader import DataLoader
 
 if 'PROJECT_PATH' not in os.environ:
     raise ImportError('PROJECT_PATH must be in the environment. You '
@@ -39,7 +42,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         defaults = self.config._config.get('defaults')
         self.assertEqual(defaults['foo'], 'bar')
         self.assertEqual(defaults['debug'], 0)
-        self.assertEqual(defaults['web_image'], 'apache:latest')
+        self.assertEqual(defaults['web_image'], 'centos:7')
 
     def test_should_parse_yaml_file(self):
         self.config.var_file = self.var_file
@@ -74,8 +77,11 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         self.config.var_file = self.var_file
         self.config.set_env('prod')
         container.ENV = 'conductor'
+        container.utils.DataLoader = DataLoader
+        container.utils.VariableManager = VariableManager
+        container.utils.RoleInclude = RoleInclude
         conductor_config = AnsibleContainerConductorConfig(self.config._config)
-        self.assertEqual(conductor_config['services']['web']['foo'], 'cats')
+        self.assertEqual(conductor_config['services']['web']['environment'][1], 'foo="cats"')
 
     def test_should_give_precedence_to_file_vars(self):
         # If no environment var, then var defined in var_file should get precedence.
@@ -84,8 +90,11 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         self.config.var_file = self.var_file
         self.config.set_env('prod')
         container.ENV = 'conductor'
+        container.utils.DataLoader = DataLoader
+        container.utils.VariableManager = VariableManager
+        container.utils.RoleInclude = RoleInclude
         conductor_config = AnsibleContainerConductorConfig(self.config._config)
-        self.assertEqual(conductor_config['services']['web']['foo'], 'baz')
+        self.assertEqual(conductor_config['services']['web']['environment'][1], 'foo="baz"')
 
     def test_should_give_precedence_to_default_vars(self):
         # If no environment var and no var_file, then the default value should be used.
@@ -94,13 +103,19 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         self.config.var_file = None
         self.config.set_env('prod')
         container.ENV = 'conductor'
+        container.utils.DataLoader = DataLoader
+        container.utils.VariableManager = VariableManager
+        container.utils.RoleInclude = RoleInclude
         conductor_config = AnsibleContainerConductorConfig(self.config._config)
-        self.assertEqual(conductor_config['services']['web']['foo'], 'bar')
+        self.assertEqual(conductor_config['services']['web']['environment'][1], 'foo="bar"')
 
     def test_should_replace_pwd_in_volumes(self):
         self.config.var_file = self.var_file
         self.config.set_env('prod')
         container.ENV = 'conductor'
+        container.utils.DataLoader = DataLoader
+        container.utils.VariableManager = VariableManager
+        container.utils.RoleInclude = RoleInclude
         conductor_config = AnsibleContainerConductorConfig(self.config._config)
         self.assertIn(self.project_path, conductor_config.services['web']['volumes'][0],
                       '{} not in volume[0]: {}'.format(self.project_path,
@@ -110,6 +125,9 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         self.config.var_file = self.var_file
         self.config.set_env('prod')
         container.ENV = 'conductor'
+        container.utils.DataLoader = DataLoader
+        container.utils.VariableManager = VariableManager
+        container.utils.RoleInclude = RoleInclude
         conductor_config = AnsibleContainerConductorConfig(self.config._config)
         self.assertIn(self.project_path, conductor_config['services']['web']['environment'][0])
 
@@ -117,6 +135,9 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         self.config.var_file = self.var_file
         self.config.set_env('dev')
         container.ENV = 'conductor'
+        container.utils.DataLoader = DataLoader
+        container.utils.VariableManager = VariableManager
+        container.utils.RoleInclude = RoleInclude
         conductor_config = AnsibleContainerConductorConfig(self.config._config)
         self.assertIn('DEBUG', conductor_config['services']['web']['environment'][0])
 

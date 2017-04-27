@@ -1,0 +1,16 @@
+# tasks/main.yml
+---
+- name: Show web_image
+  debug: msg="web_image={{ web_image }}" 
+
+- name: Show web_ports
+  debug: msg="web_ports={{ web_ports }}" 
+
+- name: Show debug 
+  debug: msg="debug={{ debug }}"
+
+- name: Show foo 
+  debug: msg="foo={{ foo }}"
+
+- name: Show project_path 
+  debug: msg="project_path={{ project_path }}"

@@ -17,12 +17,46 @@
   - vars.yml
   - vars.txt
 
+- name: Create roles directory
+  file:
+    path: "{{ actmpdir.path }}/roles/"
+    state: directory
+
+- name: Copy role 
+  copy:
+    src: "{{ role_path }}/files/test-variables"
+    dest: "{{ actmpdir.path }}/roles"
+
 - name: Test container/config.py 
-  shell: pytest tests/validate_config.py >>task.output 2>&1
+  shell: pytest {{ playbook_dir }}/tests/validate_config.py >>{{ playbook_dir }}/task.output 2>&1
+  args:
+    chdir: "{{ actmpdir.path }}" 
   environment:
     PROJECT_PATH: "{{ actmpdir.path | quote }}"
   register: output
   ignore_errors: yes
 
 - include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"    
+
+- name: Run 'ansible-container build'
+  shell: ansible-container --debug --project-name test-config build >>{{ playbook_dir }}/task.output 2>&1
+  args:
+    chdir: "{{ actmpdir.path }}"
+  register: output
+  ignore_errors: yes
+
+- name: Save build output
+  command: cat ./task.output 
+  register: build_output
+
+- include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"    
+
+- name: Test build output for container.yml defaults
+  assert:
+    that:
+      - "'web_image=centos:7' in build_output.stdout" 
+      - "'8080:80' in build_output.stdout"
+      - "'debug=0' in build_output.stdout" 
+      - "'foo=bar' in build_output.stdout" 
+      - "'project_path=/foo' in build_output.stdout" 
 
