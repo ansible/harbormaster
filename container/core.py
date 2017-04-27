@@ -670,7 +670,7 @@ def conductorcmd_build(engine_name, project_name, services, cache=True,
                 if not local_python:
                     # Use the conductor's Python runtime
                     run_kwargs['environment'] = dict(
-                         LD_LIBRARY_PATH='/_usr/lib:/_usr/local/lib',
+                         LD_LIBRARY_PATH='/_usr/lib:/_usr/lib64:/_usr/local/lib',
                          CPATH='/_usr/include:/_usr/local/include',
                          PATH='/usr/local/sbin:/usr/local/bin:'
                               '/usr/sbin:/usr/bin:/sbin:/bin:'
