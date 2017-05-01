@@ -14,6 +14,8 @@ import glob
 import shutil
 import functools
 
+from distutils import dir_util
+
 try:
     import ruamel.yaml
     from ruamel.yaml.comments import CommentedMap, CommentedSeq
@@ -467,6 +469,8 @@ class DockerfileImport(object):
     def copy_files_from_src(self):
         if self.bundle_files:
             target = os.path.join(self.role_path, 'files')
+            if not os.path.exists(target):
+                dir_util.mkpath(target)
         else:
             target = self.base_path
         self.copytree(self.import_from,
