@@ -104,6 +104,10 @@ class HostCommand(object):
                                help=u'Use a project template instead of making a '
                                     u'blank project from an Ansible Container project '
                                     u'from Ansible Galaxy.')
+        subparser.add_argument('--force', '-f', action='store_true',
+                               help=u'Overrides the requirement that init be run'
+                                    u'in an empty directory, for example'
+                                    u'if a virtualenv exists in the directory.')
 
 
     def subcmd_build_parser(self, parser, subparser):

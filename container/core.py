@@ -42,7 +42,8 @@ DEFAULT_CONDUCTOR_BASE = 'centos:7'
 @host_only
 def hostcmd_init(base_path, project=None, **kwargs):
     if project:
-        if os.listdir(base_path):
+        force = kwargs.pop('force')
+        if os.listdir(base_path) and not force:
             raise AnsibleContainerAlreadyInitializedException(
                 u'The init command can only be run in an empty directory.')
         try:
