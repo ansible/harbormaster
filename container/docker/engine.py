@@ -36,6 +36,8 @@ try:
     from docker import errors as docker_errors
     from docker.utils.ports import build_port_bindings
     from docker.errors import DockerException
+    from docker.api.container import ContainerApiMixin
+    from docker.models.containers import RUN_HOST_CONFIG_KWARGS
 except ImportError:
     raise ImportError(
         u'You must install Ansible Container with Docker(tm) support. '
@@ -158,7 +160,10 @@ class Engine(BaseEngine):
         to_return = self.services[service_name].copy()
         # remove keys that docker-compose format doesn't accept, or that can't
         #  be used during the build phase
-        for key in ['from', 'roles', 'shell', 'links', 'defaults']:
+        container_args = inspect.getargspec(ContainerApiMixin.create_container)[0] + RUN_HOST_CONFIG_KWARGS
+        remove_keys = set(to_return.keys()) - set(container_args)
+        logger.debug("Removing keys", keys=remove_keys)
+        for key in list(remove_keys):
             try:
                 to_return.pop(key)
             except KeyError:
