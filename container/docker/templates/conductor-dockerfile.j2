@@ -12,7 +12,7 @@ RUN yum update -y && \
     yum clean all
 {% elif distro in ["debian", "ubuntu"] %}
 RUN apt-get update -y && \
-    apt-get install -y gcc python2.7 git python-dev rsync libffi-dev libssl-dev python-apt && \
+    apt-get install -y gcc python2.7 git python-dev rsync libffi-dev libssl-dev dpkg-dev python-apt && \
     cd /usr/bin && \
     rm -f lsb_release && \
     ln -fs python2.7 python && \

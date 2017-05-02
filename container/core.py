@@ -668,9 +668,23 @@ def conductorcmd_build(engine_name, project_name, services, cache=True,
                 )
 
                 if not local_python:
+                    # If we're on a debian based distro, we need the correct architecture
+                    # to allow python to load dynamically loaded shared libraries
+                    extra_library_paths = ''
+                    try:
+                        architecture = subprocess.check_output(['dpkg-architecture',
+                                                                   '-qDEB_HOST_MULTIARCH'])
+                        architecture = architecture.strip()
+                        logger.debug(u'Detected architecture %s', architecture,
+                                       service=service_name, architecture=architecture)
+                        extra_library_paths = ':/_usr/lib/{0}:/_usr/local/lib/{0}'.format(architecture)
+                    except Exception:
+                        # we're not on debian/ubuntu or a system without multiarch support
+                        pass
+
                     # Use the conductor's Python runtime
                     run_kwargs['environment'] = dict(
-                         LD_LIBRARY_PATH='/_usr/lib:/_usr/lib64:/_usr/local/lib',
+                         LD_LIBRARY_PATH='/_usr/lib:/_usr/lib64:/_usr/local/lib{}'.format(extra_library_paths),
                          CPATH='/_usr/include:/_usr/local/include',
                          PATH='/usr/local/sbin:/usr/local/bin:'
                               '/usr/sbin:/usr/bin:/sbin:/bin:'
