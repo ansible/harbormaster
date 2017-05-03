@@ -259,8 +259,8 @@ class HostCommand(object):
 
         try:
             getattr(core, u'hostcmd_{}'.format(args.subcommand))(**vars(args))
-        except exceptions.AnsibleContainerAlreadyInitializedException:
-            logger.error('Ansible Container is already initialized', exc_info=False)
+        except exceptions.AnsibleContainerAlreadyInitializedException as e:
+            logger.error('{0}'.format(e), exc_info=False)
             sys.exit(1)
         except exceptions.AnsibleContainerNotInitializedException:
             logger.error('No Ansible Container project data found - do you need to '
