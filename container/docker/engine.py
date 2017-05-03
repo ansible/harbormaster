@@ -161,7 +161,7 @@ class Engine(BaseEngine):
         # remove keys that docker-compose format doesn't accept, or that can't
         #  be used during the build phase
         container_args = inspect.getargspec(ContainerApiMixin.create_container)[0] + RUN_HOST_CONFIG_KWARGS
-        remove_keys = set(to_return.keys()) - set(container_args)
+        remove_keys = list(set(to_return.keys()) - set(container_args)) + ['links']
         logger.debug("Removing keys", keys=remove_keys)
         for key in list(remove_keys):
             try:
