@@ -39,20 +39,19 @@ settings:
   #  display_name:
 
 services: {}
-  # Add your containers here, specifying the base image you want to build from
-  # For example:
-  #
-  # web:
-  #   from: centos:7
-  #   roles:
-  #     - apache-container
-  #   ports:
-  #     - "80:80"
-  #   command: ['/usr/bin/dumb-init', '/usr/sbin/apache2ctl', '-D', 'FOREGROUND']
-  #   dev_overrides:
-  #     environment:
-  #       - "DEBUG=1"
-  #
+  # Add your containers here, specifying the base image you want to build from.
+  # To use this example, uncomment it and delete the curly braces after services key.
+
+  # version: "2"
+  # services:
+  #   web:
+  #     from: "ubuntu:trusty"
+  #     ports:
+  #       - "80:80"
+  #     command: ["/usr/bin/dumb-init", "/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
+  #     dev_overrides:
+  #       environment:
+  #         - "DEBUG=1"
 registries: {}
   # Add optional registries used for deployment. For example:
   #  google:
