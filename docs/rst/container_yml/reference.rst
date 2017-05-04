@@ -232,7 +232,7 @@ The following is an example taken from a ``container.yml`` file:
       google:
         url: https://gcr.io
         namespace: my-project
-      openshift
+      openshift:
         url: https://192.168.30.14.xip.io
 
 Use the following command to push images to the *google* registry:
