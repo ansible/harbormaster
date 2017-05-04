@@ -261,6 +261,7 @@ class DockerfileParser(object):
     def parse_LABEL(self, payload, comments):
         kv_pairs = [payload]
         if '=' in payload:
+            # handle: 'foo=123 bar=100 baz=456'
             kv_pairs = shlex.split(payload)
         first = True
         logger.debug("found labels {}".format(kv_pairs))
@@ -268,7 +269,8 @@ class DockerfileParser(object):
             if '=' in label:
                 k, v = label.split('=', 1)
             elif ' ' in label:
-                k, v = label.split(' ', 1)
+                # handle: 'maintainer me@foobar.com' 
+                k, v = shlex.split(label)
             else:
                 continue
             self.meta.setdefault('labels', CommentedMap())[k] = v
