@@ -533,7 +533,7 @@ def run_playbook(playbook, engine, service_map, ansible_options='', local_python
                             debug_maybe='-vvvv' if debug else '',
                             engine_args=engine.ansible_args,
                             ansible_playbook=engine.ansible_exec_path,
-                            ansible_options=ansible_options or '')
+                            ansible_options=' '.join(ansible_options) or '')
         if tags:
             ansible_args['ansible_options'] += ' --tags={} '.format(','.join(tags))
         else:
