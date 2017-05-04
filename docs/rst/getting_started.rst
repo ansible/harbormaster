@@ -82,7 +82,7 @@ By way of an example, consider the below ``container.yml`` file:
     version: "2"
     services:
       web:
-        from: "ubuntu:trusty"
+        from: "centos:7"
         ports:
           - "80:80"
         command: ["/usr/bin/dumb-init", "/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
