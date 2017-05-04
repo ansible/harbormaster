@@ -41,17 +41,16 @@ settings:
 services: {}
   # Add your containers here, specifying the base image you want to build from.
   # To use this example, uncomment it and delete the curly braces after services key.
+  # You may need to run `docker pull ubuntu:trusty` for this to work.
 
-  # version: "2"
-  # services:
-  #   web:
-  #     from: "ubuntu:trusty"
-  #     ports:
-  #       - "80:80"
-  #     command: ["/usr/bin/dumb-init", "/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
-  #     dev_overrides:
-  #       environment:
-  #         - "DEBUG=1"
+  # web:
+  #   from: "ubuntu:trusty"
+  #   ports:
+  #     - "80:80"
+  #   command: ["/usr/bin/dumb-init", "/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
+  #   dev_overrides:
+  #     environment:
+  #       - "DEBUG=1"
 registries: {}
   # Add optional registries used for deployment. For example:
   #  google:
