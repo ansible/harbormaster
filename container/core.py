@@ -21,6 +21,11 @@ import tarfile
 import time
 import tempfile
 
+try:
+    from shlex import quote
+except ImportError:
+    from pipes import quote
+
 import requests
 from six.moves.urllib.parse import urljoin
 
@@ -528,8 +533,8 @@ def run_playbook(playbook, engine, service_map, ansible_options='', local_python
         if rc:
             raise OSError('Could not bind-mount /src into tmpdir')
 
-        ansible_args = dict(inventory=inventory_path,
-                            playbook=playbook_path,
+        ansible_args = dict(inventory=quote(inventory_path),
+                            playbook=quote(playbook_path),
                             debug_maybe='-vvvv' if debug else '',
                             engine_args=engine.ansible_args,
                             ansible_playbook=engine.ansible_exec_path,
