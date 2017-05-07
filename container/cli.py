@@ -124,6 +124,9 @@ class HostCommand(object):
         subparser.add_argument('--save-conductor-container', action='store_true',
                                help=u'Leave the Ansible Builder Container intact upon build completion. '
                                     u'Use for debugging and testing.', default=False)
+        subparser.add_argument('--services', action='store',
+                               help=u'Rather than build all services, only build specific services.',
+                               nargs='+', dest='services_to_build', default=None)
         subparser.add_argument('--no-cache', action='store_false',
                                help=u'Ansible Container caches image layers during builds '
                                     u'and reuses existing layers if it determines no '
