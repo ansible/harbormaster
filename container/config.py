@@ -9,6 +9,7 @@ import os
 from os import path
 import copy
 import json
+import re
 import six
 
 from collections import Mapping
@@ -265,16 +266,14 @@ class AnsibleContainerConductorConfig(Mapping):
     def _process_services(self):
         services = yaml.compat.ordereddict()
         for service, service_data in self._config.get('services', yaml.compat.ordereddict()).items():
-            logger.debug('Processing service...', service=service)
+            logger.debug('Processing service...', service=service, service_data=service_data)
             processed = yaml.compat.ordereddict()
             service_defaults = self.defaults.copy()
-
             for idx in range(len(service_data.get('volumes', []))):
                 # To mount the project directory, let users specify `$PWD` and
                 # have that filled in with the project path
-                service_data['volumes'][idx] = service_data['volumes'][idx].replace(
-                    '$PWD', self._config['settings'].get('pwd'))
-
+                service_data['volumes'][idx] = re.sub(r'\$(PWD|\{PWD\})', self._config['settings'].get('pwd'),
+                                                      service_data['volumes'][idx])
             for role_spec in service_data.get('roles', []):
                 if isinstance(role_spec, dict):
                     # A role with parameters to run it with

@@ -15,6 +15,7 @@ services:
       - DEBUG="{{ debug }}"
     volumes:
     - $PWD:/mysource:rw
+    - ${PWD}:/myothersource:rw
     environment:
     - project_path="{{ project_path }}"
     - foo="{{ foo }}"

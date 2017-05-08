@@ -110,6 +110,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         self.assertEqual(conductor_config['services']['web']['environment'][1], 'foo="bar"')
 
     def test_should_replace_pwd_in_volumes(self):
+        # test that $PWD gets resolved
         self.config.var_file = self.var_file
         self.config.set_env('prod')
         container.ENV = 'conductor'
@@ -119,6 +120,19 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         conductor_config = AnsibleContainerConductorConfig(self.config._config)
         self.assertIn(self.project_path, conductor_config.services['web']['volumes'][0],
                       '{} not in volume[0]: {}'.format(self.project_path,
+                                                       json.dumps(conductor_config.services, indent=4)))
+
+    def test_should_also_replace_pwd_in_volumes(self):
+        # test that ${PWD} gets resolved
+        self.config.var_file = self.var_file
+        self.config.set_env('prod')
+        container.ENV = 'conductor'
+        container.utils.DataLoader = DataLoader
+        container.utils.VariableManager = VariableManager
+        container.utils.RoleInclude = RoleInclude
+        conductor_config = AnsibleContainerConductorConfig(self.config._config)
+        self.assertIn(self.project_path, conductor_config.services['web']['volumes'][1],
+                      '{} not in volume[1]: {}'.format(self.project_path,
                                                        json.dumps(conductor_config.services, indent=4)))
 
     def test_should_resolve_lookup(self):
