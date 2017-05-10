@@ -91,7 +91,11 @@ class K8sBaseEngine(DockerEngine):
             if local_images:
                 self.services[service_name]['image'] = image.tags[0]
             else:
-                self.services[service_name]['image'] = urljoin(urljoin(url, namespace), image.tags[0])
+                if namespace is not None:
+                    image_url = urljoin('{}/'.format(urljoin(url, namespace)), image.tags[0])
+                else:
+                    image_url = urljoin(url, image.tags[0])
+                self.services[service_name]['image'] = image_url
 
         if kwargs.get('k8s_auth'):
             self.k8s_client.set_authorization(kwargs['auth'])
