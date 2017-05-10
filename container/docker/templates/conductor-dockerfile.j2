@@ -10,6 +10,17 @@ RUN yum update -y && \
     yum install -y epel-release && \
     yum install -y gcc git python-devel rsync libffi-devel openssl-devel && \
     yum clean all
+{% elif "rhel" in distro %}
+RUN yum -y update-minimal --disablerepo "*" \
+                          --enablerepo rhel-7-server-rpms,rhel-7-server-optional-rpms \
+                          --security --sec-severity=Important --sec-severity=Critical --setopt=tsflags=nodocs && \
+    yum -y install --disablerepo "*" \
+                   --enablerepo rhel-7-server-rpms \
+		   https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && \
+    yum -y install --disablerepo "*" \
+                   --enablerepo epel,rhel-7-server-rpms,rhel-7-server-optional-rpms \
+	           gcc git python-devel rsync libffi-devel openssl-devel && \
+    yum clean all
 {% elif distro in ["debian", "ubuntu"] %}
 RUN apt-get update -y && \
     apt-get install -y gcc python2.7 git python-dev rsync libffi-dev libssl-dev dpkg-dev python-apt && \
