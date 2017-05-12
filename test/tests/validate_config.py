@@ -13,6 +13,7 @@ from ansible.vars import Templar
 from ansible.playbook.role.include import RoleInclude
 from ansible.vars import VariableManager
 from ansible.parsing.dataloader import DataLoader
+from ansible.utils.unsafe_proxy import AnsibleUnsafeText
 
 if 'PROJECT_PATH' not in os.environ:
     raise ImportError('PROJECT_PATH must be in the environment. You '
@@ -26,6 +27,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         self.var_file = os.path.join(self.project_path, 'vars.yml')
         container.ENV = 'host'
         container.config.Templar = Templar
+        container.config.AnsibleUnsafeText = AnsibleUnsafeText
         self.config = AnsibleContainerConfig(self.project_path, var_file=None, engine_name='docker')
 
     def tearDown(self):
