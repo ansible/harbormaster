@@ -239,6 +239,10 @@ class Engine(BaseEngine):
             environ['DOCKER_HOST'] = 'unix:///var/run/docker.sock'
             volumes['/var/run/docker.sock'] = {'bind': '/var/run/docker.sock',
                                                'mode': 'rw'}
+        if params.get('with_variables'):
+            for var in params['with_variables']:
+                key, value = var.split('=', 1)
+                environ[key] = value
 
         if roles_path:
             environ['ANSIBLE_ROLES_PATH'] = "%s:/src/roles:/etc/ansible/roles" % roles_path

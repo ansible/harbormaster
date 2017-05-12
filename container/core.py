@@ -495,6 +495,7 @@ def run_playbook(playbook, engine, service_map, ansible_options='', local_python
 
         playbook_path = os.path.join(output_dir, 'playbook.yml')
         logger.debug("writing playbook to {}".format(playbook_path))
+        logger.debug("playbook", playbook=playbook)
         with open(playbook_path, 'w') as ofs:
             ofs.write(ruamel.yaml.round_trip_dump(playbook, indent=4, block_seq_indent=2, default_flow_style=False))
 

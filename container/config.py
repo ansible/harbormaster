@@ -18,6 +18,7 @@ from ruamel import yaml
 import container
 if container.ENV == 'conductor':
     from ansible.template import Templar
+    from ansible.utils.unsafe_proxy import AnsibleUnsafeText
 from .exceptions import AnsibleContainerConfigException, AnsibleContainerNotInitializedException
 from .utils import get_metadata_from_role, get_defaults_from_role
 
@@ -233,6 +234,8 @@ class AnsibleContainerConductorConfig(Mapping):
             if isinstance(value, basestring):
                 # strings can be templated
                 processed[key] = templar.template(value)
+                if isinstance(processed[key], AnsibleUnsafeText):
+                    processed[key] = str(processed[key])
             elif isinstance(value, (list, dict)):
                 # if it's a dimensional structure, it's cheaper just to serialize
                 # it, treat it like a template, and then deserialize it again
