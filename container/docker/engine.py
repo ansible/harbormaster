@@ -154,7 +154,7 @@ class Engine(BaseEngine):
         return u'%s_%s' % (self.project_name, service_name)
 
     def image_name_for_service(self, service_name):
-        return u'%s-%s' % (self.project_name, service_name)
+        return u'%s-%s' % (self.project_name.lower(), service_name.lower())
 
     def run_kwargs_for_service(self, service_name):
         to_return = self.services[service_name].copy()
@@ -697,11 +697,11 @@ class Engine(BaseEngine):
             # FIXME: Error out properly if build of conductor fails.
             if self.debug:
                 for line_json in self.client.api.build(fileobj=tarball_file,
-                                                  decode=True,
-                                                  custom_context=True,
-                                                  tag=self.image_name_for_service('conductor'),
-                                                  rm=True,
-                                                  nocache=not cache):
+                                                       decode=True,
+                                                       custom_context=True,
+                                                       tag=self.image_name_for_service('conductor'),
+                                                       rm=True,
+                                                       nocache=not cache):
                     try:
                         if line_json.get('status') == 'Downloading':
                             # skip over lines that give spammy byte-by-byte
