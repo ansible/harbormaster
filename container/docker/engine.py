@@ -514,21 +514,25 @@ class Engine(BaseEngine):
 
         service_def = {}
         for service_name, service in self.services.items():
+            service_definition = {}
             if service.get('roles'):
                 image = self.get_latest_image_for_service(service_name)
                 if image is None:
                     raise exceptions.AnsibleContainerConductorException(
                         u"No image found for service {}, make sure you've run `ansible-container build`".format(service_name)
                     )
+                service_definition[u'image'] = image.tags[0]
             else:
-                image = self.client.images.get(service['from'])
-                if image is None:
-                    raise exceptions.AnsibleContainerConductorException(
-                        u"No image found for service {}. You probably need to pull the image from a repository.".format(service_name)
-                    )
-            service_definition = {
-                u'image': image.tags[0],
-            }
+                try:
+                  image = self.client.images.get(service['from'])
+                except docker.errors.ImageNotFound:
+                    logger.warning(u"Image {} for service {} not found. "
+                                   u"Will attempt to pull from {}".format(service['from'], service_name,
+                                                                          self.registry_name))
+                if image:
+                    service_definition[u'image'] = image.tags[0]
+                else:
+                    service_definition[u'image'] = service['from']
             for extra in self.COMPOSE_WHITELIST:
                 if extra in service:
                     service_definition[extra] = service[extra]
