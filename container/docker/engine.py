@@ -519,16 +519,17 @@ class Engine(BaseEngine):
                 image = self.get_latest_image_for_service(service_name)
                 if image is None:
                     raise exceptions.AnsibleContainerConductorException(
-                        u"No image found for service {}, make sure you've run `ansible-container build`".format(service_name)
+                        u"No image found for service {}, make sure you've run `ansible-container "
+                        u"build`".format(service_name)
                     )
                 service_definition[u'image'] = image.tags[0]
             else:
                 try:
                   image = self.client.images.get(service['from'])
                 except docker.errors.ImageNotFound:
+                    image = None
                     logger.warning(u"Image {} for service {} not found. "
-                                   u"Will attempt to pull from {}".format(service['from'], service_name,
-                                                                          self.registry_name))
+                                   u"An attempt will be made to pull it.".format(service['from'], service_name))
                 if image:
                     service_definition[u'image'] = image.tags[0]
                 else:

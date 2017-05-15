@@ -104,9 +104,9 @@ class AnsibleContainerGalaxy(object):
             return None
         logger.debug('Role %s is containerized', role_obj)
         try:
-            assert isinstance(snippet, dict) and len(snippet) == 1
+            assert isinstance(snippet, dict) and len(snippet) > 0
         except AssertionError:
-            logger.exception('Role %s container.yml is malformed' % role_obj.namej)
+            logger.exception('Role %s container.yml is malformed' % role_obj.name)
             return None
         return snippet
 
@@ -137,14 +137,13 @@ class AnsibleContainerGalaxy(object):
         if not container_yml['services']:
             container_yml['services'] = {}
         services = container_yml['services']
-        # The snippet should be a dictionary with one key
-        new_service_key = snippet.keys()[0]
+        new_service_key = role_obj.name
         if new_service_key in services:
             raise exceptions.AnsibleContainerGalaxyRoleException(
                 'Role defines service %s, but container.yml already has a service with this name' % new_service_key)
 
         # Add role name to the service's list of roles
-        services[new_service_key] = snippet[new_service_key]
+        services[new_service_key] = {}
         if not services[new_service_key].get('roles'):
             services[new_service_key]['roles'] = []
         if role_obj.name not in services[new_service_key]['roles']:
