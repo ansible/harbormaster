@@ -280,8 +280,9 @@ class Engine(BaseEngine):
             cap_add=['SYS_ADMIN']
         )
 
-        if command == 'build':
-            run_kwargs['privileged'] = True
+        # Anytime a playbook is executed, /src is bind mounted to a tmpdir, and that seems to
+        # require privileged=True
+        run_kwargs['privileged'] = True
 
         logger.debug('Docker run:', image=image_id, params=run_kwargs)
         try:
