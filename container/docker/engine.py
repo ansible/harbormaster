@@ -218,7 +218,7 @@ class Engine(BaseEngine):
           for volume in params.get('with_volumes'):
               volume_parts = volume.split(':')
               volumes[volume_parts[0]] = {
-                  'bind': volume_parts[1],
+                  'bind': volume_parts[1] if len(volume_parts) > 1 else volume_parts[0],
                   'mode': volume_parts[2] if len(volume_parts) > 2 else 'rw'
               }
 
