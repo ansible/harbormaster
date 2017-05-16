@@ -185,8 +185,6 @@ def hostcmd_deploy(base_path, project_name, engine_name, var_file=None,
     }
     if config.get('settings', {}).get('k8s_auth'):
         params['k8s_auth'] = config['settings']['k8s_auth']
-    if config.get('volumes'):
-        params['volumes'] = config['volumes']
     if kwargs:
         params.update(kwargs)
 
@@ -223,8 +221,6 @@ def hostcmd_run(base_path, project_name, engine_name, var_file=None, cache=True,
     }
     if config.get('settings', {}).get('k8s_auth'):
         params['k8s_auth'] = config['settings']['k8s_auth']
-    if config.get('volumes'):
-        params['volumes'] = config['volumes']
     if kwargs:
         params.update(kwargs)
 
@@ -254,8 +250,6 @@ def hostcmd_destroy(base_path, project_name, engine_name, var_file=None, cache=T
     }
     if config.get('settings', {}).get('k8s_auth'):
         params['k8s_auth'] = config['settings']['k8s_auth']
-    if config.get('volumes'):
-        params['volumes'] = config['volumes']
     if kwargs:
         params.update(kwargs)
     params.update(kwargs)
@@ -279,8 +273,6 @@ def hostcmd_stop(base_path, project_name, engine_name, force=False, services=[],
     }
     if config.get('settings', {}).get('k8s_auth'):
         params['k8s_auth'] = config['settings']['k8s_auth']
-    if config.get('volumes'):
-        params['volumes'] = config['volumes']
     if kwargs:
         params.update(kwargs)
     params.update(kwargs)
@@ -304,8 +296,6 @@ def hostcmd_restart(base_path, project_name, engine_name, force=False, services=
     }
     if config.get('settings', {}).get('k8s_auth'):
         params['k8s_auth'] = config['settings']['k8s_auth']
-    if config.get('volumes'):
-        params['volumes'] = config['volumes']
     if kwargs:
         params.update(kwargs)
     params.update(kwargs)
@@ -753,8 +743,10 @@ def conductorcmd_build(engine_name, project_name, services, cache=True,
 @conductor_only
 def conductorcmd_run(engine_name, project_name, services, **kwargs):
     engine = load_engine(['RUN'], engine_name, project_name, services, **kwargs)
+
     logger.info(u'Engine integration loaded. Preparing run.',
                 engine=engine.display_name)
+
     engine.containers_built_for_services(
         [service for service, service_desc in services.items()
          if service_desc.get('roles')])

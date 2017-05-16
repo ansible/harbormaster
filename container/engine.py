@@ -38,7 +38,7 @@ class BaseEngine(object):
         self.services = services
         self.debug = debug
         self.selinux = selinux
-        self.volumes = kwargs.pop('volumes', None)
+        self.volumes = kwargs.pop('volume_data', None)
 
     @property
     def display_name(self):

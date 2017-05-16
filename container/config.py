@@ -223,6 +223,13 @@ class AnsibleContainerConfig(Mapping):
         return len(self._config)
 
 
+def ordereddict_to_dict(x):
+    if isinstance(x, OrderedDict) or isinstance(x, yaml.compat.ordereddict):
+        new_dict = {k: ordereddict_to_dict(v) for k, v in x.iteritems()}
+        return new_dict
+    return x
+
+
 class AnsibleContainerConductorConfig(Mapping):
     _config = None
 
@@ -270,9 +277,8 @@ class AnsibleContainerConductorConfig(Mapping):
         self._config['settings'] = self._config.get('settings', yaml.compat.ordereddict())
         for section in ['volumes', 'registries']:
             logger.debug('Processing section...', section=section)
-            setattr(self, section,
-                    self._process_section(self._config.get(
-                        section, yaml.compat.ordereddict())))
+            setattr(self, section, ordereddict_to_dict(
+                self._process_section(self._config.get(section, yaml.compat.ordereddict()))))
 
     def _process_services(self):
         services = yaml.compat.ordereddict()
@@ -286,14 +292,16 @@ class AnsibleContainerConductorConfig(Mapping):
                 service_data['volumes'][idx] = re.sub(r'\$(PWD|\{PWD\})', self._config['settings'].get('pwd'),
                                                       service_data['volumes'][idx])
             if service_data.get('roles'):
-                # Convert ordereddict to dict
                 updated_roles = []
                 for role in service_data['roles']:
                     if isinstance(role, OrderedDict):
-                        updated_roles.append({k: v for k, v in role.iteritems()})
+                        updated_roles.append(dict(role))
                     else:
                         updated_roles.append(role)
                 service_data['roles'] = updated_roles
+
+            if service_data.get('environment') and isinstance(service_data['environment'], OrderedDict):
+                service_data['environment'] = dict(service_data['environment'])
 
             for role_spec in service_data.get('roles', []):
                 if isinstance(role_spec, dict):
@@ -310,8 +318,7 @@ class AnsibleContainerConductorConfig(Mapping):
                                         relax=True)
                 service_defaults.update(role_args, relax=True)
             processed.update(service_data, relax=True)
-            logger.debug('Rendering service keys from defaults',
-                service=service, defaults=service_defaults)
+            logger.debug('Rendering service keys from defaults', service=service, defaults=service_defaults)
             services[service] = self._process_section(
                 processed,
                 templar=Templar(loader=None, variables=service_defaults)
