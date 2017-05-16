@@ -213,6 +213,15 @@ class Engine(BaseEngine):
 
         if not volumes:
             volumes = {}
+
+        if params.get('with_volumes'):
+          for volume in params.get('with_volumes'):
+              volume_parts = volume.split(':')
+              volumes[volume_parts[0]] = {
+                  'bind': volume_parts[1],
+                  'mode': volume_parts[2] if len(volume_parts) > 2 else 'rw'
+              }
+
         permissions = 'ro' if command != 'install' else 'rw'
         volumes[base_path] = {'bind': '/src', 'mode': permissions}
 
