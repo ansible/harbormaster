@@ -672,7 +672,7 @@ def conductorcmd_build(engine_name, project_name, services, cache=True,
                             'done"',
                     entrypoint=[],
                     privileged=True,
-                    volumes = dict()
+                    volumes=dict()
                 )
 
                 if service.get('volumes'):

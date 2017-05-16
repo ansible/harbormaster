@@ -68,7 +68,7 @@ class HostCommand(object):
                                         u'Specify volumes as strings using the Docker volume format.',
                                    default=[])
             subparser.add_argument('--with-variables', '-e', action='store', nargs='+',
-                                   help=u'Define one or more environment variables in the Ansible '
+                                   help=u'Define one or more environment variables in the '
                                         u'Conductor. Format each variable as a key=value string.',
                                    default=[])
             subparser.add_argument('--roles-path', action='store', default=None,

@@ -215,12 +215,13 @@ class Engine(BaseEngine):
             volumes = {}
 
         if params.get('with_volumes'):
-          for volume in params.get('with_volumes'):
-              volume_parts = volume.split(':')
-              volumes[volume_parts[0]] = {
-                  'bind': volume_parts[1] if len(volume_parts) > 1 else volume_parts[0],
-                  'mode': volume_parts[2] if len(volume_parts) > 2 else 'rw'
-              }
+            for volume in params.get('with_volumes'):
+                volume_parts = volume.split(':')
+                volume_parts[0] = os.path.normpath(os.path.abspath(os.path.expanduser(volume_parts[0])))
+                volumes[volume_parts[0]] = {
+                    'bind': volume_parts[1] if len(volume_parts) > 1 else volume_parts[0],
+                    'mode': volume_parts[2] if len(volume_parts) > 2 else 'rw'
+                }
 
         permissions = 'ro' if command != 'install' else 'rw'
         volumes[base_path] = {'bind': '/src', 'mode': permissions}

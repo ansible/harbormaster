@@ -79,6 +79,14 @@ class AnsibleContainerConfig(Mapping):
                 dev_overrides = service_config.pop('dev_overrides', {})
                 if env == 'dev':
                     service_config.update(dev_overrides)
+            if 'volumes' in service_config:
+                # Expand ~, ${HOME}, ${PWD}, etc. found in the volume src path
+                updated_volumes = []
+                for volume in service_config['volumes']:
+                    vol_pieces = volume.split(':')
+                    vol_pieces[0] = path.normpath(path.abspath(path.expanduser(vol_pieces[0])))
+                    updated_volumes.append(':'.join(vol_pieces))
+                service_config['volumes'] = updated_volumes
             if self.engine_name not in ('openshift', 'k8s'):
                 if 'k8s' in service_config:
                     del service_config['k8s']
