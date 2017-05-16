@@ -617,7 +617,7 @@ def apply_role_to_container(role, container_id, service_name, engine, vars={},
 
 @conductor_only
 def conductorcmd_build(engine_name, project_name, services, cache=True,
-          local_python=False, ansible_options='', debug=False, **kwargs):
+                       local_python=False, ansible_options='', debug=False, **kwargs):
     engine = load_engine(['BUILD'], engine_name, project_name, services, **kwargs)
     logger.info(u'%s integration engine loaded. Build starting.',
         engine.display_name, project=project_name)
@@ -671,8 +671,21 @@ def conductorcmd_build(engine_name, project_name, services, cache=True,
                     command='sh -c "while true; do sleep 1; '
                             'done"',
                     entrypoint=[],
-                    privileged=True
+                    privileged=True,
+                    volumes = dict()
                 )
+
+                if service.get('volumes'):
+                    for volume in service['volumes']:
+                        pieces = volume.split(':')
+                        src = pieces[0]
+                        bind = pieces[0]
+                        mode = 'rw'
+                        if len(pieces) > 1:
+                            bind = pieces[1]
+                        if len(pieces) > 2:
+                            mode = pieces[2]
+                        run_kwargs[u'volumes'][src] = {u'bind': bind, u'mode': mode}
 
                 if not local_python:
                     # If we're on a debian based distro, we need the correct architecture
@@ -698,7 +711,7 @@ def conductorcmd_build(engine_name, project_name, services, cache=True,
                               '/_usr/sbin:/_usr/bin:'
                               '/_usr/local/sbin:/_usr/local/bin',
                          PYTHONPATH='/_usr/lib/python2.7')
-                    run_kwargs['volumes'] = {engine.get_runtime_volume_id(): {'bind': '/_usr', 'mode': 'ro'}}
+                    run_kwargs['volumes'][engine.get_runtime_volume_id()] = {'bind': '/_usr', 'mode': 'ro'}
 
                 container_id = engine.run_container(cur_image_id, service_name, **run_kwargs)
 

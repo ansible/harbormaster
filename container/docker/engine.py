@@ -525,7 +525,7 @@ class Engine(BaseEngine):
                 service_definition[u'image'] = image.tags[0]
             else:
                 try:
-                  image = self.client.images.get(service['from'])
+                    image = self.client.images.get(service['from'])
                 except docker.errors.ImageNotFound:
                     image = None
                     logger.warning(u"Image {} for service {} not found. "
