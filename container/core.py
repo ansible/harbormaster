@@ -162,7 +162,6 @@ def hostcmd_build(base_path, project_name, engine_name, var_file=None,
     if kwargs.get('save_conductor_container'):
         # give precedence to CLI option
         save_container = True
-
     engine_obj.await_conductor_command(
         'build', dict(config), base_path, kwargs, save_container=save_container)
 
@@ -621,7 +620,6 @@ def conductorcmd_build(engine_name, project_name, services, cache=True,
     engine = load_engine(['BUILD'], engine_name, project_name, services, **kwargs)
     logger.info(u'%s integration engine loaded. Build starting.',
         engine.display_name, project=project_name)
-
     services_to_build = kwargs.get('services_to_build') or services.keys()
     for service_name, service in services.items():
         if service_name not in services_to_build:

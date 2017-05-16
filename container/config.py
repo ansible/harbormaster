@@ -12,7 +12,7 @@ import json
 import re
 import six
 
-from collections import Mapping
+from collections import Mapping, OrderedDict
 from ruamel import yaml
 
 import container
@@ -84,7 +84,7 @@ class AnsibleContainerConfig(Mapping):
                 updated_volumes = []
                 for volume in service_config['volumes']:
                     vol_pieces = volume.split(':')
-                    vol_pieces[0] = path.normpath(path.abspath(path.expanduser(vol_pieces[0])))
+                    vol_pieces[0] = path.normpath(path.expandvars(path.expanduser(vol_pieces[0])))
                     updated_volumes.append(':'.join(vol_pieces))
                 service_config['volumes'] = updated_volumes
             if self.engine_name not in ('openshift', 'k8s'):
@@ -285,6 +285,16 @@ class AnsibleContainerConductorConfig(Mapping):
                 # have that filled in with the project path
                 service_data['volumes'][idx] = re.sub(r'\$(PWD|\{PWD\})', self._config['settings'].get('pwd'),
                                                       service_data['volumes'][idx])
+            if service_data.get('roles'):
+                # Convert ordereddict to dict
+                updated_roles = []
+                for role in service_data['roles']:
+                    if isinstance(role, OrderedDict):
+                        updated_roles.append({k: v for k, v in role.iteritems()})
+                    else:
+                        updated_roles.append(role)
+                service_data['roles'] = updated_roles
+
             for role_spec in service_data.get('roles', []):
                 if isinstance(role_spec, dict):
                     # A role with parameters to run it with

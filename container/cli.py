@@ -18,6 +18,7 @@ from . import core
 from . import exceptions
 from container.config import AnsibleContainerConductorConfig
 
+from collections import OrderedDict
 from logging import config
 LOGGING = {
         'version': 1,
@@ -306,7 +307,8 @@ host_commandline = HostCommand()
 
 
 def decode_b64json(encoded_params):
-    return json.loads(base64.b64decode(encoded_params).decode())
+    # Using object_pairs_hook to preserve the original order of any dictionaries
+    return json.loads(base64.b64decode(encoded_params).decode(), object_pairs_hook=OrderedDict)
 
 
 @container.conductor_only

@@ -99,9 +99,9 @@ class Engine(BaseEngine):
 
     COMPOSE_WHITELIST = (
         'links', 'depends_on', 'cap_add', 'cap_drop', 'command', 'devices',
-        'dns', 'dns_opt', 'tmpfs', 'entrypoint', 'environment', 'external_links', 'labels',
-        'links', 'logging', 'log_opt', 'networks', 'network_mode',
-        'pids_limit', 'ports', 'security_opt', 'stop_grace_period',
+        'dns', 'dns_opt', 'tmpfs', 'entrypoint', 'environment', 'expose',
+        'external_links', 'labels', 'links', 'logging', 'log_opt', 'networks',
+        'network_mode', 'pids_limit', 'ports', 'security_opt', 'stop_grace_period',
         'stop_signal', 'sysctls', 'ulimits', 'userns_mode', 'volumes',
         'volume_driver', 'volumes_from', 'cpu_shares', 'cpu_quota', 'cpuset',
         'domainname', 'hostname', 'ipc', 'mac_address', 'mem_limit',
@@ -207,7 +207,6 @@ class Engine(BaseEngine):
             raise exceptions.AnsibleContainerConductorException(
                     u"Conductor container can't be found. Run "
                     u"`ansible-container build` first")
-
         serialized_params = base64.b64encode(json.dumps(params).encode("utf-8")).decode()
         serialized_config = base64.b64encode(json.dumps(config).encode("utf-8")).decode()
 
