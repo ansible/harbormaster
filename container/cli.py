@@ -64,11 +64,13 @@ class HostCommand(object):
                           }
 
     def subcmd_common_parsers(self, parser, subparser, cmd):
-        if cmd in ('build', 'run', 'deploy', 'push'):
+        if cmd in ('build', 'run', 'deploy', 'push', 'stop', 'destroy'):
             subparser.add_argument('--with-volumes', '-v', action='store', nargs='+',
                                    help=u'Mount one or more volumes to the Conductor. '
                                         u'Specify volumes as strings using the Docker volume format.',
                                    default=[])
+
+        if cmd in ('build', 'run', 'deploy', 'push'):
             subparser.add_argument('--with-variables', '-e', action='store', nargs='+',
                                    help=u'Define one or more environment variables in the '
                                         u'Conductor. Format each variable as a key=value string.',
@@ -179,6 +181,8 @@ class HostCommand(object):
         subparser.add_argument('-f', '--force', action='store_true',
                                help=u'Force stop running containers',
                                dest='force')
+        self.subcmd_common_parsers(parser, subparser, 'stop')
+
 
     def subcmd_restart_parser(self, parser, subparser):
         subparser.add_argument('service', action='store',
@@ -186,7 +190,7 @@ class HostCommand(object):
                                nargs='*')
 
     def subcmd_destroy_parser(self, parser, subparser):
-        pass
+        self.subcmd_common_parsers(parser, subparser, 'destroy')
 
     def subcmd_help_parser(self, parser, subparser):
         return
