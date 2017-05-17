@@ -17,6 +17,7 @@ import container
 from . import core
 from . import exceptions
 from container.config import AnsibleContainerConductorConfig
+from container.utils import list_to_ordereddict
 
 from collections import OrderedDict
 from logging import config
@@ -308,7 +309,7 @@ host_commandline = HostCommand()
 
 def decode_b64json(encoded_params):
     # Using object_pairs_hook to preserve the original order of any dictionaries
-    return json.loads(base64.b64decode(encoded_params).decode(), object_pairs_hook=OrderedDict)
+    return json.loads(base64.b64decode(encoded_params).decode())
 
 
 @container.conductor_only
@@ -342,10 +343,9 @@ def conductor_commandline():
     config.dictConfig(LOGGING)
 
     containers_config = decoding_fn(args.config)
-    conductor_config = AnsibleContainerConductorConfig(containers_config)
+    conductor_config = AnsibleContainerConductorConfig(list_to_ordereddict(containers_config))
 
-    logger.debug('Starting Ansible Container Conductor: %s', args.command,
-        services=conductor_config.services)
+    logger.debug('Starting Ansible Container Conductor: %s', args.command, services=conductor_config.services)
     getattr(core, 'conductorcmd_%s' % args.command)(
         args.engine,
         args.project_name,

@@ -28,8 +28,7 @@ import container
 from container import host_only, conductor_only
 from container.engine import BaseEngine
 from container import utils, exceptions
-from container.utils import logmux
-from container.utils import text
+from container.utils import logmux, text, ordereddict_to_list
 
 try:
     import docker
@@ -207,8 +206,9 @@ class Engine(BaseEngine):
             raise exceptions.AnsibleContainerConductorException(
                     u"Conductor container can't be found. Run "
                     u"`ansible-container build` first")
+
         serialized_params = base64.b64encode(json.dumps(params).encode("utf-8")).decode()
-        serialized_config = base64.b64encode(json.dumps(config).encode("utf-8")).decode()
+        serialized_config = base64.b64encode(json.dumps(ordereddict_to_list(config)).encode("utf-8")).decode()
 
         if not volumes:
             volumes = {}

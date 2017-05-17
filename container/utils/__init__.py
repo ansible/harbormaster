@@ -29,7 +29,8 @@ __all__ = ['conductor_dir', 'make_temp_dir', 'get_config', 'assert_initialized',
            'create_path', 'jinja_template_path', 'jinja_render_to_temp',
            'metadata_to_image_config', 'create_role_from_templates',
            'resolve_role_to_path', 'get_role_fingerprint', 'get_content_from_role',
-           'get_metadata_from_role', 'get_defaults_from_role', 'text']
+           'get_metadata_from_role', 'get_defaults_from_role', 'text',
+           'ordereddict_to_list', 'list_to_ordereddict']
 
 conductor_dir = os.path.dirname(container.__file__)
 make_temp_dir = MakeTempDir
@@ -263,3 +264,28 @@ def get_metadata_from_role(role_name):
 @container.conductor_only
 def get_defaults_from_role(role_name):
     return get_content_from_role(role_name, os.path.join('defaults', 'main.yml'))
+
+@container.host_only
+def ordereddict_to_list(config):
+    # If configuration top-level key is an orderedict, convert to list of tuples, providing a
+    # means to preserve key order. Call prior to encoding a config dict.
+    result = {}
+    for key, value in config.iteritems():
+        if isinstance(value, yaml.compat.ordereddict):
+            result[key] = value.items()
+        else:
+            result[key] = value
+    return result
+
+@container.conductor_only
+def list_to_ordereddict(config):
+    # If configuration top-level key is a list, convert it to an ordereddict.
+    # Call post decoding of a config dict.
+    result = {}
+    for key, value in config.iteritems():
+        if isinstance(value, list):
+            result[key] = yaml.compat.ordereddict(value)
+        else:
+            result[key] = value
+    return result
+
