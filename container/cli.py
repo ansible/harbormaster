@@ -19,7 +19,6 @@ from . import exceptions
 from container.config import AnsibleContainerConductorConfig
 from container.utils import list_to_ordereddict
 
-from collections import OrderedDict
 from logging import config
 LOGGING = {
         'version': 1,
@@ -91,28 +90,25 @@ class HostCommand(object):
                                    help=u'If authentication with the registry is required, provide a valid password.',
                                    dest='password', default=None)
             subparser.add_argument('--push-to', action='store',
-                                   help=(u'Name of a registry defined in container.yml or the actual URL of the registry, '
-                                         u'including the namespace. If passing a URL, an example would be: '
-                                         u'"https://registry.example.com:5000/myproject"'),
+                                   help=(u'Name of a registry defined in container.yml, or a registry URL. When '
+                                         u'providing a URL, include the repository or project namespace.'),
                                    dest='push_to', default=None)
             subparser.add_argument('--tag', action='store',
                                    help=u'Tag the images before pushing.',
                                    dest='tag', default=None)
-
 
     def subcmd_init_parser(self, parser, subparser):
         subparser.add_argument('--server', '-s', action='store',
                                default='https://galaxy.ansible.com/',
                                help=u'Use a different Galaxy server URL')
         subparser.add_argument('project', nargs='?', action='store',
-                               help=u'Use a project template instead of making a '
-                                    u'blank project from an Ansible Container project '
-                                    u'from Ansible Galaxy.')
+                               help=(u'Rather than starting with a blank project, use a project template '
+                                     u'from an Ansible Container project downloaded from the Ansible Galaxy '
+                                     u'web site.'))
         subparser.add_argument('--force', '-f', action='store_true',
                                help=u'Overrides the requirement that init be run'
                                     u'in an empty directory, for example'
                                     u'if a virtualenv exists in the directory.')
-
 
     def subcmd_build_parser(self, parser, subparser):
         subparser.add_argument('--flatten', action='store_true',
@@ -264,14 +260,19 @@ class HostCommand(object):
             LOGGING['loggers']['container']['level'] = 'DEBUG'
         config.dictConfig(LOGGING)
 
+        vargs = vars(args)
+        if not vargs['project_name']:
+            # Set the default project_name
+            vargs['project_name'] = os.path.basename(vargs['base_path'])
+
         try:
-            getattr(core, u'hostcmd_{}'.format(args.subcommand))(**vars(args))
+            getattr(core, u'hostcmd_{}'.format(args.subcommand))(**vargs)
         except exceptions.AnsibleContainerAlreadyInitializedException as e:
-            logger.error('{0}'.format(e), exc_info=False)
+            logger.error("Project already initialized. Use the --force option.")
             sys.exit(1)
         except exceptions.AnsibleContainerNotInitializedException:
             logger.error('No Ansible Container project data found - do you need to '
-                    'run "ansible-container init"?', exc_info=False)
+                         'run "ansible-container init"?', exc_info=False)
             sys.exit(1)
         except exceptions.AnsibleContainerNoAuthenticationProvidedException:
             logger.error('No authentication provided, unable to continue', exc_info=False)

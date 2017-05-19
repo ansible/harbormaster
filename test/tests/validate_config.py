@@ -9,7 +9,7 @@ import json
 import container
 from container.config import AnsibleContainerConfig, AnsibleContainerConductorConfig
 from container.exceptions import AnsibleContainerConfigException
-from ansible.vars import Templar
+from ansible.template import Templar
 from ansible.playbook.role.include import RoleInclude
 try:
     from ansible.vars import VariableManager

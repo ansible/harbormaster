@@ -44,18 +44,28 @@ class AnsibleContainerConfig(Mapping):
     base_path = None
 
     @container.host_only
-    def __init__(self, base_path, var_file=None, engine_name=None):
+    def __init__(self, base_path, var_file=None, engine_name=None, project_name=None):
         self.base_path = base_path
         self.var_file = var_file
         self.engine_name = engine_name
         self.config_path = path.join(self.base_path, 'container.yml')
+        self.project_name = project_name
         self.set_env('prod')
 
     @property
     def deployment_path(self):
         dep_path = self.get('settings', yaml.compat.ordereddict()).get('deployment_output_path',
                             path.join(self.base_path, 'ansible-deployment/'))
-        return path.normpath(path.abspath(path.expanduser(dep_path)))
+        return path.normpath(path.abspath(path.expanduser(path.expandvars(dep_path))))
+
+    @property
+    def image_namespace(self):
+        # When pushing images or deploying, we need to know the registry namespace
+        namespace = self.project_name
+        if self.engine_name in ('k8s', 'openshift'):
+            if self._config.get('settings', {}).get('k8s_namespace', {}).get('name'):
+                namespace = self._config['settings']['k8s_namespace']['name']
+        return namespace
 
     def set_env(self, env):
         """
@@ -106,7 +116,7 @@ class AnsibleContainerConfig(Mapping):
                         config['volumes'][vol_key] = docker_settings
             elif self.engine_name in ('openshift', 'k8s'):
                 # For openshift/k8s remove unrelated attributes
-                for vol_key in config['volumes'].keys():
+                for vol_key in list(config['volumes'].keys()):
                     for engine_key in list(config['volumes'][vol_key].keys()):
                         if engine_key != self.engine_name:
                             del config['volumes'][vol_key][engine_key]
@@ -273,7 +283,7 @@ class AnsibleContainerConductorConfig(Mapping):
         self._config['settings'] = self._config.get('settings', yaml.compat.ordereddict())
         for section in ['volumes', 'registries']:
             logger.debug('Processing section...', section=section)
-            setattr(self, section, self._process_section(self._config.get(section, yaml.compat.ordereddict())))
+            setattr(self, section, dict(self._process_section(self._config.get(section, yaml.compat.ordereddict()))))
 
     def _process_services(self):
         services = yaml.compat.ordereddict()

@@ -15,6 +15,7 @@ import inspect
 import json
 import os
 import re
+import shutil
 import six
 import sys
 import tarfile
@@ -326,10 +327,20 @@ class Engine(BaseEngine):
                         conductor_id=conductor_id, command_rc=exit_code)
             if not save_container:
                 self.delete_container(conductor_id, remove_volumes=True)
+
             if exit_code:
                 raise exceptions.AnsibleContainerConductorException(
                     u'Conductor exited with status %s' % exit_code
                 )
+            elif command in ('run', 'destroy', 'stop', 'restart') and params.get('deployment_output_path'):
+                # Remove any ansible-playbook residue
+                output_path = params['deployment_output_path']
+                for path in ('files', 'templates'):
+                    shutil.rmtree(os.path.join(output_path, path), ignore_errors=True)
+                if not self.debug:
+                    for filename in ('playbook.retry', 'playbook.yml', 'hosts'):
+                        if os.path.exists(os.path.join(output_path, filename)):
+                            os.remove(os.path.join(output_path, filename))
 
     def service_is_running(self, service):
         try:
@@ -514,38 +525,43 @@ class Engine(BaseEngine):
         image_obj.tag(self.image_name_for_service(service_name), 'latest')
 
     @conductor_only
-    def generate_orchestration_playbook(self, url=None, namespace=None, local_images=True, **kwargs):
+    def generate_orchestration_playbook(self, url=None, namespace=None, **kwargs):
         """
         Generate an Ansible playbook to orchestrate services.
         :param url: registry URL where images will be pulled from
         :param namespace: registry namespace
-        :param local_images: bypass pulling images, and use local copies
         :return: playbook dict
         """
         states = ['start', 'restart', 'stop', 'destroy']
-
+        logger.debug("GENERATE DEPLOYMENT", url=url, namespace=namespace)
         service_def = {}
         for service_name, service in self.services.items():
             service_definition = {}
             if service.get('roles'):
-                image = self.get_latest_image_for_service(service_name)
-                if image is None:
-                    raise exceptions.AnsibleContainerConductorException(
-                        u"No image found for service {}, make sure you've run `ansible-container "
-                        u"build`".format(service_name)
-                    )
-                service_definition[u'image'] = image.tags[0]
+                if url and namespace:
+                    # Reference previously pushed image
+                    service_definition[u'image'] = '{}/{}/{}'.format(re.sub(r'/$', '', url), namespace,
+                                                                     self.image_name_for_service(service_name))
+                else:
+                    # Check that the image was built
+                    image = self.get_latest_image_for_service(service_name)
+                    if image is None:
+                        raise exceptions.AnsibleContainerConductorException(
+                            u"No image found for service {}, make sure you've run `ansible-container "
+                            u"build`".format(service_name)
+                        )
+                    service_definition[u'image'] = image.tags[0]
             else:
                 try:
+                    # Check if the image is already local
                     image = self.client.images.get(service['from'])
+                    image_from = image.tags[0]
                 except docker.errors.ImageNotFound:
-                    image = None
+                    image_from = service['from']
                     logger.warning(u"Image {} for service {} not found. "
                                    u"An attempt will be made to pull it.".format(service['from'], service_name))
-                if image:
-                    service_definition[u'image'] = image.tags[0]
-                else:
-                    service_definition[u'image'] = service['from']
+                service_definition[u'image'] = image_from
+
             for extra in self.COMPOSE_WHITELIST:
                 if extra in service:
                     service_definition[extra] = service[extra]

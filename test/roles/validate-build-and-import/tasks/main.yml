@@ -95,6 +95,13 @@
 
 - include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"
 
+- name: Get docker images 
+  command: docker images 
+  register: docker_images 
+
+- name: Show docker images 
+  debug: var=docker_images.stdout_lines
+
 - name: Validate build
   shell: pytest tests/validate_build.py >>task.output 2>&1
   environment:

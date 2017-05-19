@@ -209,6 +209,7 @@ class K8sBaseDeploy(object):
         'options',
         'volume_driver',
         'volumes_from',   # TODO: figure out how to map?
+        'from',
         'roles',
         'k8s',
         'openshift',
@@ -286,7 +287,7 @@ class K8sBaseDeploy(object):
                     if isinstance(value, string_types):
                         container['args'] = shlex.split(value)
                     else:
-                        container['args'] = value
+                        container['args'] = copy.copy(value)
                 elif key == 'container_name':
                         container['name'] = value
                 elif key == 'entrypoint':
@@ -521,7 +522,7 @@ class K8sBaseDeploy(object):
             protocol = 'TCP'
             if isinstance(port, string_types) and '/' in port:
                 port, protocol = port.split('/')
-            _append_port(port, protocol)
+            _append_port(port, port, protocol)
 
         return ports
 

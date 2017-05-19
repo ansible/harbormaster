@@ -1,5 +1,5 @@
-#https://github.com/ansible/ansible/archive/devel.tar.gz
-ansible>=2.3.0
+https://github.com/ansible/ansible/archive/devel.tar.gz
+# ansible>=2.3.0
 https://github.com/openshift/openshift-restclient-python/archive/master.tar.gz#egg=openshift-1.0.0
 PyYAML>=3.12
 docker-compose>=1.7

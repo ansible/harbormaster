@@ -2,15 +2,15 @@
 from __future__ import absolute_import
 
 import os
-
+import re
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 from six import add_metaclass
-from six.moves.urllib.parse import urljoin
 
 from abc import ABCMeta, abstractproperty, abstractmethod
 
 from container import conductor_only, host_only
+from container import exceptions
 from container.docker.engine import Engine as DockerEngine, log_runs
 
 from container.utils.visibility import getLogger
@@ -37,10 +37,13 @@ class K8sBaseEngine(DockerEngine):
     _deploy = None
 
     def __init__(self, project_name, services, debug=False, selinux=True, **kwargs):
-        self.namespace_name = kwargs.pop('namespace_name', project_name)
-        self.namespace_display_name = kwargs.pop('namespace_display_name', None)
-        self.namespace_description = kwargs.pop('namespace_description', None)
+        k8s_namespace = kwargs.pop('k8s_namespace', {})
+        self.namespace_name = k8s_namespace.get('name', None) or project_name
+        self.namespace_display_name = k8s_namespace.get('display_name')
+        self.namespace_description = k8s_namespace.get('description')
         super(K8sBaseEngine, self).__init__(project_name, services, debug, selinux=selinux, **kwargs)
+        logger.debug("k8s namespace", namspace=self.namespace_name, display_name=self.namespace_display_name,
+                     description=self.namespace_description)
         logger.debug("Volume for k8s", volumes=self.volumes)
 
     @property
@@ -78,24 +81,31 @@ class K8sBaseEngine(DockerEngine):
                                                         volumes=volumes)
 
     @conductor_only
-    def generate_orchestration_playbook(self, url=None, namespace=None, local_images=True, **kwargs):
+    def generate_orchestration_playbook(self, url=None, namespace=None, **kwargs):
         """
         Generate an Ansible playbook to orchestrate services.
         :param url: registry URL where images will be pulled from
         :param namespace: registry namespace
-        :param local_images: bypass pulling images, and use local copies
         :return: playbook dict
         """
-        for service_name in self.services:
-            image = self.get_latest_image_for_service(service_name)
-            if local_images:
-                self.services[service_name]['image'] = image.tags[0]
-            else:
-                if namespace is not None:
-                    image_url = urljoin('{}/'.format(urljoin(url, namespace)), image.tags[0])
+        for service_name, service_config in self.services.iteritems():
+            if service_config.get('roles'):
+                if url and namespace:
+                    # Reference previously pushed image
+                    self.services[service_name][u'image'] = '{}/{}/{}'.format(re.sub(r'/$', '', url), namespace,
+                                                                              self.image_name_for_service(service_name))
                 else:
-                    image_url = urljoin(url, image.tags[0])
-                self.services[service_name]['image'] = image_url
+                    # We're using a local image, so check that the image was built
+                    image = self.get_latest_image_for_service(service_name)
+                    if image is None:
+                        raise exceptions.AnsibleContainerConductorException(
+                            u"No image found for service {}, make sure you've run `ansible-container "
+                            u"build`".format(service_name)
+                        )
+                    self.services[service_name][u'image'] = image.tags[0]
+            else:
+                # Not a built image
+                self.services[service_name][u'image'] = service_config['from']
 
         if kwargs.get('k8s_auth'):
             self.k8s_client.set_authorization(kwargs['auth'])
@@ -127,4 +137,3 @@ class K8sBaseEngine(DockerEngine):
 
         logger.debug(u'Created playbook to run project', playbook=playbook)
         return playbook
-

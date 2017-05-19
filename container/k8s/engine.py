@@ -38,26 +38,3 @@ class Engine(K8sBaseEngine):
         engine_name = __name__.rsplit('.', 2)[-2]
         return super(Engine, self).run_conductor(command, config, base_path, params, engine_name=engine_name)
 
-    # def _create_ks8_object(self, api_version, kind, request):
-    #     name = request.get('metadata', {}).get('name')
-    #     namespace = request.get('metadata', {}).get('namespace')
-    #
-    #     self.client.set_model(api_version, kind)
-    #     k8s_obj = self.client.get_object(name, namespace)
-    #     if not k8s_obj:
-    #         # create when it doesn't exist
-    #         try:
-    #             k8s_obj = self.client.create_object(namespace, body=request)
-    #         except KubernetesException as exc:
-    #             raise exceptions.AnsibleContainerConductorException(
-    #                 u"Error creating {0}: {1}".format(request['kind'], exc)
-    #             )
-    #     else:
-    #         # otherwise, replace it. not idempotent, but good enough for now
-    #         try:
-    #             k8s_obj = self.client.replace_object(name, namespace, body=request)
-    #         except KubernetesException as exc:
-    #             raise exceptions.AnsibleContainerConductorException(
-    #                 u"Error creating {0}: {1}".format(request['kind'], exc)
-    #             )
-    #     return k8s_obj
