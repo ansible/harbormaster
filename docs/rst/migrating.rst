@@ -12,7 +12,7 @@ If you have an existing project that you're containerizing by building from a
 Dockerfile, you can translate that Dockerfile into an Ansible Container project
 and Ansible role using the ``import`` command.
 
-The ``import`` command will example your Dockerfile and translate its directives
+The ``import`` command will examine your Dockerfile and translate its directives
 into an Ansible container-enabled role that is its equivalent. ``RUN`` directives
 will be split and turned into ``shell`` or ``command`` tasks. ``ADD`` or ``COPY``
 directives will be turned into ``copy``, ``synchronize``, or ``get_url`` tasks.
