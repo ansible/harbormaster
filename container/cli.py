@@ -64,17 +64,17 @@ class HostCommand(object):
                           }
 
     def subcmd_common_parsers(self, parser, subparser, cmd):
-        if cmd in ('build', 'run', 'deploy', 'push', 'stop', 'destroy'):
+        if cmd in ('build', 'run', 'deploy', 'push', 'restart', 'stop', 'destroy'):
             subparser.add_argument('--with-volumes', '-v', action='store', nargs='+',
                                    help=u'Mount one or more volumes to the Conductor. '
                                         u'Specify volumes as strings using the Docker volume format.',
                                    default=[])
-
-        if cmd in ('build', 'run', 'deploy', 'push'):
             subparser.add_argument('--with-variables', '-e', action='store', nargs='+',
                                    help=u'Define one or more environment variables in the '
                                         u'Conductor. Format each variable as a key=value string.',
                                    default=[])
+
+        if cmd in ('build', 'run', 'deploy', 'push'):
             subparser.add_argument('--roles-path', action='store', default=None,
                                    help=u'Specify a local path containing roles you want to '
                                         u'use in the Conductor.')
@@ -188,6 +188,7 @@ class HostCommand(object):
         subparser.add_argument('service', action='store',
                                help=u'The specific services you want to restart',
                                nargs='*')
+        self.subcmd_common_parsers(parser, subparser, 'restart')
 
     def subcmd_destroy_parser(self, parser, subparser):
         self.subcmd_common_parsers(parser, subparser, 'destroy')
