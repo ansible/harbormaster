@@ -128,11 +128,20 @@ class HostCommand(object):
                                help=u'Rather than build all services, only build specific services.',
                                nargs='+', dest='services_to_build', default=None)
         subparser.add_argument('--no-cache', action='store_false',
+                               help=u'Shortcut for --no-conductor-cache and --no-container-cache.',
+                               dest='cache', default=True)
+        subparser.add_argument('--no-conductor-cache', action='store_false',
+                               help=u'Ansible Container caches conductor images during builds '
+                                    u'and reuses the conductor image if it determines no '
+                                    u'changes have been made necessitating rebuild. '
+                                    u'You may disable conductor caching with this flag.',
+                               dest='conductor_cache', default=True)
+        subparser.add_argument('--no-container-cache', action='store_false',
                                help=u'Ansible Container caches image layers during builds '
                                     u'and reuses existing layers if it determines no '
                                     u'changes have been made necessitating rebuild. '
                                     u'You may disable layer caching with this flag.',
-                               dest='cache', default=True)
+                               dest='container_cache', default=True)
         subparser.add_argument('--use-local-python', action='store_true',
                                help=u'Prevents Ansible Container from bringing its own Python runtime '
                                     u'into target containers in order to run Ansible. Use when the target '

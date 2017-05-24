@@ -126,6 +126,7 @@ def hostcmd_init(base_path, project=None, force=False, **kwargs):
 @host_only
 def hostcmd_build(base_path, project_name, engine_name, var_file=None,
                  **kwargs):
+    conductor_cache = kwargs['cache'] and kwargs['conductor_cache']
     config = get_config(base_path, var_file=var_file, engine_name=engine_name, project_name=project_name)
     engine_obj = load_engine(['BUILD', 'RUN'],
                              engine_name, config.project_name,
@@ -142,7 +143,7 @@ def hostcmd_build(base_path, project_name, engine_name, var_file=None,
             engine_obj.build_conductor_image(
                 base_path,
                 config.get('settings', {}).get('conductor_base', DEFAULT_CONDUCTOR_BASE),
-                cache=kwargs['cache']
+                cache=conductor_cache
             )
         else:
             logger.warning(u'%s does not support building the Conductor image.',
@@ -157,6 +158,7 @@ def hostcmd_build(base_path, project_name, engine_name, var_file=None,
     if kwargs.get('save_conductor_container'):
         # give precedence to CLI option
         save_container = True
+    kwargs['cache'] = kwargs['cache'] and kwargs['container_cache']
     engine_obj.await_conductor_command(
         'build', dict(config), base_path, kwargs, save_container=save_container)
 

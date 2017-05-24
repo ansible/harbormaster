@@ -38,9 +38,19 @@ Rather than performing an orchestrated build, only build the specified set of se
 
 .. option:: --no-cache
 
+A shortcut for --no-conductor-cache and --no-container-cache.
+
+.. option:: --no-conductor-cache
+
 The Conductor container uses your container engine's built-it caching mechanisms during
 rebuilds, and Ansible Container will maintain its own per-role cache for your built images.
 To disable these caches and ensure a clean rebuild, use this option.
+
+.. option:: --no-container-cache
+
+During builds the contents of the roles are used for caching indivual layers.
+To disable these caches and ensure a clean rebuild, use this option.
+
 
 .. option:: --with-variables WITH_VARIABLES [WITH_VARIABLES ...]
 
