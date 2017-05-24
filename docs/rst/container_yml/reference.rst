@@ -297,8 +297,7 @@ To impact how objects are created, a ``k8s`` or ``openshift`` section can be add
         ports:
           - 8000:8000
         volumes:
-          volumes:
-            - static-content:/var/www/static
+          - static-content:/var/www/static
         dev_overrides:
           ports:
             - 8888:8000
