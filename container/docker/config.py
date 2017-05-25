@@ -12,8 +12,6 @@ logger = getLogger(__name__)
 
 
 class AnsibleContainerConfig(BaseAnsibleContainerConfig):
-    remove_engines = ('k8s', 'openshift')
-
     @property
     def image_namespace(self):
         return super(AnsibleContainerConfig, self).image_namespace
@@ -31,3 +29,4 @@ class AnsibleContainerConfig(BaseAnsibleContainerConfig):
                     for engine_name in self.remove_engines:
                         if engine_name in self._config['volumes'][vol_key]:
                             del self._config['volumes'][vol_key][engine_name]
+

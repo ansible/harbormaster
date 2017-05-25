@@ -2,18 +2,16 @@
 from __future__ import absolute_import
 
 import os
-import re
-from ruamel.yaml.comments import CommentedMap, CommentedSeq
-
-from six import add_metaclass
 
 from abc import ABCMeta, abstractproperty, abstractmethod
+from ruamel.yaml.comments import CommentedMap, CommentedSeq
+from six import add_metaclass
 
 from container import conductor_only, host_only
 from container import exceptions
 from container.docker.engine import Engine as DockerEngine, log_runs
-
 from container.utils.visibility import getLogger
+
 logger = getLogger(__name__)
 
 

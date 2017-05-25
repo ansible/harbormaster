@@ -5,16 +5,16 @@ The orchestration document for Ansible Container is the ``container.yml`` file. 
 file, defining the services that make up the application, the relationships between each, and how they can be accessed
 from the outside world.
 
-However, the goal for ``container.yml`` is much more ambitious. It is to provide a single definition of the application
-that builds and deploys in development and in a production cloud environment, providing one source of configuration that works
-throughout the application lifecycle.
+The goal for ``container.yml`` is to provide a single definition of the application that defines how to build images,
+how to run in development, and how to deploy to a production cloud environment. It's one source of configuration that 
+works throughout the application lifecycle.
 
 The structure and contents of the file are based on Docker Compose, supporting versions 1 and 2. Looking at a ``container.yml``
-file you will recognize it as mostly Compose with a few notable additions. There are of course directives that are not
-supported, because they do not translate to the supported clouds, and directives have been added to provide support for
-multiple environments and multiple clouds.
+file you will recognize it as mostly Compose with a few notable exceptions. There are directives that are not supported, 
+because they do not translate to the supported clouds, and there are new directives added to support
+multi-environment, and multi-cloud configurations. 
 
-The aim of this document to provide a complete reference to the contents of ``container.yml``.
+The aim of this document is to provide a complete reference to ``container.yml``.
 
 .. contents:: Topics
 
@@ -28,23 +28,161 @@ version 1, 2 and 2.1 are listed along with any directives added by Ansible Conta
 column indicates that the directive is supported. In some cases the directive name links to specific implementation notes
 that provide details on how the directive is used.
 
+
 Top level directives
-````````````````````
+--------------------
 
-===================== ======================================================== ============
-Directive             Definition                                               Supported?
-===================== ======================================================== ============
-networks              Create named, persistent networks
-:ref:`registries`     Registry definitions                                     |checkmark|
-services              Services included in the app                             |checkmark|
-version               Specifiy the version of Compose, '1' or '2'              |checkmark|
-:ref:`volumes`        Create named, persistent volumes. The syntax differs     |checkmark|
-                      from the Docker specification. View :ref:`volumes`
-                      for details.
-===================== ======================================================== ============
+========================== ======================================================== ============
+Directive                  Definition                                               Supported?
+========================== ======================================================== ============
+networks                   Create named, persistent networks
+:ref:`registries`          Registry definitions                                     |checkmark|
+:ref:`services <services>` Services included in the app                             |checkmark|
+:ref:`settings <settings>` Project level configuration settings.                    |checkmark|
+version                    Specifiy the version of Compose, '1' or '2'              |checkmark|
+:ref:`volumes`             Create named, persistent volumes. The syntax differs     |checkmark|
+                           from the Docker specification. View :ref:`volumes`
+                           for details.
+========================== ======================================================== ============
 
-Service level directives
-````````````````````````
+.. _settings:
+
+Settings
+--------
+
+The ``settings`` section is an optional dictionary, or mapping, of project level configuration settings. The following 
+settings are supported: 
+
+====================== =====================================================================
+Directive              Definition                                              
+====================== =====================================================================
+project_name           Set the name of the project. Defaults to the basename of the project 
+                       directory. For built services, project_name is concatenated with service 
+                       name to form the built image name.
+
+conductor_base         The Conductor container does the heavy lifting, and provides a portable
+                       Python runtime for building your target containers. It should be derived
+                       from the same distribution as you're building your target containers with.
+
+deployment_output_path The deployment_output_path is mounted to the Conductor container, and the 
+                       ``run`` and ``deployment`` commands then write generated Ansible playbooks to it.
+                       Defaults to ``./ansible-deployment``.
+:ref:`k8s_auth`        When deploying to K8s or OpenShift, provide API authentication details.
+
+:ref:`k8s_namespace`   When deploying to a K8s or OpenShift cluster, set the namespace, or project name, 
+                       in which to deploy the application
+====================== =====================================================================
+
+Example
+```````
+
+The following is a simple example of a ``settings`` section found in a ``container.yml`` file:
+
+.. code-block:: yaml
+
+    version: '2'
+    settings:
+      conductor_base: 'ubuntu:xenial'
+      project_name: myproject
+
+      k8s_namespace:
+        name: 'example'
+        description: 'Best example ever!'
+        display_name: 'Example'
+
+      k8s_auth:
+        config_file: /etc/k8s/dev_config
+    services:
+    ...    
+
+Implementation
+``````````````
+
+Some of the options within ``settings`` take a dictionary, or mapping, of multiple options. The following provides further
+information for these options:
+
+.. _k8s_auth:
+
+k8s_auth
+........	
+
+The ``k8s_auth`` directive takes a dictionary, or mapping, of options that provide details for 
+authenticating with the K8s or OpenShift API during the ``run`` command. The following options 
+are supported:
+
+====================== =====================================================================
+Directive              Definition                                              
+====================== =====================================================================
+config_file            Path to a K8s config file. Defaults to ${HOME}/.kube/config. If 
+                       no other options are supplied, the config file will be used to 
+                       authenticate with the cluster API.
+
+context                Name of a context found in the config file. 
+
+host                   URL for accessing the API.
+
+api_key                A valid API authentication token.                       
+
+ssl_ca_cert            Path to a CA certificate file.
+
+cert_file              Path to a certificate file.
+
+key_file               Path to a key file.
+
+verify_ssl             Boolean, indicating if SSL certs should be validated.
+====================== =====================================================================
+
+.. _k8s_namespace:
+
+k8s_namespace
+.............
+
+Used to set the namespace, or project name, in which the application will be deployed on the cluster.
+Specifically, values set here will be passed to the ``k8s_namespace``, or ``openshift_project`` module,
+within the Ansible playbook generated by the ``run`` and ``deploy`` commands. 
+
+Expects a dictionary, or mapping, with the following attributes:
+
+====================== =====================================================================
+Directive              Definition                                              
+====================== =====================================================================
+name                   The name of the namespace or project. If not provided, defaults to 
+                       the ``project_name``. 
+
+description            A description of the project. Supported only by OpenShift.
+
+display_name           A title, or more formal name, displayed in the OpenShift console. 
+                       Supported only by OpenShift.
+====================== =====================================================================
+
+
+.. _services:
+
+Services
+--------
+
+The ``services`` section is a dictionary, or mapping, of service name to service settings. For example, the following defines 
+two services, ``web`` and ``db``:
+
+.. code-block:: yaml
+
+    version: '2'
+    services:
+      web:
+        from: centos:7
+        command: [nginx]
+        entrypoint: [/usr/bin/entrypoint.sh]
+        ports:
+          - 8000:8000
+        roles:
+          - nginx-server
+     db:
+       from: 'openshift/postgresql:latest'
+       expose:
+         - 5487
+ 
+The following table details the attributes, or settings, that can be defined for a service. Only those
+with a checkmark in the *Supported* column can be used.  
 
 ===================== ======================================================== ============
 Directive             Definition                                               Supported?
@@ -113,21 +251,23 @@ working_dir           Path to set as the working directory                     |
 ===================== ======================================================== ============
 
 Implementation
---------------
+``````````````
 
 The following provides details about how specific directives are implemented.
 
 .. _depends_on:
 
 depends_on
-``````````
+..........
+
 Express a dependency between services, causing services to be started in order. Supported by ``build`` and ``run`` commands,
 but will be ignored by ``deploy``.
 
 .. _dev_over:
 
 dev_overrides
-`````````````
+.............
+
 Use for directives that should only be applied during the execution of the ``run`` command, or development mode. For example,
 consider the following ``container.yml`` file:
 
@@ -159,19 +299,20 @@ likewise, the ``deploy`` command will create a service using port 8000, and will
 .. _expose:
 
 expose
-``````
+......
 
 For the ``build`` and ``run`` commands, this exposes ports internally, allowing the container to accept requests from other
 containers.
 
 In the cloud, an exposed port translates to a service, and ``deploy`` will create a service for each exposed port. The cloud
-service will have the same name as the `container.yml` service, will listen on the specified port, and forward requests
+service will have the same name as the ``container.yml`` service, will listen on the specified port, and forward requests
 to the same port on the pod.
 
 .. _extra_hosts:
 
 extra_hosts
-```````````
+...........
+
 For ``build`` and ``run``, adds a hosts entry to the container.
 
 In the cloud, ``deploy`` will create an External IP service. See `Kubernetes external IPs <http://kubernetes.io/docs/user-guide/services/#external-ips for details>`_
@@ -180,7 +321,7 @@ for details.
 .. _links:
 
 links
-`````
+.....
 
 Links allow containers to communicate directly without having to define a network, and this is supported by the ``build``
 and ``run`` commands.
@@ -191,7 +332,7 @@ using services, so to enable communication between two containers, add the *expo
 .. _k8s:
 
 k8s
-```
+...
 
 Specify directives specific to the ``k8s`` engine. View :ref:`k8s_openshift_options` for a reference of available directives.
 
@@ -199,14 +340,15 @@ Specify directives specific to the ``k8s`` engine. View :ref:`k8s_openshift_opti
 .. _openshift:
 
 openshift
-`````````
+.........
 
 Specify directives specific to the ``openshift`` engine. View :ref:`k8s_openshift_options` for a reference of available directives.
 
 .. _ports:
 
 ports
-`````
+.....
+
 Connects ports from the host to the container, allowing the container to receive external requests. This is supported by
 the ``build`` and ``run`` commands.
 
@@ -219,7 +361,8 @@ the container port.
 .. _registries:
 
 registries
-``````````
+..........
+
 Define registries that can be referenced by the ``push`` and ``deploy`` commands. For each registiry provide a *url* and
 and optional namespace. If no namespace is provided, the username found in your .docker/config.json or specified on the
 command line will be used.
@@ -245,7 +388,7 @@ Use the following command to push images to the *google* registry:
 .. _volumes:
 
 volumes
-```````
+.......
 
 Supported by ``build``, ``run`` and ``deploy`` commands. The volumes directive mounts host paths or named volumes to the container.
 In version 2 of compose a named volume must be defined in the top-level volumes directive. In version 1, if a named volume does
@@ -264,7 +407,7 @@ which means:
 .. _volumes_from:
 
 volumes_from
-````````````
+............
 
 Mount all the volumes from another service or container. Supported by ``build`` and ``run`` commands, but not supported
 in the cloud, and thus ignored by ``deploy``.
@@ -297,7 +440,6 @@ To impact how objects are created, a ``k8s`` or ``openshift`` section can be add
         ports:
           - 8000:8000
         volumes:
-          volumes:
             - static-content:/var/www/static
         dev_overrides:
           ports:
