@@ -1,22 +1,22 @@
-import shutil
-import tempfile
-from os import path
 import unittest
 import os
-import yaml
 import json
 
 import container
-from container.config import AnsibleContainerConfig, AnsibleContainerConductorConfig
+from container.utils import get_config
+from container.config import AnsibleContainerConductorConfig
 from container.exceptions import AnsibleContainerConfigException
-from ansible.template import Templar
 from ansible.playbook.role.include import RoleInclude
+
 try:
-    from ansible.vars import VariableManager
+    from ansible.vars import VariableManager, Templar
+    from ansible.vars.unsafe_proxy import AnsibleUnsafeText
 except ImportError:
     from ansible.vars.manager import VariableManager
+    from ansible.template import Templar
+    from ansible.utils.unsafe_proxy import AnsibleUnsafeText
+
 from ansible.parsing.dataloader import DataLoader
-from ansible.vars.unsafe_proxy import AnsibleUnsafeText
 
 if 'PROJECT_PATH' not in os.environ:
     raise ImportError('PROJECT_PATH must be in the environment. You '
@@ -31,7 +31,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         container.ENV = 'host'
         container.config.Templar = Templar
         container.config.AnsibleUnsafeText = AnsibleUnsafeText
-        self.config = AnsibleContainerConfig(self.project_path, var_file=None, engine_name='docker')
+        self.config = get_config(self.project_path, var_file=None, engine_name='docker')
 
     def tearDown(self):
         pass
@@ -40,14 +40,22 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         self.assertEqual(len(self.config._config['services'].keys()), 1,
                          'Failed to load container.yml {}'.format(json.dumps(self.config._config, indent=4)))
 
-    # def test_should_remove_defaults_section(self):
-    #     self.assertEqual(self.config.get('defaults', None), None, 'Failed to remove defaults.')
-
     def test_should_parse_defaults(self):
         defaults = self.config._config.get('defaults')
         self.assertEqual(defaults['foo'], 'bar')
         self.assertEqual(defaults['debug'], 0)
         self.assertEqual(defaults['web_image'], 'centos:7')
+
+    def test_should_have_project_name_equal_basename(self):
+        self.assertEqual(self.config.project_name, os.path.basename(self.project_path))
+
+    def test_should_have_project_name_equal_cli(self):
+        config = get_config(self.project_path, var_file=None, engine_name='docker', project_name='foo')
+        self.assertEqual(config.project_name, 'foo')
+
+    def test_should_have_project_name_equal_settings(self):
+        self.config._config['settings'] = {'project_name': 'baz'}
+        self.assertEqual(self.config.project_name, 'baz')
 
     def test_should_parse_yaml_file(self):
         self.config.var_file = self.var_file

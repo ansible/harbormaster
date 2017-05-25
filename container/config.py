@@ -1,27 +1,31 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
+
 from .utils.visibility import getLogger
 logger = getLogger(__name__)
 
+from abc import ABCMeta, abstractproperty, abstractmethod
 from io import BytesIO
 import os
 from os import path
 import copy
 import json
 import re
-import six
+from six import add_metaclass, iteritems, PY2, string_types
 
-from collections import Mapping, OrderedDict
+from collections import Mapping
 from ruamel import yaml
 
 import container
+
 if container.ENV == 'conductor':
     from ansible.template import Templar
     try:
         from ansible.utils.unsafe_proxy import AnsibleUnsafeText
     except ImportError:
         from ansible.vars.unsafe_proxy import AnsibleUnsafeText
+
 from .exceptions import AnsibleContainerConfigException, AnsibleContainerNotInitializedException
 from .utils import get_metadata_from_role, get_defaults_from_role
 
@@ -39,9 +43,11 @@ from .utils import get_metadata_from_role, get_defaults_from_role
 # given variable values
 
 
-class AnsibleContainerConfig(Mapping):
+@add_metaclass(ABCMeta)
+class BaseAnsibleContainerConfig(Mapping):
     _config = yaml.compat.ordereddict()
     base_path = None
+    engine_list = ['docker', 'openshift', 'k8s']
 
     @container.host_only
     def __init__(self, base_path, var_file=None, engine_name=None, project_name=None):
@@ -49,7 +55,8 @@ class AnsibleContainerConfig(Mapping):
         self.var_file = var_file
         self.engine_name = engine_name
         self.config_path = path.join(self.base_path, 'container.yml')
-        self.project_name = project_name
+        self.cli_project_name = project_name
+        self.remove_engines = set(self.engine_list) - set([engine_name])
         self.set_env('prod')
 
     @property
@@ -59,14 +66,22 @@ class AnsibleContainerConfig(Mapping):
         return path.normpath(path.abspath(path.expanduser(path.expandvars(dep_path))))
 
     @property
-    def image_namespace(self):
-        # When pushing images or deploying, we need to know the registry namespace
-        namespace = self.project_name
-        if self.engine_name in ('k8s', 'openshift'):
-            if self._config.get('settings', {}).get('k8s_namespace', {}).get('name'):
-                namespace = self._config['settings']['k8s_namespace']['name']
-        return namespace
+    def project_name(self):
+        if self.cli_project_name:
+            # Give precedence to CLI args
+            return self.cli_project_name
+        if self._config.get('settings', {}).get('project_name', None):
+            # Look for settings.project_name
+            return self._config['settings']['project_name']
+        return os.path.basename(self.base_path)
 
+    @property
+    @abstractproperty
+    def image_namespace(self):
+        # When pushing images or deploying, we need to know the default namespace
+        return self.project_name
+
+    @abstractmethod
     def set_env(self, env):
         """
         Loads config from container.yml,  and stores the resulting dict to self._config.
@@ -84,8 +99,8 @@ class AnsibleContainerConfig(Mapping):
 
         self._validate_config(config)
 
-        for service, service_config in (config.get('services') or {}).items():
-            if not service_config or isinstance(service_config, six.string_types):
+        for service, service_config in iteritems(config.get('services') or {}):
+            if not service_config or isinstance(service_config, string_types):
                 raise AnsibleContainerConfigException(u"Error: no definition found in container.yml for service %s."
                                                       % service)
             if isinstance(service_config, dict):
@@ -100,26 +115,10 @@ class AnsibleContainerConfig(Mapping):
                     vol_pieces[0] = path.normpath(path.expandvars(path.expanduser(vol_pieces[0])))
                     updated_volumes.append(':'.join(vol_pieces))
                 service_config['volumes'] = updated_volumes
-            if self.engine_name not in ('openshift', 'k8s'):
-                if 'k8s' in service_config:
-                    del service_config['k8s']
-                if 'openshift' in service_config:
-                    del service_config['openshift']
 
-        if config.get('volumes'):
-            # Adjust volumes based on engine_name
-            if self.engine_name == 'docker':
-                # For docker replace all attributes with just those for docker
-                for vol_key in list(config['volumes'].keys()):
-                    if 'docker' in config['volumes'][vol_key]:
-                        docker_settings = copy.deepcopy(config['volumes'][vol_key]['docker'])
-                        config['volumes'][vol_key] = docker_settings
-            elif self.engine_name in ('openshift', 'k8s'):
-                # For openshift/k8s remove unrelated attributes
-                for vol_key in list(config['volumes'].keys()):
-                    for engine_key in list(config['volumes'][vol_key].keys()):
-                        if engine_key != self.engine_name:
-                            del config['volumes'][vol_key][engine_key]
+            for key in service_config:
+                if key in self.remove_engines:
+                    del self._config[service][key]
 
         # Insure settings['pwd'] = base_path. Will be used later by conductor to resolve $PWD in volumes.
         if config.get('settings', None) is None:
@@ -148,7 +147,7 @@ class AnsibleContainerConfig(Mapping):
         if self.var_file:
             defaults.update(self._get_variables_from_file(), relax=True)
         logger.debug('The default type is', defaults=str(type(defaults)), config=str(type(config)))
-        if six.PY2 and type(defaults) == yaml.compat.ordereddict:
+        if PY2 and type(defaults) == yaml.compat.ordereddict:
             defaults.update(self._get_environment_variables(), relax=True)
         else:
             defaults.update(self._get_environment_variables())
@@ -196,7 +195,7 @@ class AnsibleContainerConfig(Mapping):
                 config = json.load(open(abspath))
             except Exception as exc:
                 raise AnsibleContainerConfigException(u"JSON exception: %s" % unicode(exc))
-        return six.iteritems(config)
+        return iteritems(config)
 
     TOP_LEVEL_WHITELIST = [
         'version',

@@ -33,10 +33,11 @@ class BaseEngine(object):
     CAP_RUN = False
     CAP_VERSION = False
 
-    def __init__(self, project_name, services, debug=False, selinux=True, **kwargs):
+    def __init__(self, project_name, services, debug=False, selinux=True, devel=False, **kwargs):
         self.project_name = project_name
         self.services = services
         self.debug = debug
+        self.devel = devel
         self.selinux = selinux
         self.volumes = kwargs.pop('volume_data', None)
 

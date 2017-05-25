@@ -36,8 +36,10 @@ class K8sBaseEngine(DockerEngine):
     _k8s_client = None
     _deploy = None
 
-    def __init__(self, project_name, services, debug=False, selinux=True, **kwargs):
-        k8s_namespace = kwargs.pop('k8s_namespace', {})
+    def __init__(self, project_name, services, debug=False, selinux=True, settings=None, **kwargs):
+        if not settings:
+            settings = {}
+        k8s_namespace = settings.get('k8s_namespace', {})
         self.namespace_name = k8s_namespace.get('name', None) or project_name
         self.namespace_display_name = k8s_namespace.get('display_name')
         self.namespace_description = k8s_namespace.get('description')
@@ -81,18 +83,23 @@ class K8sBaseEngine(DockerEngine):
                                                         volumes=volumes)
 
     @conductor_only
-    def generate_orchestration_playbook(self, url=None, namespace=None, **kwargs):
+    def generate_orchestration_playbook(self, url=None, namespace=None, settings=None, **kwargs):
         """
         Generate an Ansible playbook to orchestrate services.
         :param url: registry URL where images will be pulled from
         :param namespace: registry namespace
+        :param settings: settings dict from container.yml
         :return: playbook dict
         """
+        if not settings:
+            settings = {}
+        k8s_auth = settings.get('k8s_auth', {})
+
         for service_name, service_config in self.services.iteritems():
             if service_config.get('roles'):
                 if url and namespace:
                     # Reference previously pushed image
-                    self.services[service_name][u'image'] = '{}/{}/{}'.format(re.sub(r'/$', '', url), namespace,
+                    self.services[service_name][u'image'] = '{}/{}/{}'.format(url.rstrip('/'), namespace,
                                                                               self.image_name_for_service(service_name))
                 else:
                     # We're using a local image, so check that the image was built
@@ -107,8 +114,8 @@ class K8sBaseEngine(DockerEngine):
                 # Not a built image
                 self.services[service_name][u'image'] = service_config['from']
 
-        if kwargs.get('k8s_auth'):
-            self.k8s_client.set_authorization(kwargs['auth'])
+        if k8s_auth:
+            self.k8s_client.set_authorization(k8s_auth)
 
         play = CommentedMap()
         play['name'] = u'Manage the lifecycle of {} on {}'.format(self.project_name, self.display_name)

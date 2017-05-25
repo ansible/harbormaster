@@ -45,8 +45,7 @@ DEFAULT_CONDUCTOR_BASE = 'centos:7'
 
 
 @host_only
-def hostcmd_init(base_path, project=None, **kwargs):
-    force = kwargs.pop('force')
+def hostcmd_init(base_path, project=None, force=False, **kwargs):
     container_cfg = os.path.join(base_path, 'container.yml')
     if os.path.exists(container_cfg) and not force:
         raise AnsibleContainerAlreadyInitializedException()
@@ -129,7 +128,7 @@ def hostcmd_build(base_path, project_name, engine_name, var_file=None,
                  **kwargs):
     config = get_config(base_path, var_file=var_file, engine_name=engine_name, project_name=project_name)
     engine_obj = load_engine(['BUILD', 'RUN'],
-                             engine_name, project_name,
+                             engine_name, config.project_name,
                              config['services'], **kwargs)
 
     conductor_container_id = engine_obj.get_container_id_for_service('conductor')
@@ -170,18 +169,15 @@ def hostcmd_deploy(base_path, project_name, engine_name, var_file=None,
     output_path = kwargs.pop('deployment_output_path', None) or config.deployment_path
 
     engine_obj = load_engine(['LOGIN', 'PUSH', 'DEPLOY'],
-                             engine_name, project_name,
+                             engine_name, config.project_name,
                              config['services'], **kwargs)
 
     params = {
         'deployment_output_path': os.path.normpath(os.path.abspath(os.path.expanduser(output_path))),
         'host_user_uid': os.getuid(),
         'host_user_gid': os.getgid(),
+        'settings': config.get('settings', {}),
     }
-    if config.get('settings', {}).get('k8s_auth'):
-        params['k8s_auth'] = config['settings']['k8s_auth']
-    if config.get('settings', {}).get('k8s_namespace'):
-        params['k8s_namespace'] = config['settings']['k8s_namespace']
     if kwargs:
         params.update(kwargs)
 
@@ -207,7 +203,7 @@ def hostcmd_run(base_path, project_name, engine_name, var_file=None, cache=True,
     logger.debug('hostcmd_run configuration', config=config.__dict__)
 
     engine_obj = load_engine(['RUN'],
-                             engine_name, project_name,
+                             engine_name, config.project_name,
                              config['services'], **kwargs)
 
     remove_existing_container(engine_obj, 'conductor', remove_volumes=True)
@@ -216,9 +212,8 @@ def hostcmd_run(base_path, project_name, engine_name, var_file=None, cache=True,
         'deployment_output_path': config.deployment_path,
         'host_user_uid': os.getuid(),
         'host_user_gid': os.getgid(),
+        'settings': config.get('settings', {})
     }
-    if config.get('settings', {}).get('k8s_auth'):
-        params['k8s_auth'] = config['settings']['k8s_auth']
     if kwargs:
         params.update(kwargs)
 
@@ -229,14 +224,13 @@ def hostcmd_run(base_path, project_name, engine_name, var_file=None, cache=True,
         save_container=config.get('settings', {}).get('save_conductor_container', False))
 
 @host_only
-def hostcmd_destroy(base_path, project_name, engine_name, var_file=None, cache=True,
-                  **kwargs):
+def hostcmd_destroy(base_path, project_name, engine_name, var_file=None, cache=True, **kwargs):
     assert_initialized(base_path)
     logger.debug('Got extra args to `destroy` command', arguments=kwargs)
     config = get_config(base_path, var_file=var_file, engine_name=engine_name, project_name=project_name)
 
     engine_obj = load_engine(['RUN'],
-                             engine_name, project_name,
+                             engine_name, config.project_name,
                              config['services'], **kwargs)
 
     remove_existing_container(engine_obj, 'conductor', remove_volumes=True)
@@ -245,12 +239,10 @@ def hostcmd_destroy(base_path, project_name, engine_name, var_file=None, cache=T
         'deployment_output_path': config.deployment_path,
         'host_user_uid': os.getuid(),
         'host_user_gid': os.getgid(),
+        'settings': config.get('settings', {})
     }
-    if config.get('settings', {}).get('k8s_auth'):
-        params['k8s_auth'] = config['settings']['k8s_auth']
     if kwargs:
         params.update(kwargs)
-    params.update(kwargs)
 
     engine_obj.await_conductor_command(
         'destroy', dict(config), base_path, params,
@@ -261,19 +253,17 @@ def hostcmd_stop(base_path, project_name, engine_name, force=False, services=[],
                  **kwargs):
     config = get_config(base_path, engine_name=engine_name, project_name=project_name)
     engine_obj = load_engine(['RUN'],
-                             engine_name, project_name,
+                             engine_name, config.project_name,
                              config['services'], **kwargs)
 
     params = {
         'deployment_output_path': config.deployment_path,
         'host_user_uid': os.getuid(),
         'host_user_gid': os.getgid(),
+        'settings': config.get('settings', {})
     }
-    if config.get('settings', {}).get('k8s_auth'):
-        params['k8s_auth'] = config['settings']['k8s_auth']
     if kwargs:
         params.update(kwargs)
-    params.update(kwargs)
 
     engine_obj.await_conductor_command(
         'stop', dict(config), base_path, params,
@@ -285,18 +275,16 @@ def hostcmd_restart(base_path, project_name, engine_name, force=False, services=
                     **kwargs):
     config = get_config(base_path, engine_name=engine_name, project_name=project_name)
     engine_obj = load_engine(['RUN'],
-                             engine_name, project_name,
+                             engine_name, config.project_name,
                              config['services'], **kwargs)
     params = {
         'deployment_output_path': config.deployment_path,
         'host_user_uid': os.getuid(),
         'host_user_gid': os.getgid(),
+        'settings': config.get('settings', {})
     }
-    if config.get('settings', {}).get('k8s_auth'):
-        params['k8s_auth'] = config['settings']['k8s_auth']
     if kwargs:
         params.update(kwargs)
-    params.update(kwargs)
 
     engine_obj.await_conductor_command(
         'restart', dict(config), base_path, params,
@@ -314,9 +302,9 @@ def hostcmd_push(base_path, project_name, engine_name, var_file=None, **kwargs):
     config = get_config(base_path, var_file=var_file, engine_name=engine_name, project_name=project_name)
 
     engine_obj = load_engine(['LOGIN', 'PUSH'],
-                             engine_name, project_name,
+                             engine_name, config.project_name,
                              config['services'], **kwargs)
-    logger.debug('PROJECT NAME', project_name=project_name)
+    logger.debug('PROJECT NAME', project_name=config.project_name)
     push_images(base_path,
                 config.image_namespace,
                 engine_obj,
@@ -394,7 +382,7 @@ def hostcmd_install(base_path, project_name, engine_name, **kwargs):
     config = get_config(base_path, engine_name=engine_name, project_name=project_name)
     save_conductor = config.get('settings', {}).get('save_conductor_container', False)
     engine_obj = load_engine(['INSTALL'],
-                             engine_name, project_name,
+                             engine_name, config.project_name,
                              config['services'], **kwargs)
     engine_obj.await_conductor_command('install',
                                        dict(config),
@@ -411,7 +399,7 @@ def hostcmd_version(base_path, project_name, engine_name, **kwargs):
         assert_initialized(base_path)
         engine_obj = load_engine(['VERSION'],
                                  engine_name,
-                                 project_name,
+                                 project_name or os.path.basename(base_path),
                                  {}, **kwargs)
         engine_obj.print_version_info()
 
@@ -420,7 +408,7 @@ def hostcmd_version(base_path, project_name, engine_name, **kwargs):
 def hostcmd_import(base_path, project_name, engine_name, **kwargs):
     engine_obj = load_engine(['IMPORT'],
                              engine_name,
-                             project_name,
+                             project_name or os.path.basename(base_path),
                              {}, **kwargs)
 
     engine_obj.import_project(base_path, **kwargs)

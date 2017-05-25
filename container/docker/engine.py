@@ -337,7 +337,7 @@ class Engine(BaseEngine):
                 output_path = params['deployment_output_path']
                 for path in ('files', 'templates'):
                     shutil.rmtree(os.path.join(output_path, path), ignore_errors=True)
-                if not self.debug:
+                if not self.devel:
                     for filename in ('playbook.retry', 'playbook.yml', 'hosts'):
                         if os.path.exists(os.path.join(output_path, filename)):
                             os.remove(os.path.join(output_path, filename))

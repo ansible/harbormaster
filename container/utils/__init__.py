@@ -6,6 +6,8 @@ logger = getLogger(__name__)
 
 import os
 import hashlib
+import importlib
+
 from datetime import datetime
 from distutils import dir_util
 
@@ -41,10 +43,9 @@ make_temp_dir = MakeTempDir
 
 
 def get_config(base_path, var_file=None, engine_name=None, project_name=None):
-    # To avoid circular import
-    from ..config import AnsibleContainerConfig
-
-    return AnsibleContainerConfig(base_path, var_file=var_file, engine_name=engine_name, project_name=project_name)
+    mod = importlib.import_module('.%s.config' % engine_name,
+                                  package='container')
+    return mod.AnsibleContainerConfig(base_path, var_file=var_file, engine_name=engine_name, project_name=project_name)
 
 
 def assert_initialized(base_path):

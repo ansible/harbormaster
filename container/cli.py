@@ -260,13 +260,8 @@ class HostCommand(object):
             LOGGING['loggers']['container']['level'] = 'DEBUG'
         config.dictConfig(LOGGING)
 
-        vargs = vars(args)
-        if not vargs['project_name']:
-            # Set the default project_name
-            vargs['project_name'] = os.path.basename(vargs['base_path'])
-
         try:
-            getattr(core, u'hostcmd_{}'.format(args.subcommand))(**vargs)
+            getattr(core, u'hostcmd_{}'.format(args.subcommand))(**vars(args))
         except exceptions.AnsibleContainerAlreadyInitializedException as e:
             logger.error("Project already initialized. Use the --force option.")
             sys.exit(1)
