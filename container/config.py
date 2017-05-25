@@ -76,7 +76,6 @@ class BaseAnsibleContainerConfig(Mapping):
         return os.path.basename(self.base_path)
 
     @property
-    @abstractproperty
     def image_namespace(self):
         # When pushing images or deploying, we need to know the default namespace
         return self.project_name
