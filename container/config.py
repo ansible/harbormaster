@@ -118,7 +118,7 @@ class BaseAnsibleContainerConfig(Mapping):
 
             for key in service_config:
                 if key in self.remove_engines:
-                    del self._config[service][key]
+                    del config['services'][service][key]
 
         # Insure settings['pwd'] = base_path. Will be used later by conductor to resolve $PWD in volumes.
         if config.get('settings', None) is None:
