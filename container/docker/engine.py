@@ -231,6 +231,8 @@ class Engine(BaseEngine):
 
         if params.get('deployment_output_path'):
             deployment_path = params['deployment_output_path']
+            if not os.path.isdir(deployment_path):
+                os.mkdir(deployment_path, 0o755)
             volumes[deployment_path] = {'bind': deployment_path, 'mode': 'rw'}
 
         roles_path = None
