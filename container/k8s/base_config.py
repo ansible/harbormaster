@@ -12,7 +12,7 @@ class K8sBaseConfig(BaseAnsibleContainerConfig):
 
     @property
     def image_namespace(self):
-        namespace = super(K8sBaseConfig, self).image_namespace
+        namespace = self.project_name
         if self._config.get('settings', {}).get('k8s_namespace', {}).get('name'):
             namespace = self._config['settings']['k8s_namespace']['name']
         return namespace

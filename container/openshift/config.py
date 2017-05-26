@@ -16,4 +16,4 @@ class AnsibleContainerConfig(K8sBaseConfig):
         return super(AnsibleContainerConfig, self).image_namespace
 
     def set_env(self, env):
-        super(AnsibleContainerConfig, self).set_env()
+        super(AnsibleContainerConfig, self).set_env(env)

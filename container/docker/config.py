@@ -14,7 +14,7 @@ logger = getLogger(__name__)
 class AnsibleContainerConfig(BaseAnsibleContainerConfig):
     @property
     def image_namespace(self):
-        return super(AnsibleContainerConfig, self).image_namespace
+        return self.project_name
 
     def set_env(self, env):
         super(AnsibleContainerConfig, self).set_env(env)

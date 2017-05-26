@@ -79,7 +79,7 @@ class BaseAnsibleContainerConfig(Mapping):
     @abstractproperty
     def image_namespace(self):
         # When pushing images or deploying, we need to know the default namespace
-        return self.project_name
+        pass
 
     @abstractmethod
     def set_env(self, env):
@@ -116,9 +116,9 @@ class BaseAnsibleContainerConfig(Mapping):
                     updated_volumes.append(':'.join(vol_pieces))
                 service_config['volumes'] = updated_volumes
 
-            for key in service_config:
-                if key in self.remove_engines:
-                    del config['services'][service][key]
+            for engine_name in self.remove_engines:
+                if engine_name in service_config:
+                    del service_config[engine_name]
 
         # Insure settings['pwd'] = base_path. Will be used later by conductor to resolve $PWD in volumes.
         if config.get('settings', None) is None:
