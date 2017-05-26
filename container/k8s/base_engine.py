@@ -66,9 +66,16 @@ class K8sBaseEngine(DockerEngine):
     def run_conductor(self, command, config, base_path, params, engine_name=None, volumes=None):
         volumes = {}
         k8s_auth = config.get('settings', {}).get('k8s_auth', {})
-        if not k8s_auth.get('config_file') and os.path.isfile(self.k8s_config_path):
-            # mount default config file
-            volumes[self.k8s_config_path] = {'bind': '/root/.kube/config', 'mode': 'ro'}
+
+        # Set a value for config_file
+        if not k8s_auth.get('config_file'):
+            k8s_auth['config_file'] = self.k8s_config_path
+        # Verify the config_file exists
+        if not os.path.isfile(k8s_auth['config_file']):
+            raise exceptions.AnsibleContainerConfigException("Unable to locate {}".format(k8s_auth['config_file']))
+        # Mount the config_file to the conductor
+        volumes[k8s_auth['config_file']] = {'bind': '/root/.kube/config', 'mode': 'ro'}
+
         if k8s_auth:
             # check if we need to mount any other paths
             path_params = ['config_file', 'ssl_ca_cert', 'cert_file', 'key_file']
@@ -76,6 +83,14 @@ class K8sBaseEngine(DockerEngine):
                 if k8s_auth.get(param, None) is not None:
                     volumes[k8s_auth[param]] = {'bind': k8s_auth[param], 'mode': 'ro'}
 
+        # Add k8s_auth settings as environment variables in the conductor
+        if not params.get('with_variables'):
+            params['with_variables'] = []
+        for key in k8s_auth:
+            if key == 'config_file':
+                params['with_variables'].append("K8S_AUTH_KUBECONFIG={}".format(k8s_auth[key]))
+            else:
+                params['with_variables'].append("K8S_AUTH_{}={}".format(key.upper(), k8s_auth[key]))
         return super(K8sBaseEngine, self).run_conductor(command, config, base_path, params,
                                                         engine_name=engine_name,
                                                         volumes=volumes)
@@ -89,10 +104,6 @@ class K8sBaseEngine(DockerEngine):
         :param settings: settings dict from container.yml
         :return: playbook dict
         """
-        if not settings:
-            settings = {}
-        k8s_auth = settings.get('k8s_auth', {})
-
         for service_name, service_config in self.services.iteritems():
             if service_config.get('roles'):
                 if url and namespace:
@@ -111,9 +122,6 @@ class K8sBaseEngine(DockerEngine):
             else:
                 # Not a built image
                 self.services[service_name][u'image'] = service_config['from']
-
-        if k8s_auth:
-            self.k8s_client.set_authorization(k8s_auth)
 
         play = CommentedMap()
         play['name'] = u'Manage the lifecycle of {} on {}'.format(self.project_name, self.display_name)
