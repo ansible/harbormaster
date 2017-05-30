@@ -1,7 +1,7 @@
 version: "2"
 services:
   test:
-    image: "ansible/ansible-container-testing:latest"
+    from: "ansible/ansible-container-testing:latest"
     volumes:
       - "${ANSIBLE_CONTAINER_PATH}:${ANSIBLE_CONTAINER_PATH}"
       - /var/run/docker.sock:/var/run/docker.sock
