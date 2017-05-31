@@ -15,7 +15,7 @@ try:
 except ImportError:
     raise ImportError(
         u'You must install Ansible Container with OpenShift support. '
-        u'Try:\npip install ansible-container==%s[openshift]' % (
+        u'Try:\npip install ansible-container[openshift]==%s' % (
         __version__
     ))
 

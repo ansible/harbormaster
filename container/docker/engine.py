@@ -20,6 +20,8 @@ import six
 import sys
 import tarfile
 
+if six.PY3:
+    from functools import reduce
 try:
     import httplib as StatusCodes
 except ImportError:
@@ -41,7 +43,7 @@ try:
 except ImportError:
     raise ImportError(
         u'You must install Ansible Container with Docker(tm) support. '
-        u'Try:\npip install ansible-container==%s[docker]' % (
+        u'Try:\npip install ansible-container[docker]==%s' % (
         container.__version__
     ))
 
@@ -67,6 +69,21 @@ DOCKER_CONFIG_FILEPATH_CASCADE = [
 
 REMOVE_HTTP = re.compile('^https?://')
 
+# A map of distros and their aliases that we build pre-baked builders for
+PREBAKED_DISTROS = {
+    'centos:7': ['centos:latest', 'centos:centos7'],
+    'fedora:25': ['fedora:latest'],
+    'fedora:24': [],
+    'debian:jessie': ['debian:8', 'debian:latest', 'debian:jessie-slim'],
+    'debian:stretch': ['debian:9', 'debian:stretch-slim'],
+    'debian:wheezy': ['debian:7', 'debian:wheezy-slim'],
+    'ubuntu:precise': ['ubuntu:12.04'],
+    'ubuntu:trusty': ['ubuntu:14.04'],
+    'ubuntu:xenial': ['ubuntu:16.04'],
+    'ubuntu:zesty': ['ubuntu:17.04'],
+    'alpine:3.5': ['alpine:latest'],
+    'alpine:3.4': []
+}
 
 def log_runs(fn):
     @functools.wraps(fn)
@@ -672,66 +689,99 @@ class Engine(BaseEngine):
                 else:
                     plainLogger.debug(line)
 
+    def _prepare_prebake_manifest(self, base_path, base_image, temp_dir, tarball):
+        utils.jinja_render_to_temp(TEMPLATES_PATH,
+                                   'conductor-src-dockerfile.j2', temp_dir,
+                                   'Dockerfile',
+                                   conductor_base=base_image,
+                                   docker_version=DOCKER_VERSION)
+        tarball.add(os.path.join(temp_dir, 'Dockerfile'),
+                    arcname='Dockerfile')
+
+        container_dir = os.path.dirname(container.__file__)
+        tarball.add(container_dir, arcname='container-src')
+        package_dir = os.path.dirname(container_dir)
+
+        # For an editable install, the setup.py and requirements.* will be
+        # available in the package_dir. Otherwise, our custom sdist (see
+        # setup.py) would have moved them to FILES_PATH
+        setup_py_dir = (package_dir
+                        if os.path.exists(os.path.join(package_dir, 'setup.py'))
+                        else FILES_PATH)
+        req_txt_dir = (package_dir
+                       if os.path.exists(
+            os.path.join(package_dir, 'conductor-requirements.txt'))
+                       else FILES_PATH)
+        req_yml_dir = (package_dir
+                       if os.path.exists(
+            os.path.join(package_dir, 'conductor-requirements.yml'))
+                       else FILES_PATH)
+        tarball.add(os.path.join(setup_py_dir, 'setup.py'),
+                    arcname='container-src/conductor-build/setup.py')
+        tarball.add(os.path.join(req_txt_dir, 'conductor-requirements.txt'),
+                    arcname='container-src/conductor-build/conductor'
+                            '-requirements.txt')
+        tarball.add(os.path.join(req_yml_dir, 'conductor-requirements.yml'),
+                    arcname='container-src/conductor-build/conductor-requirements.yml')
+
+    def _prepare_conductor_manifest(self, base_path, base_image, temp_dir, tarball):
+        source_dir = os.path.normpath(base_path)
+
+        for filename in ['ansible.cfg', 'ansible-requirements.txt',
+                         'requirements.yml']:
+            file_path = os.path.join(source_dir, filename)
+            if os.path.exists(filename):
+                tarball.add(file_path,
+                            arcname=os.path.join('build-src', filename))
+        # Make an empty file just to make sure the build-src dir has something
+        open(os.path.join(temp_dir, '.touch'), 'w')
+        tarball.add(os.path.join(temp_dir, '.touch'),
+                    arcname='build-src/.touch')
+
+        prebaked = base_image in reduce(lambda x, y: x + [y[0]] + y[1],
+                                        PREBAKED_DISTROS.items(), [])
+        if prebaked:
+            base_image = [k for k, v in PREBAKED_DISTROS.items()
+                              if base_image in [k] + v][0]
+            conductor_base = 'container-conductor-%s:%s' % (
+                base_image.replace(':', '-'),
+                container.__version__
+            )
+            if not self.get_image_id_by_tag(conductor_base):
+                conductor_base = 'ansible/%s' % conductor_base
+        else:
+            conductor_base = 'container-conductor-%s:%s' % (
+                base_image.replace(':', '-'),
+                container.__version__
+            )
+
+        utils.jinja_render_to_temp(TEMPLATES_PATH,
+                                   'conductor-local-dockerfile.j2', temp_dir,
+                                   'Dockerfile',
+                                   conductor_base=conductor_base,
+                                   docker_version=DOCKER_VERSION)
+        tarball.add(os.path.join(temp_dir, 'Dockerfile'),
+                    arcname='Dockerfile')
+
     @log_runs
     @host_only
-    def build_conductor_image(self, base_path, base_image, cache=True):
+    def build_conductor_image(self, base_path, base_image, prebaking=False, cache=True):
         with utils.make_temp_dir() as temp_dir:
             logger.info('Building Docker Engine context...')
             tarball_path = os.path.join(temp_dir, 'context.tar')
             tarball_file = open(tarball_path, 'wb')
             tarball = tarfile.TarFile(fileobj=tarball_file,
                                       mode='w')
-            source_dir = os.path.normpath(base_path)
 
-            for filename in ['ansible.cfg', 'ansible-requirements.txt',
-                             'requirements.yml']:
-                file_path = os.path.join(source_dir, filename)
-                if os.path.exists(filename):
-                    tarball.add(file_path,
-                                arcname=os.path.join('build-src', filename))
-            # Make an empty file just to make sure the build-src dir has something
-            open(os.path.join(temp_dir, '.touch'), 'w')
-            tarball.add(os.path.join(temp_dir, '.touch'), arcname='build-src/.touch')
-
-            tarball.add(os.path.join(FILES_PATH, 'get-pip.py'),
-                        arcname='contrib/get-pip.py')
-
-            container_dir = os.path.dirname(container.__file__)
-            tarball.add(container_dir, arcname='container-src')
-            package_dir = os.path.dirname(container_dir)
-
-            # For an editable install, the setup.py and requirements.* will be
-            # available in the package_dir. Otherwise, our custom sdist (see
-            # setup.py) would have moved them to FILES_PATH
-            setup_py_dir = (package_dir
-                            if os.path.exists(os.path.join(package_dir, 'setup.py'))
-                            else FILES_PATH)
-            req_txt_dir = (package_dir
-                           if os.path.exists(os.path.join(package_dir, 'conductor-requirements.txt'))
-                           else FILES_PATH)
-            req_yml_dir = (package_dir
-                           if os.path.exists(os.path.join(package_dir, 'conductor-requirements.yml'))
-                           else FILES_PATH)
-            tarball.add(os.path.join(setup_py_dir, 'setup.py'),
-                        arcname='container-src/conductor-build/setup.py')
-            tarball.add(os.path.join(req_txt_dir, 'conductor-requirements.txt'),
-                            arcname='container-src/conductor-build/conductor-requirements.txt')
-            tarball.add(os.path.join(req_yml_dir, 'conductor-requirements.yml'),
-                        arcname='container-src/conductor-build/conductor-requirements.yml')
-
-            utils.jinja_render_to_temp(TEMPLATES_PATH,
-                                       'conductor-dockerfile.j2', temp_dir,
-                                       'Dockerfile',
-                                       conductor_base=base_image,
-                                       docker_version=DOCKER_VERSION)
-            tarball.add(os.path.join(temp_dir, 'Dockerfile'),
-                        arcname='Dockerfile')
-
-            #for context_file in ['builder.sh', 'ansible-container-inventory.py',
-            #                     'ansible.cfg', 'wait_on_host.py', 'ac_galaxy.py']:
-            #    tarball.add(os.path.join(TEMPLATES_PATH, context_file),
-            #                arcname=context_file)
-
+            if prebaking:
+                self._prepare_prebake_manifest(base_path, base_image, temp_dir,
+                                               tarball)
+                tag = 'container-conductor-%s:%s' % (base_image.replace(':', '-'),
+                                                     container.__version__)
+            else:
+                self._prepare_conductor_manifest(base_path, base_image, temp_dir,
+                                                 tarball)
+                tag = self.image_name_for_service('conductor')
             logger.debug('Context manifest:')
             for tarinfo_obj in tarball.getmembers():
                 logger.debug('tarball item: %s (%s bytes)', tarinfo_obj.name,
@@ -746,7 +796,7 @@ class Engine(BaseEngine):
                 for line_json in self.client.api.build(fileobj=tarball_file,
                                                        decode=True,
                                                        custom_context=True,
-                                                       tag=self.image_name_for_service('conductor'),
+                                                       tag=tag,
                                                        rm=True,
                                                        nocache=not cache):
                     try:
@@ -765,11 +815,11 @@ class Engine(BaseEngine):
                     # this bypasses the fancy colorized logger for things that
                     # are just STDOUT of a process
                     plainLogger.debug(text.to_text(line_json.get('stream', json.dumps(line_json))).rstrip())
-                return self.get_latest_image_id_for_service('conductor')
+                return self.get_image_id_by_tag(tag)
             else:
                 image = self.client.images.build(fileobj=tarball_file,
                                                  custom_context=True,
-                                                 tag=self.image_name_for_service('conductor'),
+                                                 tag=tag,
                                                  rm=True,
                                                  nocache=not cache)
                 return image.id

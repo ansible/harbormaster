@@ -8,7 +8,8 @@ RUN dnf update -y && \
 {% elif distro in ["centos"] %}
 RUN yum update -y && \
     yum install -y epel-release && \
-    yum install -y gcc git python-devel rsync libffi-devel openssl-devel && \
+    yum install -y gcc git python-devel rsync libffi-devel openssl-devel tar redhat-rpm-config && \
+    yum install -y gcc git python-devel rsync libffi-devel openssl-devel tar redhat-rpm-config && \
     yum clean all
 {% elif "rhel" in distro %}
 RUN yum -y update-minimal --disablerepo "*" \
@@ -29,13 +30,13 @@ RUN apt-get update -y && \
     ln -fs python2.7 python && \
     apt-get clean
 {% elif distro in ["alpine"] %}
+# openssh is necessary until this is fixed: https://github.com/ansible/ansible/issues/24705
 RUN apk add --no-cache -U python2-dev git rsync libffi libffi-dev openssl openssl-dev gcc musl-dev tar openssh
 {% endif %}
 
 ADD https://get.docker.com/builds/Linux/x86_64/docker-{{ docker_version }}.tgz /tmp/docker.tgz
-
-COPY /contrib/get-pip.py /get-pip.py
-RUN python /get-pip.py && \
+ADD https://bootstrap.pypa.io/get-pip.py /tmp/get-pip.py
+RUN python /tmp/get-pip.py && \
     mkdir -p /etc/ansible/roles /_ansible/src && \
     cd /usr/local/bin && \
     tar -xz --strip-components=1 -f /tmp/docker.tgz
@@ -46,12 +47,6 @@ RUN cd /_ansible && \
     pip install -r container/conductor-build/conductor-requirements.txt && \
     PYTHONPATH=. LC_ALL="en_US.UTF-8" python container/conductor-build/setup.py develop -v && \
     ansible-galaxy install -p /etc/ansible/roles -r container/conductor-build/conductor-requirements.yml
-
-# The COPY here will break cache if the requirements or ansible.cfg has changed
-COPY /build-src /_ansible/build
-RUN ( test -f /_ansible/build/ansible-requirements.txt && pip install --no-cache-dir -r /_ansible/build/ansible-requirements.txt || true ) && \
-    ( test -f /_ansible/build/requirements.yml && ansible-galaxy install -p /etc/ansible/roles -r /_ansible/build/requirements.yml || true ) && \
-    ( test -f /_ansible/build/ansible.cfg && cp /_ansible/build/ansible.cfg /etc/ansible/ansible.cfg || true)
 
 VOLUME /usr
 {% if distro in ["ubuntu", "debian", "alpine"] %}

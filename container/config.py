@@ -15,8 +15,8 @@ import re
 from six import add_metaclass, iteritems, PY2, string_types
 
 from collections import Mapping
+from .utils.ordereddict import ordereddict
 from ruamel import yaml
-
 import container
 
 if container.ENV == 'conductor':
@@ -45,7 +45,7 @@ from .utils import get_metadata_from_role, get_defaults_from_role
 
 @add_metaclass(ABCMeta)
 class BaseAnsibleContainerConfig(Mapping):
-    _config = yaml.compat.ordereddict()
+    _config = ordereddict()
     base_path = None
     engine_list = ['docker', 'openshift', 'k8s']
 
@@ -61,7 +61,7 @@ class BaseAnsibleContainerConfig(Mapping):
 
     @property
     def deployment_path(self):
-        dep_path = self.get('settings', yaml.compat.ordereddict()).get('deployment_output_path',
+        dep_path = self.get('settings', ordereddict()).get('deployment_output_path',
                             path.join(self.base_path, 'ansible-deployment/'))
         return path.normpath(path.abspath(path.expanduser(path.expandvars(dep_path))))
 
@@ -122,7 +122,7 @@ class BaseAnsibleContainerConfig(Mapping):
 
         # Insure settings['pwd'] = base_path. Will be used later by conductor to resolve $PWD in volumes.
         if config.get('settings', None) is None:
-            config['settings'] = yaml.compat.ordereddict()
+            config['settings'] = ordereddict()
         config['settings']['pwd'] = self.base_path
 
         self._resolve_defaults(config)
@@ -140,14 +140,14 @@ class BaseAnsibleContainerConfig(Mapping):
         """
         if config.get('defaults'):
             # convert config['defaults'] to an ordereddict()
-            tmp_defaults = yaml.compat.ordereddict()
+            tmp_defaults = ordereddict()
             tmp_defaults.update(copy.deepcopy(config['defaults']), relax=True)
             config['defaults'] = tmp_defaults
-        defaults = config.setdefault('defaults', yaml.compat.ordereddict())
+        defaults = config.setdefault('defaults', ordereddict())
         if self.var_file:
             defaults.update(self._get_variables_from_file(), relax=True)
         logger.debug('The default type is', defaults=str(type(defaults)), config=str(type(config)))
-        if PY2 and type(defaults) == yaml.compat.ordereddict:
+        if PY2 and type(defaults) == ordereddict:
             defaults.update(self._get_environment_variables(), relax=True)
         else:
             defaults.update(self._get_environment_variables())
@@ -160,10 +160,10 @@ class BaseAnsibleContainerConfig(Mapping):
         key is the result of removing 'AC_' from the variable name and converting the remainder to lowercase.
         For example, 'AC_DEBUG=1' becomes 'debug: 1'.
 
-        :return ruamel.yaml.compat.ordereddict
+        :return ruamel.ordereddict
         '''
         logger.debug(u'Getting environment variables...')
-        env_vars = yaml.compat.ordereddict()
+        env_vars = ordereddict()
         for var, value in ((k, v) for k, v in os.environ.items()
                            if k.startswith('AC_')):
             env_vars[var[3:].lower()] = value
@@ -175,7 +175,7 @@ class BaseAnsibleContainerConfig(Mapping):
         Looks for file relative to base_path. If not found, checks relative to base_path/ansible.
         If file extension is .yml | .yaml, parses as YAML, otherwise parses as JSON.
 
-        :return: ruamel.yaml.compat.ordereddict
+        :return: ruamel.ordereddict
         """
         abspath = path.abspath(self.var_file)
         if not path.exists(abspath):
@@ -223,7 +223,7 @@ class BaseAnsibleContainerConfig(Mapping):
                     logger.warning("Version '1' is deprecated. Consider upgrading to version '2'.")
             else:
                 if config[top_level] is None:
-                    config[top_level] = yaml.compat.ordereddict()
+                    config[top_level] = ordereddict()
 
     def __getitem__(self, item):
         return self._config[item]
@@ -249,7 +249,7 @@ class AnsibleContainerConductorConfig(Mapping):
     def _process_section(self, section_value, callback=None, templar=None):
         if not templar:
             templar = self._templar
-        processed = yaml.compat.ordereddict()
+        processed = ordereddict()
         for key, value in section_value.items():
             if isinstance(value, basestring):
                 # strings can be templated
@@ -274,21 +274,21 @@ class AnsibleContainerConductorConfig(Mapping):
     def _process_defaults(self):
         logger.debug('Processing defaults section...')
         self.defaults = self._process_section(
-            self._config.get('defaults', yaml.compat.ordereddict()),
+            self._config.get('defaults', ordereddict()),
             callback=lambda processed: self._templar.set_available_variables(
                 dict(processed)))
 
     def _process_top_level_sections(self):
-        self._config['settings'] = self._config.get('settings', yaml.compat.ordereddict())
+        self._config['settings'] = self._config.get('settings', ordereddict())
         for section in ['volumes', 'registries']:
             logger.debug('Processing section...', section=section)
-            setattr(self, section, dict(self._process_section(self._config.get(section, yaml.compat.ordereddict()))))
+            setattr(self, section, dict(self._process_section(self._config.get(section, ordereddict()))))
 
     def _process_services(self):
-        services = yaml.compat.ordereddict()
-        for service, service_data in self._config.get('services', yaml.compat.ordereddict()).items():
+        services = ordereddict()
+        for service, service_data in self._config.get('services', ordereddict()).items():
             logger.debug('Processing service...', service=service, service_data=service_data)
-            processed = yaml.compat.ordereddict()
+            processed = ordereddict()
             service_defaults = self.defaults.copy()
             for idx in range(len(service_data.get('volumes', []))):
                 # To mount the project directory, let users specify `$PWD` and

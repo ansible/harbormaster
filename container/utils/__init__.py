@@ -291,7 +291,7 @@ def ordereddict_to_list(config):
 def list_to_ordereddict(config):
     # If configuration top-level key is a list, convert it to an ordereddict.
     # Call post decoding of a config dict.
-    result = {}
+    result = yaml.compat.ordereddict()
     for key, value in iteritems(config):
         if isinstance(value, list):
             result[key] = yaml.compat.ordereddict(value)

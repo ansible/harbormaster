@@ -122,6 +122,26 @@ def hostcmd_init(base_path, project=None, force=False, **kwargs):
                                  **context)
         logger.info('Ansible Container initialized.')
 
+@host_only
+def hostcmd_prebake(distros, debug=False, cache=True, ignore_errors=False):
+    logger.info('Prebaking distros...', distros=distros, cache=cache)
+    engine_obj = load_engine(['BUILD_CONDUCTOR'], 'docker', os.getcwd(), {}, debug=debug)
+    from .docker.engine import PREBAKED_DISTROS
+    for distro in (distros or PREBAKED_DISTROS):
+        logger.info('Now prebaking Conductor image for %s', distro)
+        try:
+            engine_obj.build_conductor_image(os.getcwd(),
+                                             distro,
+                                             prebaking=True,
+                                             cache=cache)
+        except Exception, e:
+            logger.exception('Failure building prebaked image for %s', distro)
+            if ignore_errors:
+                continue
+        except KeyboardInterrupt:
+            if ignore_errors:
+                continue
+
 
 @host_only
 def hostcmd_build(base_path, project_name, engine_name, var_file=None,

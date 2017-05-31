@@ -1,0 +1,72 @@
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Get version tag
+      command: python -c "import container, sys; sys.stdout.write(container.__version__)"
+      register: container_version_result
+      tags:
+        - always
+    - name: Register version tag
+      set_fact:
+        ansible_container_version: "{{ container_version_result.stdout }}"
+      tags:
+        - always
+    - name: Build pre-baked Conductor bases
+      command: python setup.py prebake
+      tags:
+        - prebake
+    - name: Build distribution
+      command: python setup.py sdist
+      tags:
+        - test
+        - release
+    - name: Make tempdir for tests
+      tempfile:
+        path: /tmp
+        state: directory
+      notify: Cleanup tempdir
+      tags:
+        - test
+      register: tempdir
+    - name: Make virtualenv for tests
+      command: virtualenv "{{ tempdir.path }}/venv"
+      tags:
+        - test
+    - name: Install from sdist
+      command: >
+          {{ tempdir.path }}/venv/pip install
+          ./dist/ansible-container-{{ ansible_container_version }}.tar.gz[docker]
+      tags:
+        - test
+    - name: Run full test suite
+      command: >
+        {{ tempdir.path }}/bin/python setup.py test --ansible-args="-vvv"
+      tags:
+        - test
+    - name: Preflight checks [git branch]
+      command: git rev-parse --abbrev-ref HEAD
+      register: git_branch
+      tags:
+        - release
+    - name: Preflight checks
+      assert:
+        that:
+          - "{{ git_branch.stdout }} == 'master'"
+      tags:
+        - release
+    - name: Confirm release
+      pause:
+        prompt: >
+            Are you sure you want to release Ansible Container
+            {{ ansible_container_version }} to PyPI?
+      tags:
+        - release
+    - name: Upload to PyPI
+      command: python setup.py upload
+      tags:
+        - release
+  handlers:
+    - name: Cleanup tempdir
+      file:
+        path: "{{ tempdir.path }}"
+        state: absent
