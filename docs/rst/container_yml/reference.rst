@@ -363,9 +363,9 @@ the container port.
 registries
 ..........
 
-Define registries that can be referenced by the ``push`` and ``deploy`` commands. For each registiry provide a *url* and
-and optional namespace. If no namespace is provided, the username found in your .docker/config.json or specified on the
-command line will be used.
+Define registries that can be used by the ``push`` and ``deploy`` commands. For each registry, provide a *url*, an optional
+*namespace*, and an optional *repository_prefix*. For both *namespace* and *repository_prefix*, if a value is not provided, the project
+name is used.
 
 The following is an example taken from a ``container.yml`` file:
 
@@ -377,8 +377,23 @@ The following is an example taken from a ``container.yml`` file:
         namespace: my-project
       openshift:
         url: https://192.168.30.14.xip.io
+        namespace: my-project
+        repository_prefix: foo
 
-Use the following command to push images to the *google* registry:
+The ``deploy`` command will automatically push images before generating the deployment Ansible playbook. Use the ``--push-to`` option
+to specify the registry to which images will be pushed. For example:
+
+.. code-block:: bash
+
+    # Push images and generate the deployment playbook
+    $ ansible-container deploy --push-to openshift
+
+In the above example, images will be pushed to *https://192.168.3.14.xip.io/my-project*. Each image will result in a repository name
+of *foo-<service-name>*, where *foo* is the *repository_prefix* value for the *openshift* registry. For example, suppose the project
+included a service named *web*. The image for it would be pushed to a repository named *foo-web*
+
+You can also use the ``push`` command to push images directly, and bypass the generation of a deployment playbook. The following will
+push images to the *google* registry:
 
 .. code-block:: bash
 

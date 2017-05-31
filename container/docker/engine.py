@@ -632,25 +632,23 @@ class Engine(BaseEngine):
         return playbook
 
     @conductor_only
-    def push(self, image_id, service_name, repository_data):
+    def push(self, image_id, service_name, tag=None, namespace=None, url=None, username=None, password=None,
+             repository_prefix=None, **kwargs):
         """
         Push an image to a remote registry.
         """
-        tag = repository_data.get('tag')
-        namespace = repository_data.get('namespace')
-        url = repository_data.get('url')
         auth_config = {
-            'username': repository_data.get('username'),
-            'password': repository_data.get('password')
+            'username': username,
+            'password': password
         }
 
         build_stamp = self.get_build_stamp_for_image(image_id)
         tag = tag or build_stamp
 
-        repository = "%s/%s-%s" % (namespace, self.project_name, service_name)
+        repository = "%s/%s-%s" % (namespace, repository_prefix or self.project_name, service_name)
         if url != self.default_registry_url:
             url = REMOVE_HTTP.sub('', url)
-            repository = "%s/%s" % (re.sub('/$', '', url), repository)
+            repository = "%s/%s" % (url.rstrip('/'), repository)
 
         logger.info('Tagging %s' % repository)
         self.client.api.tag(image_id, repository, tag=tag)

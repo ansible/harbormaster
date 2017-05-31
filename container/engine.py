@@ -158,7 +158,7 @@ class BaseEngine(object):
         raise NotImplementedError()
 
     @conductor_only
-    def push(self, image_id, service_name, repository_data):
+    def push(self, image_id, service_name, **kwargs):
         """
         Push an image to a registry.
         """

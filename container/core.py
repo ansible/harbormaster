@@ -324,11 +324,13 @@ def push_images(base_path, image_namespace, engine_obj, config, **kwargs):
     registry_name = engine_obj.default_registry_name
     namespace = image_namespace
     save_conductor = config.get('settings', {}).get('save_conductor_container', False)
+    repository_prefix = None
 
     if push_to:
         if config.get('registries', dict()).get(push_to):
             url = config['registries'][push_to].get('url')
             namespace = config['registries'][push_to].get('namespace', namespace)
+            repository_prefix = config['registries'][push_to].get('repository_prefix')
             if not url:
                 raise AnsibleContainerRegistryAttributeException(
                     u"Registry {} missing required attribute 'url'".format(push_to)
@@ -338,6 +340,8 @@ def push_images(base_path, image_namespace, engine_obj, config, **kwargs):
 
     if username and not password:
         # If a username was supplied without a password, prompt for it
+        if url != engine_obj.default_registry_url:
+            registry_name = url
         while not password:
             password = getpass.getpass(u"Enter password for {0} at {1}: ".format(username, registry_name))
 
@@ -372,6 +376,7 @@ def push_images(base_path, image_namespace, engine_obj, config, **kwargs):
     push_params['password'] = password
     push_params['url'] = url
     push_params['namespace'] = namespace
+    push_params['repository_prefix'] = repository_prefix
     engine_obj.await_conductor_command('push', dict(config), base_path, push_params, save_container=save_conductor)
     return url, namespace
 
@@ -842,6 +847,7 @@ def conductorcmd_push(engine_name, project_name, services, **kwargs):
     namespace = kwargs.pop('namespace')
     tag = kwargs.pop('tag')
     config_path = kwargs.pop('config_path')
+    repository_prefix =kwargs.pop('repository_prefix')
 
     engine = load_engine(['PUSH', 'LOGIN'], engine_name, project_name, services)
     logger.info(u'Engine integration loaded. Preparing push.',
@@ -850,17 +856,10 @@ def conductorcmd_push(engine_name, project_name, services, **kwargs):
     # Verify that we can authenticate with the registry
     username, password = engine.login(username, password, email, url, config_path)
 
-    repo_data = {
-        'url': url,
-        'namespace': namespace,
-        'tag': tag,
-        'username': username,
-        'password': password
-    }
-
     # Push each image that has been built using Ansible roles
     for service_name, service_config in services.items():
         if service_config.get('roles'):
             # if the service has roles, it's an image we should push
             image_id = engine.get_latest_image_id_for_service(service_name)
-            engine.push(image_id, service_name, repo_data)
+            engine.push(image_id, service_name, url=url, tag=tag, namespace=namespace, username=username,
+                        password=password, repository_prefix=repository_prefix)
