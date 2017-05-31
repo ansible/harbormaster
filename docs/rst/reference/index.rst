@@ -6,7 +6,6 @@ Command Reference
 
    build
    deploy
-   deploy/index
    destroy
    init
    install

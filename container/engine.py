@@ -193,3 +193,11 @@ class BaseEngine(object):
         return the username
         """
         raise NotImplementedError()
+
+    @conductor_only
+    def pre_deployment_setup(self, **kwargs):
+        """
+        Perform any setup tasks required prior to writing the Ansible playbook.
+        return None
+        """
+        raise NotImplementedError()

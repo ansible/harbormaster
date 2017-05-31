@@ -456,6 +456,23 @@ def resolve_push_to(push_to, default_url, default_namespace):
 
 
 @conductor_only
+def set_path_ownership(path, uid, gid):
+    """
+    Starting with the path, recursively set ownership of files and subdirectories.
+    :param path: Root path
+    :param uid: User ID
+    :param gid: Group ID
+    :return: None
+    """
+    os.chown(path, uid, gid)
+    for root, dirs, files in os.walk(path):
+        for d in dirs:
+            os.chown(os.path.join(root, d), uid, gid)
+        for f in files:
+            os.chown(os.path.join(root, f), uid, gid)
+
+
+@conductor_only
 def run_playbook(playbook, engine, service_map, ansible_options='', local_python=False, debug=False,
                  deployment_output_path=None, tags=None, **kwargs):
     uid, gid = kwargs.get('host_user_uid', 1), kwargs.get('host_user_gid', 1)
@@ -467,8 +484,6 @@ def run_playbook(playbook, engine, service_map, ansible_options='', local_python
         else:
             remove_tmpdir = True
             output_dir = tempfile.mkdtemp()
-
-        os.chown(output_dir, uid, gid)
 
         playbook_path = os.path.join(output_dir, 'playbook.yml')
         logger.debug("writing playbook to {}".format(playbook_path))
@@ -493,14 +508,7 @@ def run_playbook(playbook, engine, service_map, ansible_options='', local_python
         if not os.path.exists(os.path.join(output_dir, 'templates')):
             os.mkdir(os.path.join(output_dir, 'templates'))
 
-        for root, dirs, files in os.walk(output_dir):
-            for d in dirs:
-                logger.debug('found dir %s', os.path.join(root, d))
-                os.chown(os.path.join(root, d), uid, gid)
-            for f in files:
-                logger.debug('found file %s', os.path.join(root, f))
-                os.chown(os.path.join(root, f), uid, gid)
-
+        set_path_ownership(output_dir, uid, gid)
 
         rc = subprocess.call(['mount', '--bind', '/src',
                               os.path.join(output_dir, 'files')])
@@ -785,6 +793,8 @@ def conductorcmd_destroy(engine_name, project_name, services, **kwargs):
 
 @conductor_only
 def conductorcmd_deploy(engine_name, project_name, services, **kwargs):
+    uid, gid = kwargs.get('host_user_uid', 1), kwargs.get('host_user_gid', 1)
+
     engine = load_engine(['DEPLOY'], engine_name, project_name, services, **kwargs)
     logger.info(u'Engine integration loaded. Preparing deploy.',
                 engine=engine.display_name)
@@ -802,6 +812,8 @@ def conductorcmd_deploy(engine_name, project_name, services, **kwargs):
     deployment_output_path = kwargs.get('deployment_output_path')
     playbook = engine.generate_orchestration_playbook(**kwargs)
 
+    engine.pre_deployment_setup(project_name, services, **kwargs)
+
     try:
         with open(os.path.join(deployment_output_path, '%s.yml' % project_name), 'w') as ofs:
             ofs.write(ruamel.yaml.round_trip_dump(playbook, indent=4, block_seq_indent=2, default_flow_style=False))
@@ -810,6 +822,7 @@ def conductorcmd_deploy(engine_name, project_name, services, **kwargs):
         logger.error(u'Failure writing deployment playbook', exc_info=True)
         raise
 
+    set_path_ownership(deployment_output_path, uid, gid)
 
 @conductor_only
 def conductorcmd_install(engine_name, project_name, services, **kwargs):

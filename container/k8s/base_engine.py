@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
+import logging
+plainLogger = logging.getLogger(__name__)
+
 import os
+import subprocess
 
 from abc import ABCMeta, abstractproperty, abstractmethod
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
@@ -59,6 +63,38 @@ class K8sBaseEngine(DockerEngine):
     @property
     def k8s_config_path(self):
         return os.path.normpath(os.path.expanduser('~/.kube/config'))
+
+    @conductor_only
+    def pre_deployment_setup(self, project_name, services, deployment_output_path=None, **kwargs):
+        # Prior to running the playbook, install the ansible.kubernetes-modules role
+
+        if not os.path.isdir(os.path.join(deployment_output_path, 'roles')):
+            # Create roles subdirectory
+            os.mkdir(os.path.join(deployment_output_path, 'roles'), 0o777)
+
+        role_path = os.path.join(deployment_output_path, 'roles', 'ansible.kubernetes-modules')
+        if deployment_output_path and not os.path.exists(role_path):
+            # Install the role, if not already installed
+            ansible_cmd = "ansible-galaxy -vvv install -p ./roles ansible.kubernetes-modules"
+            logger.debug('Running ansible-galaxy', command=ansible_cmd, cwd=deployment_output_path)
+            process = subprocess.Popen(ansible_cmd,
+                                       shell=True,
+                                       bufsize=1,
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.STDOUT,
+                                       cwd=deployment_output_path,
+                                       )
+            log_iter = iter(process.stdout.readline, '')
+            while process.returncode is None:
+                try:
+                    plainLogger.info(log_iter.next().rstrip())
+                except StopIteration:
+                    process.wait()
+                finally:
+                    process.poll()
+
+            if process.returncode:
+                raise exceptions.AnsibleContainerDeployException(u"Failed to install ansible.kubernetes-modules role")
 
     @log_runs
     @host_only
@@ -131,7 +167,7 @@ class K8sBaseEngine(DockerEngine):
         play['roles'] = CommentedSeq()
         play['tasks'] = CommentedSeq()
         role = CommentedMap([
-            ('role', 'kubernetes-modules')
+            ('role', 'ansible.kubernetes-modules')
         ])
         play['roles'].append(role)
         play.yaml_set_comment_before_after_key(

@@ -870,3 +870,7 @@ class Engine(BaseEngine):
         if auth_key:
             username, password = base64.b64decode(auth_key).split(':', 1)
         return username, password
+
+    @conductor_only
+    def pre_deployment_setup(self, project_name, services, **kwargs):
+        pass
