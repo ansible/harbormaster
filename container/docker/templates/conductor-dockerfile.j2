@@ -42,7 +42,9 @@ RUN python /get-pip.py && \
 
 # The COPY here will break cache if the version of conductor changed
 COPY /container-src /_ansible/container
+# Fix: 'pip install six' is a temporary fix for setuptools==36.0.0 bug
 RUN cd /_ansible && \
+    pip install six && \
     pip install -r container/conductor-build/conductor-requirements.txt && \
     PYTHONPATH=. LC_ALL="en_US.UTF-8" python container/conductor-build/setup.py develop -v && \
     ansible-galaxy install -p /etc/ansible/roles -r container/conductor-build/conductor-requirements.yml
