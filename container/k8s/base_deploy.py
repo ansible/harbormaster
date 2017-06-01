@@ -398,6 +398,7 @@ class K8sBaseDeploy(object):
             for name, service_config in self._services.items():
                 # Remove deployment for any services where state is 'absent'
                 if service_config.get(self.CONFIG_KEY, {}).get('state', 'present') == 'absent':
+                    task = CommentedMap()
                     task['name'] = 'Remove deployment'
                     task[module_name] = CommentedMap()
                     task[module_name]['state'] = 'absent'

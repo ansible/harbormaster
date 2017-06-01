@@ -182,10 +182,11 @@ def hostcmd_deploy(base_path, project_name, engine_name, var_file=None,
         params.update(kwargs)
 
     if not local_images:
-        url, namespace = push_images(base_path, config.image_namespace, engine_obj, config,
-                                     save_conductor=False, **params)
+        url, namespace, repository_prefix = push_images(base_path, config.image_namespace, engine_obj, config,
+                                                        save_conductor=False, **params)
         params['url'] = url
         params['namespace'] = namespace
+        params['repository_prefix'] = repository_prefix
 
     engine_obj.await_conductor_command(
         'deploy', dict(config), base_path, params,
@@ -378,7 +379,7 @@ def push_images(base_path, image_namespace, engine_obj, config, **kwargs):
     push_params['namespace'] = namespace
     push_params['repository_prefix'] = repository_prefix
     engine_obj.await_conductor_command('push', dict(config), base_path, push_params, save_container=save_conductor)
-    return url, namespace
+    return url, namespace, repository_prefix
 
 
 @host_only

@@ -6,7 +6,10 @@ deploy
 The ``deploy`` command pushes images to a remote registry, and generates an Ansible playbook that can be used to deploy the application to a cloud platform.
 
 The cloud platform is determined by the engine used to generate the deployment. Supported engines include: docker, k8s, and openshift. The default is docker.
-Use the ``--engine`` option to choose the engine.
+Use the ``--engine`` option to choose the engine. For example:
+
+.. code-block:: bash
+    $ ansible-container --engine k8s deploy
 
 The ``deploy`` command maps your ``container.yml`` file to a cloud configuration, depending on the engine. See the :doc:`../../container_yml/reference`
 for details on how directives are mapped, and for cloud specific options.
@@ -32,14 +35,21 @@ If using the URL form, include the namespace. For example: ``registry.example.co
 the default namespace for the engine will be used. In the case of docker, the default is the project name. In the case of k8s and openshift, the *k8s_namespace* defined
 in the *settings* section of ``container.yml`` will be used. If that's not defined, the project name will be used.
 
+The process will use registry credentials from your container engine configuration file (e.g., ${HOME}/.docker/config.json), if they exist, to authenticate with the registry.
+Otherwise, you may specify a username and password on the command line using the ``--username`` and ``--password`` options. If the ``--username`` option is provided without
+``--password``, you will be prompted for the password. After a successful login, the engine configuration file will be updated with the new credentials.
+
+
+.. note::
+
+    If you have a credential store service running in your local environment, and you previously logged into the registry using ``docker login``, the authentication data
+    will not exist in the configuration file. Instead, it is stored in the credential store. Ansible Container will not have access to the credential store. To resolve this, remove
+    the registry entry from the configuration file, and use the Ansible Container ``deploy`` or ``push`` commands to perform the authentication.
+
+
 .. option:: --help
 
 Display usage help.
-
-.. option:: --engine
-
-Specify the deployment engine. The selected engine will be used to generate the Ansible playbook for deploying the application to the corresponding platform.
-Valid engines include: docker, k8s, and openshift, with the default engine being docker.
 
 .. option:: --local-images
 

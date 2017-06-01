@@ -14,7 +14,7 @@ Enable debug-level logging for all actions (inside and outside conductor).
 
 .. option:: --engine ENGINE_NAME
 
-Select your container engine and orchestrator. Defaults to *docker*.
+Select your container engine and orchestrator. Valid options are: docker, k8s, openshift. Defaults to *docker*.
 
 .. option:: --no-selinux
 

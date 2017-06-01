@@ -132,11 +132,13 @@ class K8sBaseEngine(DockerEngine):
                                                         volumes=volumes)
 
     @conductor_only
-    def generate_orchestration_playbook(self, url=None, namespace=None, settings=None, **kwargs):
+    def generate_orchestration_playbook(self, url=None, namespace=None, settings=None, repository_prefix=None,
+                                        **kwargs):
         """
         Generate an Ansible playbook to orchestrate services.
         :param url: registry URL where images will be pulled from
         :param namespace: registry namespace
+        :param repository_prefix: prefix to use for the image name
         :param settings: settings dict from container.yml
         :return: playbook dict
         """
@@ -144,8 +146,8 @@ class K8sBaseEngine(DockerEngine):
             if service_config.get('roles'):
                 if url and namespace:
                     # Reference previously pushed image
-                    self.services[service_name][u'image'] = '{}/{}/{}'.format(url.rstrip('/'), namespace,
-                                                                              self.image_name_for_service(service_name))
+                    image_name = "{}-{}".format(repository_prefix or self.project_name, service_name)
+                    self.services[service_name][u'image'] = "{}/{}/{}".format(url.rstrip('/'), namespace, image_name)
                 else:
                     # We're using a local image, so check that the image was built
                     image = self.get_latest_image_for_service(service_name)

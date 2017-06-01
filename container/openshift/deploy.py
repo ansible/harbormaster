@@ -132,6 +132,7 @@ class Deploy(K8sBaseDeploy):
         for name, service_config in self._services.items():
             # Remove routes where state is 'absent'
             if service_config.get(self.CONFIG_KEY, {}).get('state', 'present') == 'absent':
+                task = CommentedMap()
                 task['name'] = 'Remove route'
                 task[module_name] = CommentedMap()
                 task[module_name]['state'] = 'absent'
