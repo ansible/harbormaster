@@ -23,7 +23,7 @@ import tarfile
 try:
     import httplib as StatusCodes
 except ImportError:
-    from http import HTTPStatus as StatusCodes
+    import http.client as StatusCodes
 
 import container
 from container import host_only, conductor_only
