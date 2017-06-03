@@ -214,7 +214,8 @@ class BaseAnsibleContainerConfig(Mapping):
         'volumes',
         'services',
         'defaults',
-        'registries'
+        'registries',
+        'secrets'
     ]
 
     OPTIONS_KUBE_WHITELIST = []
@@ -291,7 +292,7 @@ class AnsibleContainerConductorConfig(Mapping):
 
     def _process_top_level_sections(self):
         self._config['settings'] = self._config.get('settings', yaml.compat.ordereddict())
-        for section in ['volumes', 'registries']:
+        for section in ['volumes', 'registries', 'secrets']:
             logger.debug('Processing section...', section=section)
             setattr(self, section, dict(self._process_section(self._config.get(section, yaml.compat.ordereddict()))))
 
@@ -339,10 +340,11 @@ class AnsibleContainerConductorConfig(Mapping):
 
     def __len__(self):
         # volumes, registries, services, and defaults
-        return 4
+        return 5
 
     def __iter__(self):
         yield self.defaults
         yield self.registries
         yield self.volumes
         yield self.services
+        yield self.secrets

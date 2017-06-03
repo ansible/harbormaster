@@ -363,6 +363,7 @@ def conductor_commandline():
         conductor_config.services,
         volume_data=conductor_config.volumes,
         repository_data=conductor_config.registries,
+        secrets=conductor_config.secrets,
         **params)
 
 

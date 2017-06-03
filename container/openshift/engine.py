@@ -28,6 +28,7 @@ class Engine(K8sBaseEngine):
         if not self._deploy:
             self._deploy = Deploy(self.services, self.project_name,
                                   volumes=self.volumes,
+                                  secrets=self.secrets,
                                   namespace_name=self.namespace_name,
                                   namespace_description=self.namespace_description,
                                   namespace_display_name=self.namespace_display_name)

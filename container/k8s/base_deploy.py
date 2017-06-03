@@ -27,7 +27,7 @@ class K8sBaseDeploy(object):
     DEFAULT_API_VERSION = 'v1'
     CONFIG_KEY = 'k8s'
 
-    def __init__(self, services=None, project_name=None, volumes=None, auth=None, namespace_name=None, 
+    def __init__(self, services=None, project_name=None, volumes=None, secrets=None, auth=None, namespace_name=None,
                  namespace_description=None, namespace_display_name=None):
         self._services = services
         self._project_name = project_name
@@ -35,6 +35,7 @@ class K8sBaseDeploy(object):
         self._namespace_description = namespace_description
         self._namespace_display_name = namespace_display_name
         self._volumes = volumes
+        self._secrets = secrets
         self._auth = auth
 
     @property
@@ -315,6 +316,15 @@ class K8sBaseDeploy(object):
                         container['volumeMounts'] = vol_mounts
                     if vols:
                         volumes += vols
+                elif key == 'secrets':
+                    vols, vol_mounts = self.get_k8s_secrets(value, service[self.CONFIG_KEY]['secrets'])
+                    if vol_mounts:
+                        if 'volumeMounts' not in container:
+                            container['volumeMounts'] = []
+
+                        container['volumeMounts'].extend(vol_mounts)
+                    if vols:
+                        volumes += vols
                 elif key == 'working_dir':
                     container['workingDir'] = value
                 else:
@@ -491,6 +501,80 @@ class K8sBaseDeploy(object):
                         tasks.append(task)
         return tasks
 
+    def get_secret_templates(self):
+        def _secret(secret_name, secret):
+            template = CommentedMap()
+            template['force'] = secret.get('force', False)
+            template['apiVersion'] = 'v1'
+            template = CommentedMap()
+            template['apiVersion'] = self.DEFAULT_API_VERSION
+            template['kind'] = "Secret"
+            template['metadata'] = CommentedMap([
+                ('name', secret_name),
+                ('namespace', self._namespace_name)
+            ])
+            template['type'] = 'Generic'
+            if secret.get('type'):
+                template['type'] = 'Generic'
+            if secret.get('data'):
+                data = secret['data']
+                template['data'] = {}
+
+                for key, value in data.items():
+                    if type(value) is CommentedMap:
+                        if value['type'] == 'file':
+                            with open(value['value']) as file:
+                                value = file.read()
+                        else:
+                            value = value['value']
+
+                    template['data'][key] = value.encode('base64')
+
+            return template
+
+        templates = CommentedSeq()
+        if self._secrets:
+            for secret_name, secret_config in self._secrets.items():
+                if self.CONFIG_KEY in secret_config:
+                    if secret_config[self.CONFIG_KEY].get('state', 'present') == 'present':
+                        secret = _secret(secret_name, secret_config[self.CONFIG_KEY])
+                        templates.append(secret)
+        return templates
+
+    def get_secret_tasks(self, tags=[]):
+        module_name='k8s_v1_secret'
+        tasks = CommentedSeq()
+        for template in self.get_secret_templates():
+            task = CommentedMap()
+            task['name'] = 'Create Secret'
+            task[module_name] = CommentedMap()
+            task[module_name]['state'] = 'present'
+            if self._auth:
+                for key in self._auth:
+                    task[module_name][key] = self._auth[key]
+            task[module_name]['force'] = template.pop('force', False)
+            task[module_name]['resource_definition'] = template
+            if tags:
+                task['tags'] = copy.copy(tags)
+            tasks.append(task)
+        if self._secrets:
+            for secret_name, secret_config in self._secrets.items():
+                if self.CONFIG_KEY in secret_config:
+                    if secret_config[self.CONFIG_KEY].get('state', 'present') == 'absent':
+                        task = CommentedMap()
+                        task['name'] = 'Remove Secret'
+                        task[module_name] = CommentedMap()
+                        task[module_name]['name'] = secret_name
+                        task[module_name]['namespace'] = self._namespace_name
+                        task[module_name]['state'] = 'absent'
+                        if self._auth:
+                            for key in self._auth:
+                                task[module_name][key] = self._auth[key]
+                        if tags:
+                            task['tags'] = copy.copy(tags)
+                        tasks.append(task)
+        return tasks
+
     @staticmethod
     def get_service_ports(service):
         ports = []
@@ -621,6 +705,54 @@ class K8sBaseDeploy(object):
                 mountPath=destination,
                 name=name,
                 readOnly=(True if permissions == 'ro' else False)
+            ))
+
+        return volumes, volume_mounts
+
+    @classmethod
+    def get_k8s_secrets(cls, docker_secrets, overrides):
+        """ Given an array of Docker secrets return a set of secrets and a set of volumeMounts """
+        secrets = []
+        volume_mounts = []
+        volumes = []
+        docker_default = '/run/secrets'
+        for secret in docker_secrets:
+            source = None
+            target = None
+            mode = None
+            mount_path = docker_default
+            read_only = True
+
+            if type(secret) is dict:
+                source = secret.source
+                target = secret.target
+                mode = secret.mode
+            else:
+                source = secret
+
+            if target:
+                mount_path += '/' + target
+            else:
+                mount_path += '/' + source
+
+            override = filter(lambda x: x['name'] == source, overrides)
+
+            if len(override) == 1:
+                override = override[0]
+                if 'mount_path' in override:
+                    mount_path = override['mount_path']
+                if 'read_only' in override:
+                    read_only = override['read_only']
+
+            volume_mounts.append(dict(
+                mountPath=mount_path,
+                name=source,
+                readOnly=read_only
+            ))
+
+            volumes.append(dict(
+                name=source,
+                secret=dict(secretName=source)
             ))
 
         return volumes, volume_mounts

@@ -192,6 +192,7 @@ class K8sBaseEngine(DockerEngine):
         play['tasks'].extend(self.deploy.get_deployment_tasks(engine_state='stop', tags=['stop', 'restart']))
         play['tasks'].extend(self.deploy.get_deployment_tasks(tags=['start', 'restart']))
         play['tasks'].extend(self.deploy.get_pvc_tasks(tags=['start']))
+        play['tasks'].extend(self.deploy.get_secret_tasks(tags=['start']))
 
         playbook = CommentedSeq()
         playbook.append(play)

@@ -6,13 +6,13 @@ file, defining the services that make up the application, the relationships betw
 from the outside world.
 
 The goal for ``container.yml`` is to provide a single definition of the application that defines how to build images,
-how to run in development, and how to deploy to a production cloud environment. It's one source of configuration that 
+how to run in development, and how to deploy to a production cloud environment. It's one source of configuration that
 works throughout the application lifecycle.
 
 The structure and contents of the file are based on Docker Compose, supporting versions 1 and 2. Looking at a ``container.yml``
-file you will recognize it as mostly Compose with a few notable exceptions. There are directives that are not supported, 
+file you will recognize it as mostly Compose with a few notable exceptions. There are directives that are not supported,
 because they do not translate to the supported clouds, and there are new directives added to support
-multi-environment, and multi-cloud configurations. 
+multi-environment, and multi-cloud configurations.
 
 The aim of this document is to provide a complete reference to ``container.yml``.
 
@@ -42,6 +42,9 @@ networks                   Create named, persistent networks
 version                    Specifiy the version of Compose, '1' or '2'              |checkmark|
 :ref:`top-volumes`         Create named, persistent volumes. The syntax differs     |checkmark|
                            from the Docker specification.
+:ref:`secrets`             Create named secrets. The syntax differs                 |checkmark|
+                           from the Docker specification. View :ref:`secrets`
+                           for details.
 ========================== ======================================================== ============
 
 .. _settings:
@@ -49,26 +52,26 @@ version                    Specifiy the version of Compose, '1' or '2'          
 Settings
 --------
 
-The ``settings`` section is an optional dictionary, or mapping, of project level configuration settings. The following 
-settings are supported: 
+The ``settings`` section is an optional dictionary, or mapping, of project level configuration settings. The following
+settings are supported:
 
 ====================== =====================================================================
-Directive              Definition                                              
+Directive              Definition
 ====================== =====================================================================
-project_name           Set the name of the project. Defaults to the basename of the project 
-                       directory. For built services, project_name is concatenated with service 
+project_name           Set the name of the project. Defaults to the basename of the project
+                       directory. For built services, project_name is concatenated with service
                        name to form the built image name.
 
 conductor_base         The Conductor container does the heavy lifting, and provides a portable
                        Python runtime for building your target containers. It should be derived
                        from the same distribution as you're building your target containers with.
 
-deployment_output_path The deployment_output_path is mounted to the Conductor container, and the 
+deployment_output_path The deployment_output_path is mounted to the Conductor container, and the
                        ``run`` and ``deployment`` commands then write generated Ansible playbooks to it.
                        Defaults to ``./ansible-deployment``.
 :ref:`k8s_auth`        When deploying to K8s or OpenShift, provide API authentication details.
 
-:ref:`k8s_namespace`   When deploying to a K8s or OpenShift cluster, set the namespace, or project name, 
+:ref:`k8s_namespace`   When deploying to a K8s or OpenShift cluster, set the namespace, or project name,
                        in which to deploy the application
 ====================== =====================================================================
 
@@ -92,7 +95,7 @@ The following is a simple example of a ``settings`` section found in a ``contain
       k8s_auth:
         config_file: /etc/k8s/dev_config
     services:
-    ...    
+    ...
 
 Implementation
 ``````````````
@@ -103,24 +106,24 @@ information for these options:
 .. _k8s_auth:
 
 k8s_auth
-........	
+........
 
-The ``k8s_auth`` directive takes a dictionary, or mapping, of options that provide details for 
-authenticating with the K8s or OpenShift API during the ``run`` command. The following options 
+The ``k8s_auth`` directive takes a dictionary, or mapping, of options that provide details for
+authenticating with the K8s or OpenShift API during the ``run`` command. The following options
 are supported:
 
 ====================== =====================================================================
-Directive              Definition                                              
+Directive              Definition
 ====================== =====================================================================
-config_file            Path to a K8s config file. Defaults to ${HOME}/.kube/config. If 
-                       no other options are supplied, the config file will be used to 
+config_file            Path to a K8s config file. Defaults to ${HOME}/.kube/config. If
+                       no other options are supplied, the config file will be used to
                        authenticate with the cluster API.
 
-context                Name of a context found in the config file. 
+context                Name of a context found in the config file.
 
 host                   URL for accessing the API.
 
-api_key                A valid API authentication token.                       
+api_key                A valid API authentication token.
 
 ssl_ca_cert            Path to a CA certificate file.
 
@@ -138,19 +141,19 @@ k8s_namespace
 
 Used to set the namespace, or project name, in which the application will be deployed on the cluster.
 Specifically, values set here will be passed to the ``k8s_namespace``, or ``openshift_project`` module,
-within the Ansible playbook generated by the ``run`` and ``deploy`` commands. 
+within the Ansible playbook generated by the ``run`` and ``deploy`` commands.
 
 Expects a dictionary, or mapping, with the following attributes:
 
 ====================== =====================================================================
-Directive              Definition                                              
+Directive              Definition
 ====================== =====================================================================
-name                   The name of the namespace or project. If not provided, defaults to 
-                       the ``project_name``. 
+name                   The name of the namespace or project. If not provided, defaults to
+                       the ``project_name``.
 
 description            A description of the project. Supported only by OpenShift.
 
-display_name           A title, or more formal name, displayed in the OpenShift console. 
+display_name           A title, or more formal name, displayed in the OpenShift console.
                        Supported only by OpenShift.
 ====================== =====================================================================
 
@@ -160,7 +163,7 @@ display_name           A title, or more formal name, displayed in the OpenShift 
 Services
 --------
 
-The ``services`` section is a dictionary, or mapping, of service name to service settings. For example, the following defines 
+The ``services`` section is a dictionary, or mapping, of service name to service settings. For example, the following defines
 two services, ``web`` and ``db``:
 
 .. code-block:: yaml
@@ -179,9 +182,9 @@ two services, ``web`` and ``db``:
        from: 'openshift/postgresql:latest'
        expose:
          - 5487
- 
+
 The following table details the attributes, or settings, that can be defined for a service. Only those
-with a checkmark in the *Supported* column can be used.  
+with a checkmark in the *Supported* column can be used.
 
 ===================== ======================================================== ============
 Directive             Definition                                               Supported?
@@ -415,6 +418,24 @@ Supported by ``run`` and ``deploy`` commands. The volumes directive mounts host 
 In version 2 of compose a named volume must be defined in the :ref:`top-level volumes directive <top-volumes>`. In version 1, if a named volume does
 not exist, it is automatically created.
 
+In the cloud, host paths result in the creation of an `emptyDir <http://kubernetes.io/docs/user-guide/volumes/#emptydir>`_,
+and a named volume will result in the creation of a persistent volume claim (PVC). The resulting emptyDir or PVC will then
+be mounted to the container using the specified path.
+
+Ansible Container follows the `Portable Configuration pattern <http://kubernetes.io/docs/user-guide/persistent-volumes/#writing-portable-configuration>`_,
+which means:
+
+- It does not create persistent volumes
+- It does create persistent volume claims.
+
+.. _secrets:
+
+secrets
+.......
+
+Supported by the ``deploy`` command. The secrets directive be used to define a literal, file or from a directory to be mounted into
+a container. If supplied secrets are not base64 encoded then they are encoded when the deployment playbook is generated.
+
 .. _volumes_from:
 
 volumes_from
@@ -504,6 +525,7 @@ state                    Set to *present*, if the service should be deployed to 
 :ref:`service_sub`       Adds a mapping of Service object attributes.
 :ref:`deployment_sub`    Adds a mapping of Deployment (or DeploymentConfig for OpenShift) object attributes.
 :ref:`route_sub`         Adds a mapping of OpenShift Route object attributes.
+:ref:`secrets_sub`       Adds a mapping of OpenShift Secrets object attributes to volume mounts in the deployment.
 ======================== ======================================================================================================
 
 .. _service_sub:
@@ -693,6 +715,80 @@ With the new options, the route for port 4443 will be updated with the following
           [...]
           -----END CERTIFICATE-----
 
+.. _secrets_sub:
+
+secrets
+.......
+
+Secrets are mounted into OpenShift deployments as volume mounts inside the containers. Docker secrets have defaults and options that do not directly correlate inside OpenShift. How secrets are defined as volume mounts for a deployment can be defined in this section allowing to set the ``mountPath`` and alter the ``readOnly`` state that is set to ``yes`` by default.
+Route objects are used by OpenShift to expose services externally, and Ansible Container generates routes based on the ``ports`` directive of a service.
+
+Consider the following service defined in ``container.yml``:
+
+.. code-block:: yaml
+
+    services:
+      web:
+        from: centos:7
+        entrypoint: ['/usr/bin/entrypoint.sh']
+        working_dir: /
+        user: apache
+        command: [/usr/bin/dumb-init, httpd, -DFOREGROUND]
+        ports:
+        - 8000:8080
+        - 4443:8443
+        secrets:
+          - apache-certs
+
+For each secret in the set of defined ``secrets``, a volumeMount object is generated, and the above will generate the following mounts:
+
+.. code-block:: yaml
+
+   ...
+   template
+     spec:
+       containers:
+         - name: web
+           volumeMounts:
+             - name: apache-certs
+               mountPath: /run/secrets/apache-certs
+               readOnly: true
+
+The ``mountPath`` is by default set to the standard Docker location of ``/run/secrets``. To customize where the secret is mounted inside OpenShift the value can be overriden:
+
+.. code-block:: yaml
+
+    services:
+      web:
+        from: centos:7
+        entrypoint: ['/usr/bin/entrypoint.sh']
+        working_dir: /
+        user: apache
+        command: [/usr/bin/dumb-init, httpd, -DFOREGROUND]
+        ports:
+        - 8000:8080
+        - 4443:8443
+        secrets:
+          - apache-certs
+        openshift:
+          state: present
+          secrets:
+            - name: apache-certs
+              mount_path: /etc/httpd/pki/apache-certs
+
+This will result in:
+
+.. code-block:: yaml
+
+   ...
+   template
+     spec:
+       containers:
+         - name: web
+           volumeMounts:
+             - name: apache-certs
+               mountPath: /etc/httpd/pki/apache-certs
+               readOnly: true
 
 .. _top-volumes:
 
@@ -772,5 +868,69 @@ match_expressions        A list of expressions used to filter matching volumes.
 requested_storage        The amount of storage being requested. Defaults to 1Gi.
                          See `compute resources <http://kubernetes.io/docs/user-guide/compute-resources/>`_ for abbreviations.
 ======================== ========================================================================================================================
+
+
+.. secrets:
+
+Secrets
+```````
+
+For Docker, the service level ``secrets`` directive works as expected. The top-level ``secrets`` directive, however, has been modified slightly. The following example ``container.yml`` shows the three forms of the service level ``secrets`` directive, and the new top-level ``secrets`` format:
+
+.. code-block:: yaml
+
+    version: '2'
+    services:
+      web:
+        from: centos:7
+        entrypoint: [/usr/bin/entrypoint.sh]
+        working_dir: /
+        user: apache
+        command: [/usr/bin/dumb-init, httpd, -DFOREGROUND]
+        ports:
+        - 8000:8080
+        - 4443:8443
+        roles:
+        - apache-container
+        secrets:
+          - apache-certs
+
+    secrets:
+      my-secrets:
+        docker: {}
+        openshift:
+          state: present
+          force: false
+          type: Generic
+          data:
+            username: admin
+            password:
+              type: literal
+              value: mypassword
+      apache-certs:
+        openshift:
+          state: present
+          force: false
+          type: Generic
+          data:
+            apache-cert:
+              type: file
+              value: "{{ APACHE_CERT_PATH }}"
+            apache-key:
+              type: file
+              value: "certs/private/apache.key"
+
+For additional information about Docker secrets see Docker's `secrets configuration reference <https://docs.docker.com/compose/compose-file/#volume-configuration-reference>`_.
+
+
+For ``openshift`` and ``k8s``, the following options are available:
+
+======================== =============================================================================================================
+Directive                Definition
+======================== =============================================================================================================
+type                     Specify secret type, the most common is generic.
+data                     The actual secrets which can specified as either a type of file or literal. A file type can point to a single
+                         file or directory of files. The name for each data entry is assumed to be the key label on the object.
+======================== =============================================================================================================
 
 

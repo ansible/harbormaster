@@ -25,7 +25,7 @@ class Engine(K8sBaseEngine):
     def deploy(self):
         if not self._deploy:
             self._deploy = Deploy(self.services, self.project_name, namespace_name=self.namespace_name,
-                                  volumes=self.volumes)
+                                  volumes=self.volumes, secrets=self.secrets)
         return self._deploy
 
     @property
