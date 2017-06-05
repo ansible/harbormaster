@@ -366,3 +366,8 @@ def conductor_commandline():
         volume_data=conductor_config.volumes,
         repository_data=conductor_config.registries,
         **params)
+
+
+if __name__ == '__main__':
+    logger = getLogger('container')
+    host_commandline()
