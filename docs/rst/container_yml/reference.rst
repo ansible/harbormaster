@@ -42,9 +42,9 @@ networks                   Create named, persistent networks
 version                    Specifiy the version of Compose, '1' or '2'              |checkmark|
 :ref:`top-volumes`         Create named, persistent volumes. The syntax differs     |checkmark|
                            from the Docker specification.
-:ref:`secrets`             Create named secrets. The syntax differs                 |checkmark|
-                           from the Docker specification. View :ref:`secrets`
-                           for details.
+:ref:`secrets_top`         Create named secrets that can be mounted to pods as      |checkmark|
+                           volumes during cloud deployment. The syntax differs
+                           from the Docker specification.
 ========================== ======================================================== ============
 
 .. _settings:
@@ -236,6 +236,7 @@ pid                   Sets the PID mode to the host PID mode, enabling between
 privileged            Run in privileged mode                                   |checkmark|
 read_only             Mount the container's file system as read only           |checkmark|
 restart               Restart policy to apply when a container exits           |checkmark|
+secrets               Mount secrets as volumes                                 |checkmark|
 security_opt          Override default labeling scheme
 shm_size              Size of /dev/shm
 stdin_open            Keep stdin open                                          |checkmark|
@@ -433,8 +434,8 @@ which means:
 secrets
 .......
 
-Supported by the ``deploy`` command. The secrets directive be used to define a literal, file or from a directory to be mounted into
-a container. If supplied secrets are not base64 encoded then they are encoded when the deployment playbook is generated.
+Supported by the ``deploy`` and ``run`` commands. The secrets directive can be used to associate a secret with a container, mounting it as
+a volume. Use the top-level :ref:`secrets directive <secrets_top>` to define a secret. To set cloud specific options, view :ref:`k8s_openshift_options`.
 
 .. _volumes_from:
 
@@ -458,7 +459,9 @@ When using the ``k8s`` and ``openshift`` engines, the following commands are ava
  - stop
  - destroy
 
-To impact how objects are created, a ``k8s`` or ``openshift`` section can be added to a specific service, and to a named volume within the top-level volumes directive. The following presents an``openshift`` example:
+To impact how objects are created, a ``k8s`` or ``openshift`` section can be added to a specific service, to a named volume within
+the top-level :ref:`volumes directive <volumes_top>`, or to a secret within the top-level :ref:`secrets directive <secrets_top>`.
+The following presents an ``openshift`` example:
 
 
 .. code-block:: yaml
@@ -517,16 +520,15 @@ Service level directives
 
 The following directives can be added to a ``k8s`` or ``openshift`` section within a service:
 
-======================== ======================================================================================================
+======================== =========================================================================================================================
 Directive                Definition
-======================== ======================================================================================================
-state                    Set to *present*, if the service should be deployed to the cluster, or *absent*, if it should not.
-                         Defaults to *present*.
+======================== =========================================================================================================================
+state                    Set to *present*, if the service should be deployed to the cluster, or *absent*, if it should not. Defaults to *present*.
 :ref:`service_sub`       Adds a mapping of Service object attributes.
 :ref:`deployment_sub`    Adds a mapping of Deployment (or DeploymentConfig for OpenShift) object attributes.
 :ref:`route_sub`         Adds a mapping of OpenShift Route object attributes.
 :ref:`secrets_sub`       Adds a mapping of OpenShift Secrets object attributes to volume mounts in the deployment.
-======================== ======================================================================================================
+======================== =========================================================================================================================
 
 .. _service_sub:
 
@@ -720,10 +722,7 @@ With the new options, the route for port 4443 will be updated with the following
 secrets
 .......
 
-Secrets are mounted into OpenShift deployments as volume mounts inside the containers. Docker secrets have defaults and options that do not directly correlate inside OpenShift. How secrets are defined as volume mounts for a deployment can be defined in this section allowing to set the ``mountPath`` and alter the ``readOnly`` state that is set to ``yes`` by default.
-Route objects are used by OpenShift to expose services externally, and Ansible Container generates routes based on the ``ports`` directive of a service.
-
-Consider the following service defined in ``container.yml``:
+Secrets are included in K8s and OpenShift deployments as volume mounts to a container. Consider the following service defined in ``container.yml``:
 
 .. code-block:: yaml
 
@@ -738,9 +737,9 @@ Consider the following service defined in ``container.yml``:
         - 8000:8080
         - 4443:8443
         secrets:
-          - apache-certs
+        - apache-certs
 
-For each secret in the set of defined ``secrets``, a volumeMount object is generated, and the above will generate the following mounts:
+For each secret, a ``volumeMount`` object is generated. The above will generate the following during ``deploy`` and ``run``:
 
 .. code-block:: yaml
 
@@ -754,7 +753,8 @@ For each secret in the set of defined ``secrets``, a volumeMount object is gener
                mountPath: /run/secrets/apache-certs
                readOnly: true
 
-The ``mountPath`` is by default set to the standard Docker location of ``/run/secrets``. To customize where the secret is mounted inside OpenShift the value can be overriden:
+The ``mountPath`` is by default set to the standard Docker location of ``/run/secrets``, and ``readOnly`` defaults to ``true``. Within the  ``k8s`` or
+``openshift`` section for the service, set the ``mount_path`` and ``read_only`` attributes of a secret as follows:
 
 .. code-block:: yaml
 
@@ -769,12 +769,13 @@ The ``mountPath`` is by default set to the standard Docker location of ``/run/se
         - 8000:8080
         - 4443:8443
         secrets:
-          - apache-certs
+        - apache-certs
         openshift:
           state: present
           secrets:
             - name: apache-certs
               mount_path: /etc/httpd/pki/apache-certs
+              read_only: false
 
 This will result in:
 
@@ -788,7 +789,7 @@ This will result in:
            volumeMounts:
              - name: apache-certs
                mountPath: /etc/httpd/pki/apache-certs
-               readOnly: true
+               readOnly: false
 
 .. _top-volumes:
 
@@ -869,13 +870,13 @@ requested_storage        The amount of storage being requested. Defaults to 1Gi.
                          See `compute resources <http://kubernetes.io/docs/user-guide/compute-resources/>`_ for abbreviations.
 ======================== ========================================================================================================================
 
-
-.. secrets:
+.. _secrets_top:
 
 Secrets
 ```````
 
-For Docker, the service level ``secrets`` directive works as expected. The top-level ``secrets`` directive, however, has been modified slightly. The following example ``container.yml`` shows the three forms of the service level ``secrets`` directive, and the new top-level ``secrets`` format:
+For Docker, the service level ``secrets`` directive works as expected. The top-level ``secrets`` directive, however, has been modified slightly. The following example
+``container.yml`` shows the service level ``secrets`` directive, and the new top-level ``secrets`` format:
 
 .. code-block:: yaml
 
@@ -893,7 +894,7 @@ For Docker, the service level ``secrets`` directive works as expected. The top-l
         roles:
         - apache-container
         secrets:
-          - apache-certs
+        - apache-certs
 
     secrets:
       my-secrets:
