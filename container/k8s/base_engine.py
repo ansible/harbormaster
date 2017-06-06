@@ -133,21 +133,31 @@ class K8sBaseEngine(DockerEngine):
 
     @conductor_only
     def generate_orchestration_playbook(self, url=None, namespace=None, settings=None, repository_prefix=None,
-                                        **kwargs):
+                                        pull_from_url=None, tag=None, **kwargs):
         """
         Generate an Ansible playbook to orchestrate services.
-        :param url: registry URL where images will be pulled from
+        :param url: registry URL where images were pushed.
         :param namespace: registry namespace
         :param repository_prefix: prefix to use for the image name
         :param settings: settings dict from container.yml
+        :param pull_from_url: if url to pull from is different than url
         :return: playbook dict
         """
         for service_name, service_config in self.services.iteritems():
             if service_config.get('roles'):
                 if url and namespace:
                     # Reference previously pushed image
-                    image_name = "{}-{}".format(repository_prefix or self.project_name, service_name)
-                    self.services[service_name][u'image'] = "{}/{}/{}".format(url.rstrip('/'), namespace, image_name)
+                    image_id = self.get_latest_image_id_for_service(service_name)
+                    if not image_id:
+                        raise exceptions.AnsibleContainerConductorException(
+                            u"Unable to get image ID for service {}. Did you forget to run "
+                            u"`ansible-container build`?".format(service_name)
+                        )
+                    tag = tag or self.get_build_stamp_for_image(image_id)
+                    image_name = "{}-{}:{}".format(repository_prefix or self.project_name, service_name, tag)
+                    pull_url = url if not pull_from_url else pull_from_url
+                    self.services[service_name][u'image'] = "{}/{}/{}".format(pull_url.rstrip('/'), namespace,
+                                                                              image_name)
                 else:
                     # We're using a local image, so check that the image was built
                     image = self.get_latest_image_for_service(service_name)

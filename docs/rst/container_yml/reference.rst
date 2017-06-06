@@ -1,5 +1,5 @@
-Ansible Container Compose Specification
-=======================================
+Container.yml Specification
+===========================
 
 The orchestration document for Ansible Container is the ``container.yml`` file. It's much like a ``docker-compose.yml``
 file, defining the services that make up the application, the relationships between each, and how they can be accessed
@@ -40,9 +40,8 @@ networks                   Create named, persistent networks
 :ref:`services <services>` Services included in the app                             |checkmark|
 :ref:`settings <settings>` Project level configuration settings.                    |checkmark|
 version                    Specifiy the version of Compose, '1' or '2'              |checkmark|
-:ref:`volumes`             Create named, persistent volumes. The syntax differs     |checkmark|
-                           from the Docker specification. View :ref:`volumes`
-                           for details.
+:ref:`top-volumes`         Create named, persistent volumes. The syntax differs     |checkmark|
+                           from the Docker specification.
 ========================== ======================================================== ============
 
 .. _settings:
@@ -371,14 +370,16 @@ The following is an example taken from a ``container.yml`` file:
 
 .. code-block:: yaml
 
+    ...
     registries:
       google:
         url: https://gcr.io
         namespace: my-project
       openshift:
-        url: https://192.168.30.14.xip.io
+        url: https://local.openshift
         namespace: my-project
         repository_prefix: foo
+        pull_from_url: http://172.30.1.1:5000
 
 The ``deploy`` command will automatically push images before generating the deployment Ansible playbook. Use the ``--push-to`` option
 to specify the registry to which images will be pushed. For example:
@@ -388,11 +389,16 @@ to specify the registry to which images will be pushed. For example:
     # Push images and generate the deployment playbook
     $ ansible-container deploy --push-to openshift
 
-In the above example, images will be pushed to *https://192.168.3.14.xip.io/my-project*. Each image will result in a repository name
+In the above example, images will be pushed to *https://local.openshift*. Each image will result in a repository name
 of *foo-<service-name>*, where *foo* is the *repository_prefix* value for the *openshift* registry. For example, suppose the project
-included a service named *web*. The image for it would be pushed to a repository named *foo-web*
+included a service named *web*. Its image would be pushed to a repository named *foo-web*
 
-You can also use the ``push`` command to push images directly, and bypass the generation of a deployment playbook. The following will
+Use the ``pull_from_url`` attribute, if the URL for pushing images differs from the URL used to pull images. When using a registry hosted
+on the cluster, it's possible that the DNS name or IP address used to access the registry from outside the cluster differs from that used
+inside the cluster. In that case, set the ``url`` to the external address, the one used to push images, and set the ``pull_from_url`` to
+the address used inside the cluster to pull images.
+
+The ``push`` command can also be used to push images directly, and bypass the generation of a deployment playbook. The following will
 push images to the *google* registry:
 
 .. code-block:: bash
@@ -405,19 +411,9 @@ push images to the *google* registry:
 volumes
 .......
 
-Supported by ``build``, ``run`` and ``deploy`` commands. The volumes directive mounts host paths or named volumes to the container.
-In version 2 of compose a named volume must be defined in the top-level volumes directive. In version 1, if a named volume does
+Supported by ``run`` and ``deploy`` commands. The volumes directive mounts host paths or named volumes to the container.
+In version 2 of compose a named volume must be defined in the :ref:`top-level volumes directive <top-volumes>`. In version 1, if a named volume does
 not exist, it is automatically created.
-
-In the cloud, host paths result in the creation of an `emptyDir <http://kubernetes.io/docs/user-guide/volumes/#emptydir>`_,
-and a named volume will result in the creation of a persistent volume claim (PVC). The resulting emptyDir or PVC will then
-be mounted to the container using the specified path.
-
-Ansible Container follows the `Portable Configuration pattern <http://kubernetes.io/docs/user-guide/persistent-volumes/#writing-portable-configuration>`_,
-which means:
-
-- It does not create persistent volumes
-- It does create persistent volume claims.
 
 .. _volumes_from:
 
@@ -698,12 +694,13 @@ With the new options, the route for port 4443 will be updated with the following
           -----END CERTIFICATE-----
 
 
-.. volumes:
+.. _top-volumes:
 
 Volumes
 ```````
 
-For Docker, the service level ``volumes`` directive works as expected. The top-level ``volumes`` directive, however, has been modified slightly. The following example ``container.yml`` shows the three forms of the service level ``volumes`` directive, and the new top-level ``volumes`` format:
+For Docker, the service level ``volumes`` directive works as expected. The top-level ``volumes`` directive, however, has been modified slightly. The following example ``container.yml`` shows the
+three forms of the service level ``volumes`` directive, and the new top-level ``volumes`` format:
 
 .. code-block:: yaml
 
@@ -737,24 +734,43 @@ For Docker, the service level ``volumes`` directive works as expected. The top-l
           metadata:
             annotations: 'volume.beta.kubernetes.io/mount-options: "discard"'
 
-The top-level directive is organized by volume name. In this case, a volume named ``static-content`` is mounted to the container as ``/var/www/static2``. The definition of the named volume is found in the top-level ``volumes`` directive under the name, where specific options are organized by container engine. In this case there are no options for ``docker``, and several options for ``openshift``.
+For K8s and OpenShift, each of the volumes in the list of volumes for the ``web`` service are handled as follows. The host path volume, the first volume in the list, results in the
+creation of a host path volume on the cluster, provided the feature has been enabled, and the path is available to the cluster. This type of volume works well in a development environment where the
+cluster is running in a virtual machine, and the host path is shared with the virtual machine.
 
-Under ``docker``, add valid volume attributes including: driver, driver_opts and external. For additional information about Docker volumes see Docker's `volume configuration reference <https://docs.docker.com/compose/compose-file/#volume-configuration-reference>`_.
+A path only volume, the third volume in the list, results in an `emptyDir <http://kubernetes.io/docs/user-guide/volumes/#emptydir>`_. And finally, a named volume, the second volume in the list,
+results in the creation of a persistent volume claim (PVC).
 
+The top-level directive is organized by volume name. In this case, a volume named ``static-content`` is mounted to the container as ``/var/www/static2``. The definition of the named volume is
+found in the top-level ``volumes`` directive, under the same name. Here specific options are organized by container engine. In this case, there are no options for ``docker``, and several
+options for ``openshift``.
+
+Ansible Container follows the `Portable Configuration pattern <http://kubernetes.io/docs/user-guide/persistent-volumes/#writing-portable-configuration>`_,
+which means:
+
+- It does not create persistent volumes
+- It does create persistent volume claims.
+
+During deployment, the ``static-content`` volume definition generates a PVCs, which is then referenced by name in a container volume definitions. The container volume definition simply mounts the
+PVC by name to a path within the container, in this case the path is ``/var/www/static2``.
+
+In the top-level ``volumes`` directive for``docker``, valid attributes include: driver, driver_opts and external. For additional information about Docker volumes see Docker's
+`volume configuration reference <https://docs.docker.com/compose/compose-file/#volume-configuration-reference>`_.
 
 For ``openshift`` and ``k8s``, the following options are available:
 
-======================== =============================================================================================================
+======================== ========================================================================================================================
 Directive                Definition
-======================== =============================================================================================================
+======================== ========================================================================================================================
 metadata                 Provide a metadata mapping, as depicted above. In general, the only mapping value provided here would be
                          ``annotations``.
 access_modes             A list of valid `access modes <http://kubernetes.io/docs/user-guide/persistent-volumes/#access-modes>`_.
 match_labels             A mapping of key:value pairs used to filter matching volumes.
 match_expressions        A list of expressions used to filter matching volumes.
-                         See `Persistent Volume Claims <https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims>`_ for additional details.
+                         See `Persistent Volume Claims <https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims>`_
+                         for additional details.
 requested_storage        The amount of storage being requested. Defaults to 1Gi.
                          See `compute resources <http://kubernetes.io/docs/user-guide/compute-resources/>`_ for abbreviations.
-======================== =============================================================================================================
+======================== ========================================================================================================================
 
 

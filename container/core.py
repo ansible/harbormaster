@@ -184,11 +184,9 @@ def hostcmd_deploy(base_path, project_name, engine_name, var_file=None,
         params.update(kwargs)
 
     if not local_images:
-        url, namespace, repository_prefix = push_images(base_path, config.image_namespace, engine_obj, config,
-                                                        save_conductor=False, **params)
-        params['url'] = url
-        params['namespace'] = namespace
-        params['repository_prefix'] = repository_prefix
+        push_options = push_images(base_path, config.image_namespace, engine_obj, config,
+                                   save_conductor=False, **params)
+        params.update(push_options)
 
     engine_obj.await_conductor_command(
         'deploy', dict(config), base_path, params,
@@ -318,7 +316,7 @@ def hostcmd_push(base_path, project_name, engine_name, var_file=None, **kwargs):
 
 @host_only
 def push_images(base_path, image_namespace, engine_obj, config, **kwargs):
-    """ Pushes images to a Docker registry. Returns (url, namespace) used to push images. """
+    """ Pushes images to a Docker registry. Returns dict containing attributes used to push images. """
     config_path = kwargs.get('config_path', engine_obj.auth_config_path)
     username = kwargs.get('username')
     password = kwargs.get('password')
@@ -328,12 +326,14 @@ def push_images(base_path, image_namespace, engine_obj, config, **kwargs):
     namespace = image_namespace
     save_conductor = config.get('settings', {}).get('save_conductor_container', False)
     repository_prefix = None
+    pull_from_url = None
 
     if push_to:
         if config.get('registries', dict()).get(push_to):
             url = config['registries'][push_to].get('url')
             namespace = config['registries'][push_to].get('namespace', namespace)
             repository_prefix = config['registries'][push_to].get('repository_prefix')
+            pull_from_url = config['registries'][push_to].get('pull_from_url')
             if not url:
                 raise AnsibleContainerRegistryAttributeException(
                     u"Registry {} missing required attribute 'url'".format(push_to)
@@ -380,8 +380,15 @@ def push_images(base_path, image_namespace, engine_obj, config, **kwargs):
     push_params['url'] = url
     push_params['namespace'] = namespace
     push_params['repository_prefix'] = repository_prefix
+    push_params['pull_from_url'] = pull_from_url
+
+    # Push
     engine_obj.await_conductor_command('push', dict(config), base_path, push_params, save_container=save_conductor)
-    return url, namespace, repository_prefix
+
+    return {'url': url,
+            'namespace': namespace,
+            'repository_prefix': repository_prefix,
+            'pull_from_url': pull_from_url }
 
 
 @host_only
