@@ -60,3 +60,4 @@ registries: {}
   #  google:
   #    url: https://gcr.io
   #    namespace: my-cool-project-xxxxxx   
+
