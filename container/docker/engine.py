@@ -129,9 +129,14 @@ class Engine(BaseEngine):
         return self._client
 
     @property
-    def ansible_args(self):
-        """Additional commandline arguments necessary for ansible-playbook runs."""
-        return u'-c docker'
+    def ansible_build_args(self):
+        """Additional commandline arguments necessary for ansible-playbook runs during build"""
+        return '-c docker'
+
+    @property
+    def ansible_orchestrate_args(self):
+        """Additional commandline arguments necessary for ansible-playbook runs during orchestrate"""
+        return '-c local'
 
     @property
     def default_registry_url(self):

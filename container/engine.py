@@ -46,8 +46,13 @@ class BaseEngine(object):
         return __name__.split('.')[-2].capitalize()
 
     @property
-    def ansible_args(self):
-        """Additional commandline arguments necessary for ansible-playbook runs."""
+    def ansible_build_args(self):
+        """Additional commandline arguments necessary for ansible-playbook runs during build"""
+        raise NotImplementedError()
+
+    @property
+    def ansible_orchestrate_args(self):
+        """Additional commandline arguments necessary for ansible-playbook runs during orchestrate"""
         raise NotImplementedError()
 
     @property

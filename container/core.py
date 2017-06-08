@@ -489,9 +489,9 @@ def set_path_ownership(path, uid, gid):
 
 @conductor_only
 def run_playbook(playbook, engine, service_map, ansible_options='', local_python=False, debug=False,
-                 deployment_output_path=None, tags=None, **kwargs):
+                 deployment_output_path=None, tags=None, build=False, **kwargs):
     uid, gid = kwargs.get('host_user_uid', 1), kwargs.get('host_user_gid', 1)
-
+    return_code = 0
     try:
         if deployment_output_path:
             remove_tmpdir = False
@@ -517,7 +517,6 @@ def run_playbook(playbook, engine, service_map, ansible_options='', local_python
                     # Use local Python runtime
                     ofs.write('%s ansible_host="%s"\n' % (service_name, container_id))
 
-
         if not os.path.exists(os.path.join(output_dir, 'files')):
             os.mkdir(os.path.join(output_dir, 'files'))
         if not os.path.exists(os.path.join(output_dir, 'templates')):
@@ -537,7 +536,8 @@ def run_playbook(playbook, engine, service_map, ansible_options='', local_python
         ansible_args = dict(inventory=quote(inventory_path),
                             playbook=quote(playbook_path),
                             debug_maybe='-vvvv' if debug else '',
-                            engine_args=engine.ansible_args,
+                            build_args=engine.ansible_build_args if build else '',
+                            orchestrate_args=engine.ansible_orchestrate_args if not build else '',
                             ansible_playbook=engine.ansible_exec_path,
                             ansible_options=' '.join(ansible_options) or '')
         if tags:
@@ -551,7 +551,8 @@ def run_playbook(playbook, engine, service_map, ansible_options='', local_python
                        '{debug_maybe} '
                        '{ansible_options} '
                        '-i {inventory} '
-                       '{engine_args} '
+                       '{build_args} '
+                       '{orchestrate_args} '
                        '{playbook}').format(**ansible_args)
         logger.debug('Running Ansible Playbook', command=ansible_cmd, cwd='/src')
         process = subprocess.Popen(ansible_cmd,
@@ -572,7 +573,7 @@ def run_playbook(playbook, engine, service_map, ansible_options='', local_python
             finally:
                 process.poll()
 
-        return process.returncode
+        return_code = process.returncode
     finally:
         try:
             rc = subprocess.call(['unmount',
@@ -587,6 +588,7 @@ def run_playbook(playbook, engine, service_map, ansible_options='', local_python
         except Exception:
             pass
 
+    return return_code
 
 @conductor_only
 def apply_role_to_container(role, container_id, service_name, engine, vars={},
@@ -608,7 +610,7 @@ def apply_role_to_container(role, container_id, service_name, engine, vars={},
     # FIXME: Actually do stuff if onbuild is not null
 
     rc = run_playbook(playbook, engine, {service_name: container_id}, ansible_options=ansible_options,
-                      local_python=local_python, debug=debug)
+                      local_python=local_python, debug=debug, build=True)
     if rc:
         logger.error('Error applying role!', playbook=playbook, engine=engine,
             exit_code=rc)
@@ -793,6 +795,10 @@ def conductorcmd_stop(engine_name, project_name, services, **kwargs):
                 engine=engine.display_name)
     playbook = engine.generate_orchestration_playbook(**kwargs)
     rc = run_playbook(playbook, engine, services, tags=['stop'], **kwargs)
+    if rc:
+        raise AnsibleContainerException(
+            "Error executing the stop command. Some containers may still be running."
+        )
     logger.info(u'All services stopped.', playbook_rc=rc)
 
 
