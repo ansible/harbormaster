@@ -78,11 +78,6 @@ class HostCommand(object):
                                help=u'Run with the production configuration.',
                                default=False, dest='production')
 
-        if cmd in ('build', 'run', 'deploy', 'push'):
-            subparser.add_argument('--roles-path', action='store', default=None,
-                                   help=u'Specify a local path containing roles you want to '
-                                        u'use in the Conductor.')
-
         if cmd in ('deploy', 'push'):
             subparser.add_argument('--username', action='store',
                                help=u'If authentication with the registry is required, provide a valid username.',
@@ -126,6 +121,9 @@ class HostCommand(object):
                                     u'previously built image for your hosts. Disable '
                                     u'that with this flag.',
                                dest='purge_last', default=True)
+        subparser.add_argument('--roles-path', action='store', default=None,
+                               help=u'Specify a local path containing roles you want to '
+                                    u'use during the build process.')
         subparser.add_argument('--save-conductor-container', action='store_true',
                                help=u'Leave the Ansible Builder Container intact upon build completion. '
                                     u'Use for debugging and testing.', default=False)

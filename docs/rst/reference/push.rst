@@ -60,8 +60,3 @@ Define one or more environment variables in the Ansible Builder Container. Forma
 .. option:: --with-volumes WITH_VOLUMES [WITH_VOLUMES ...]
 
 Mount one or more volumes to the Conductor container. Specify volumes as strings using the Docker volume format.
-
-.. option:: --roles-path LOCAL_PATH
-
-If you have Ansible roles in a local path other than your `ansible/` directory that you wish to use, specify that path with this option.
-

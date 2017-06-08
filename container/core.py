@@ -779,13 +779,11 @@ def conductorcmd_run(engine_name, project_name, services, **kwargs):
         [service for service, service_desc in services.items()
          if service_desc.get('roles')])
 
-    logger.debug("In conductorcmd_run", kwargs=kwargs)
     playbook = engine.generate_orchestration_playbook(**kwargs)
-    logger.debug("in conductorcmd_run", playbook=playbook)
     rc = run_playbook(playbook, engine, services, tags=['start'], **kwargs)
     if rc:
         raise AnsibleContainerException(
-            'Error executing the run command. Not all service may be running.'
+            'Error executing the run command. Not all containers may be running.'
         )
     logger.info(u'All services running.', playbook_rc=rc)
 
@@ -797,6 +795,10 @@ def conductorcmd_restart(engine_name, project_name, services, **kwargs):
                 engine=engine.display_name)
     playbook = engine.generate_orchestration_playbook(**kwargs)
     rc = run_playbook(playbook, engine, services, tags=['restart'], **kwargs)
+    if rc:
+        raise AnsibleContainerException(
+            'Error executing the restart command. Not all containers may be running.'
+        )
     logger.info(u'All services restarted.', playbook_rc=rc)
 
 
@@ -822,6 +824,10 @@ def conductorcmd_destroy(engine_name, project_name, services, **kwargs):
                 engine=engine.display_name)
     playbook = engine.generate_orchestration_playbook(**kwargs)
     rc = run_playbook(playbook, engine, services, tags=['destroy'], **kwargs)
+    if rc:
+        raise AnsibleContainerException(
+            'Error executing the destroy command. Not all containers and images may have been removed.'
+        )
     logger.info(u'All services destroyed.', playbook_rc=rc)
 
 @conductor_only
