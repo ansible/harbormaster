@@ -229,6 +229,8 @@ def hostcmd_destroy(base_path, project_name, engine_name, var_file=None, cache=T
     assert_initialized(base_path)
     logger.debug('Got extra args to `destroy` command', arguments=kwargs)
     config = get_config(base_path, var_file=var_file, engine_name=engine_name, project_name=project_name)
+    if not kwargs['production']:
+        config.set_env('dev')
 
     engine_obj = load_engine(['RUN'],
                              engine_name, config.project_name,
@@ -253,6 +255,9 @@ def hostcmd_destroy(base_path, project_name, engine_name, var_file=None, cache=T
 def hostcmd_stop(base_path, project_name, engine_name, force=False, services=[],
                  **kwargs):
     config = get_config(base_path, engine_name=engine_name, project_name=project_name)
+    if not kwargs['production']:
+        config.set_env('dev')
+
     engine_obj = load_engine(['RUN'],
                              engine_name, config.project_name,
                              config['services'], **kwargs)
@@ -275,6 +280,9 @@ def hostcmd_stop(base_path, project_name, engine_name, force=False, services=[],
 def hostcmd_restart(base_path, project_name, engine_name, force=False, services=[],
                     **kwargs):
     config = get_config(base_path, engine_name=engine_name, project_name=project_name)
+    if not kwargs['production']:
+        config.set_env('dev')
+
     engine_obj = load_engine(['RUN'],
                              engine_name, config.project_name,
                              config['services'], **kwargs)
@@ -775,6 +783,10 @@ def conductorcmd_run(engine_name, project_name, services, **kwargs):
     playbook = engine.generate_orchestration_playbook(**kwargs)
     logger.debug("in conductorcmd_run", playbook=playbook)
     rc = run_playbook(playbook, engine, services, tags=['start'], **kwargs)
+    if rc:
+        raise AnsibleContainerException(
+            'Error executing the run command. Not all service may be running.'
+        )
     logger.info(u'All services running.', playbook_rc=rc)
 
 

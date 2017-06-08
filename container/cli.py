@@ -73,6 +73,11 @@ class HostCommand(object):
                                         u'Conductor. Format each variable as a key=value string.',
                                    default=[])
 
+        if cmd in ('run', 'stop', 'restart', 'destroy'):
+            subparser.add_argument('--production', action='store_true',
+                               help=u'Run with the production configuration.',
+                               default=False, dest='production')
+
         if cmd in ('build', 'run', 'deploy', 'push'):
             subparser.add_argument('--roles-path', action='store', default=None,
                                    help=u'Specify a local path containing roles you want to '
@@ -172,9 +177,6 @@ class HostCommand(object):
         subparser.add_argument('service', action='store',
                                help=u'The specific services you want to run',
                                nargs='*')
-        subparser.add_argument('--production', action='store_true',
-                               help=u'Run the production configuration locally',
-                               default=False, dest='production')
         subparser.add_argument('-d', '--detached', action='store_true',
                                help=u'Run the application in detached mode', dest='detached')
         self.subcmd_common_parsers(parser, subparser, 'run')
