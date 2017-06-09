@@ -153,8 +153,8 @@ class K8sBaseEngine(DockerEngine):
                             u"Unable to get image ID for service {}. Did you forget to run "
                             u"`ansible-container build`?".format(service_name)
                         )
-                    tag = tag or self.get_build_stamp_for_image(image_id)
-                    image_name = "{}-{}:{}".format(repository_prefix or self.project_name, service_name, tag)
+                    image_tag = tag or self.get_build_stamp_for_image(image_id)
+                    image_name = "{}-{}:{}".format(repository_prefix or self.project_name, service_name, image_tag)
                     pull_url = url if not pull_from_url else pull_from_url
                     self.services[service_name][u'image'] = "{}/{}/{}".format(pull_url.rstrip('/'), namespace,
                                                                               image_name)
