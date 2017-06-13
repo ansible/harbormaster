@@ -252,9 +252,9 @@ def hostcmd_destroy(base_path, project_name, engine_name, var_file=None, cache=T
         save_container=config.get('settings', {}).get('save_conductor_container', False))
 
 @host_only
-def hostcmd_stop(base_path, project_name, engine_name, force=False, services=[],
+def hostcmd_stop(base_path, project_name, engine_name, var_file=None, force=False, services=[],
                  **kwargs):
-    config = get_config(base_path, engine_name=engine_name, project_name=project_name)
+    config = get_config(base_path, var_file=var_file, engine_name=engine_name, project_name=project_name)
     if not kwargs['production']:
         config.set_env('dev')
 
@@ -277,9 +277,9 @@ def hostcmd_stop(base_path, project_name, engine_name, force=False, services=[],
 
 
 @host_only
-def hostcmd_restart(base_path, project_name, engine_name, force=False, services=[],
+def hostcmd_restart(base_path, project_name, engine_name, var_file=None, force=False, services=[],
                     **kwargs):
-    config = get_config(base_path, engine_name=engine_name, project_name=project_name)
+    config = get_config(base_path, var_file=var_file, engine_name=engine_name,  project_name=project_name)
     if not kwargs['production']:
         config.set_env('dev')
 
