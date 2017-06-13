@@ -32,13 +32,11 @@ RUN apt-get update -y && \
 RUN apk add --no-cache -U python2-dev make git rsync libffi libffi-dev openssl openssl-dev gcc musl-dev tar openssh
 {% endif %}
 
-ADD https://get.docker.com/builds/Linux/x86_64/docker-{{ docker_version }}.tgz /tmp/docker.tgz
-
 COPY /contrib/get-pip.py /get-pip.py
 RUN python /get-pip.py && \
     mkdir -p /etc/ansible/roles /_ansible/src && \
-    cd /usr/local/bin && \
-    tar -xz --strip-components=1 -f /tmp/docker.tgz
+    curl https://get.docker.com/builds/Linux/x86_64/docker-{{ docker_version }}.tgz \
+    | tar -zxvC /usr/local/bin/ --strip-components=1
 
 # The COPY here will break cache if the version of conductor changed
 COPY /container-src /_ansible/container
