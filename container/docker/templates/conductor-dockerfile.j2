@@ -3,12 +3,12 @@ ENV ANSIBLE_CONTAINER=1
 {% set distro = conductor_base.split(':')[0] %}
 {% if distro in ["fedora"] %}
 RUN dnf update -y && \
-    dnf install -y make gcc git python2 python2-devel rsync libffi-devel openssl-devel redhat-rpm-config python2-dnf tar redhat-rpm-config && \
+    dnf install -y make gcc git python2 python2-devel curl rsync libffi-devel openssl-devel redhat-rpm-config python2-dnf tar redhat-rpm-config && \
     dnf clean all
 {% elif distro in ["centos"] %}
 RUN yum update -y && \
     yum install -y epel-release && \
-    yum install -y make gcc git python-devel rsync libffi-devel openssl-devel && \
+    yum install -y make gcc git python-devel curl rsync libffi-devel openssl-devel && \
     yum clean all
 {% elif "rhel" in distro %}
 RUN yum -y update-minimal --disablerepo "*" \
@@ -23,20 +23,20 @@ RUN yum -y update-minimal --disablerepo "*" \
     yum clean all
 {% elif distro in ["debian", "ubuntu"] %}
 RUN apt-get update -y && \
-    apt-get install -y make gcc python2.7 git python-dev rsync libffi-dev libssl-dev dpkg-dev python-apt libpopt0 && \
+    apt-get install -y make gcc python2.7 git python-dev curl rsync libffi-dev libssl-dev dpkg-dev python-apt libpopt0 && \
     cd /usr/bin && \
     rm -f lsb_release && \
     ln -fs python2.7 python && \
     apt-get clean
 {% elif distro in ["alpine"] %}
-RUN apk add --no-cache -U python2-dev make git rsync libffi libffi-dev openssl openssl-dev gcc musl-dev tar openssh
+RUN apk add --no-cache -U python2-dev make git curl rsync libffi libffi-dev openssl openssl-dev gcc musl-dev tar openssh
 {% endif %}
 
 COPY /contrib/get-pip.py /get-pip.py
 RUN python /get-pip.py && \
     mkdir -p /etc/ansible/roles /_ansible/src && \
     curl https://get.docker.com/builds/Linux/x86_64/docker-{{ docker_version }}.tgz \
-    | tar -zxvC /usr/local/bin/ --strip-components=1
+    | tar -zxC /usr/local/bin/ --strip-components=1
 
 # The COPY here will break cache if the version of conductor changed
 COPY /container-src /_ansible/container
