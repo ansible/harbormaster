@@ -514,21 +514,29 @@ class K8sBaseDeploy(object):
                 ('namespace', self._namespace_name)
             ])
             template['type'] = 'Generic'
+
             if secret.get('type'):
                 template['type'] = 'Generic'
+
             if secret.get('data'):
                 data = secret['data']
                 template['data'] = {}
 
-                for key, value in data.items():
-                    if type(value) is CommentedMap:
-                        if value['type'] == 'file':
-                            with open(value['value']) as file:
+                for item in data:
+                    if 'file' in item:
+                        if os.path.isdir(item['file']):
+                            directory = item['file']
+                            for file in os.listdir(item['file']):
+                                if os.path.isfile(directory + '/' + file):
+                                    with open(directory + '/' + file) as value:
+                                        template['data'][file] = value.read().encode('base64')
+                        elif os.path.isfile(item['file']):
+                            with open(item['file']) as file:
                                 value = file.read()
-                        else:
-                            value = value['value']
-
-                    template['data'][key] = value.encode('base64')
+                                template['data'][item['name']] = value.encode('base64')
+                    else:
+                        value = item['literal']
+                        template['data'][item['name']] = value.encode('base64')
 
             return template
 
@@ -544,6 +552,7 @@ class K8sBaseDeploy(object):
     def get_secret_tasks(self, tags=[]):
         module_name='k8s_v1_secret'
         tasks = CommentedSeq()
+
         for template in self.get_secret_templates():
             task = CommentedMap()
             task['name'] = 'Create Secret'
@@ -557,6 +566,7 @@ class K8sBaseDeploy(object):
             if tags:
                 task['tags'] = copy.copy(tags)
             tasks.append(task)
+
         if self._secrets:
             for secret_name, secret_config in self._secrets.items():
                 if self.CONFIG_KEY in secret_config:
@@ -716,6 +726,7 @@ class K8sBaseDeploy(object):
         volume_mounts = []
         volumes = []
         docker_default = '/run/secrets'
+
         for secret in docker_secrets:
             source = None
             target = None
@@ -744,16 +755,20 @@ class K8sBaseDeploy(object):
                 if 'read_only' in override:
                     read_only = override['read_only']
 
-            volume_mounts.append(dict(
-                mountPath=mount_path,
-                name=source,
-                readOnly=read_only
-            ))
+                secret_volume = dict(secretName=source)
+                if 'items' in override:
+                    secret_volume['items'] = override['items']
 
-            volumes.append(dict(
-                name=source,
-                secret=dict(secretName=source)
-            ))
+                volume_mounts.append(dict(
+                    mountPath=mount_path,
+                    name=source,
+                    readOnly=read_only
+                ))
+
+                volumes.append(dict(
+                    name=source,
+                    secret=secret_volume
+                ))
 
         return volumes, volume_mounts
 
