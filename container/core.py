@@ -153,12 +153,15 @@ def hostcmd_build(base_path, project_name, engine_name, var_file=None,
         engine_obj.delete_container(conductor_container_id)
 
     logger.debug('Config settings', config=config, rawsettings=config.get('settings'),
-                 tconf=type(config), settings=config.get('settings', {}))
+                 conf=type(config), settings=config.get('settings', {}))
+
     save_container = config.get('settings', {}).get('save_conductor_container', False)
     if kwargs.get('save_conductor_container'):
         # give precedence to CLI option
         save_container = True
+
     kwargs['cache'] = kwargs['cache'] and kwargs['container_cache']
+    kwargs['config_vars'] = config.get('defaults')
     engine_obj.await_conductor_command(
         'build', dict(config), base_path, kwargs, save_container=save_container)
 
@@ -626,8 +629,8 @@ def apply_role_to_container(role, container_id, service_name, engine, vars={},
 
 
 @conductor_only
-def conductorcmd_build(engine_name, project_name, services, cache=True,
-                       local_python=False, ansible_options='', debug=False, **kwargs):
+def conductorcmd_build(engine_name, project_name, services, cache=True, local_python=False,
+                       ansible_options='', debug=False, config_vars=None, **kwargs):
     engine = load_engine(['BUILD'], engine_name, project_name, services, **kwargs)
     logger.info(u'%s integration engine loaded. Build starting.',
         engine.display_name, project=project_name)
@@ -736,7 +739,7 @@ def conductorcmd_build(engine_name, project_name, services, cache=True,
                 logger.debug('Container running', id=container_id)
 
                 rc = apply_role_to_container(role, container_id, service_name,
-                                             engine, vars=dict(service['defaults']),
+                                             engine, vars=config_vars,
                                              local_python=local_python,
                                              ansible_options=ansible_options,
                                              debug=debug)
