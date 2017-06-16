@@ -262,7 +262,7 @@ class AnsibleContainerConductorConfig(Mapping):
             templar = self._templar
         processed = yaml.compat.ordereddict()
         for key, value in section_value.items():
-            if isinstance(value, basestring):
+            if isinstance(value, string_types):
                 # strings can be templated
                 processed[key] = templar.template(value)
                 if isinstance(processed[key], AnsibleUnsafeText):
