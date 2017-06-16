@@ -313,7 +313,10 @@ class K8sBaseDeploy(object):
                 elif key == 'volumes':
                     vols, vol_mounts = self.get_k8s_volumes(value)
                     if vol_mounts:
-                        container['volumeMounts'] = vol_mounts
+                        if 'volumeMounts' not in container:
+                            container['volumeMounts'] = []
+
+                        container['volumeMounts'].extend(vol_mounts)
                     if vols:
                         volumes += vols
                 elif key == 'secrets':

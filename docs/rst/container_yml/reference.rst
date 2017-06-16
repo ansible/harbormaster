@@ -434,7 +434,7 @@ which means:
 secrets
 .......
 
-Supported by the ``deploy`` and ``run`` commands. The secrets directive can be used to associate a secret with a container, mounting it as
+Supported by the ``deploy`` command. The secrets directive can be used to associate a secret with a container, mounting it as
 a volume. Use the top-level :ref:`secrets directive <secrets_top>` to define a secret. To set cloud specific options, view :ref:`k8s_openshift_options`.
 
 .. _volumes_from:
@@ -739,7 +739,7 @@ Secrets are included in K8s and OpenShift deployments as volume mounts to a cont
         secrets:
         - apache-certs
 
-For each secret, a ``volumeMount`` object is generated. The above will generate the following during ``deploy`` and ``run``:
+For each secret, a ``volumeMount`` object is generated. The above will generate the following during ``deploy``:
 
 .. code-block:: yaml
 
@@ -774,7 +774,7 @@ The ``mountPath`` is by default set to the standard Docker location of ``/run/se
           state: present
           secrets:
             - name: apache-certs
-              mount_path: /etc/httpd/pki/apache-certs
+              mount_path: /etc/pki/httpd/apache-certs
               read_only: false
 
 This will result in:
@@ -788,10 +788,40 @@ This will result in:
          - name: web
            volumeMounts:
              - name: apache-certs
-               mountPath: /etc/httpd/pki/apache-certs
+               mountPath: /etc/pki/httpd/apache-certs
                readOnly: false
 
 .. _top-volumes:
+
+The location of individual items within a secret can be configured within ``k8s`` and ``openshift`` environments. If for example, you had a top level secret that contained multiple certificates or private keys they could be placed on the file system in different locations:
+
+.. code-block:: yaml
+
+    services:
+      web:
+        from: centos:7
+        entrypoint: ['/usr/bin/entrypoint.sh']
+        working_dir: /
+        user: apache
+        command: [/usr/bin/dumb-init, httpd, -DFOREGROUND]
+        ports:
+        - 8000:8080
+        - 4443:8443
+        secrets:
+        - apache-certs
+        openshift:
+          state: present
+          secrets:
+            - name: apache-certs
+              mount_path: /etc/pki/httpd/apache-certs
+              read_only: false
+              items:
+                - key: ca.key
+                  path: private/ca.key
+                - key: ca.crt
+                  path: certs/ca.crt
+
+This will result in ``ca.key`` being mounted at ``/etc/pki/httpd/apache-certs/private/ca.key`` for example.
 
 Volumes
 ```````
@@ -875,8 +905,7 @@ requested_storage        The amount of storage being requested. Defaults to 1Gi.
 Secrets
 ```````
 
-For Docker, the service level ``secrets`` directive works as expected. The top-level ``secrets`` directive, however, has been modified slightly. The following example
-``container.yml`` shows the service level ``secrets`` directive, and the new top-level ``secrets`` format:
+The following example ``container.yml`` shows the service level ``secrets`` directive, and the new top-level ``secrets`` format:
 
 .. code-block:: yaml
 
@@ -904,24 +933,20 @@ For Docker, the service level ``secrets`` directive works as expected. The top-l
           force: false
           type: Generic
           data:
-            username: admin
-            password:
-              type: literal
-              value: mypassword
+            - name: username
+              literal: admin
+            - name: password
+              literal: mypassword
       apache-certs:
         openshift:
           state: present
           force: false
           type: Generic
           data:
-            apache-cert:
-              type: file
-              value: "{{ APACHE_CERT_PATH }}"
-            apache-key:
-              type: file
-              value: "certs/private/apache.key"
-
-For additional information about Docker secrets see Docker's `secrets configuration reference <https://docs.docker.com/compose/compose-file/#volume-configuration-reference>`_.
+            - name: apache-cert:
+              file: "{{ APACHE_CERT_PATH }}"
+            - name: apache-key
+              file: "certs/private/apache.key"
 
 
 For ``openshift`` and ``k8s``, the following options are available:
@@ -929,9 +954,13 @@ For ``openshift`` and ``k8s``, the following options are available:
 ======================== =============================================================================================================
 Directive                Definition
 ======================== =============================================================================================================
-type                     Specify secret type, the most common is generic.
+file                     Specifies whether to pull the secret from a file. In the case where the file is a directory, all files in the
+                         directory are turned into secrets based off of their file names.
+literal                  A secret that is the literal value specified within container.yml or a variable.
+name                     The name of the secret. This only applies to individual files and literals.
 data                     The actual secrets which can specified as either a type of file or literal. A file type can point to a single
-                         file or directory of files. The name for each data entry is assumed to be the key label on the object.
+                         file or directory of files.
+type                     The type of the secret to create. See ``k8s`` documentation for valid types.
 ======================== =============================================================================================================
 
 
