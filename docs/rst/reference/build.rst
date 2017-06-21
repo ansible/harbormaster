@@ -72,3 +72,37 @@ Ansible ordinarily connects to hosts it is managing via the SSH protocol. Ansibl
 * The `become` methods do not work with Ansible Container, as `su` is disallowed in the Docker connection plugin (see `#16226 <https://github.com/ansible/ansible/pull/16226>`_), and `sudo` requires a TTY. Instead, use the `remote_user` parameter.
 
 Also, remember that the ``ansible-playbook`` executable runs on your Conductor container, not your local host, and thus operates in the filesystem and network context of the build container.
+
+If you run into the following error during build, you are likely using overlay or overlay2 docker storage backend.
+
+.. code-block:: bash
+
+    Traceback (most recent call last):
+      File "/usr/lib/python2.7/site-packages/pip/basecommand.py", line 215, in main
+        status = self.run(options, args)
+      File "/usr/lib/python2.7/site-packages/pip/commands/install.py", line 342, in run
+        prefix=options.prefix_path,
+      File "/usr/lib/python2.7/site-packages/pip/req/req_set.py", line 778, in install
+        requirement.uninstall(auto_confirm=True)
+      File "/usr/lib/python2.7/site-packages/pip/req/req_install.py", line 754, in uninstall
+        paths_to_remove.remove(auto_confirm)
+      File "/usr/lib/python2.7/site-packages/pip/req/req_uninstall.py", line 115, in remove
+        renames(path, new_path)
+      File "/usr/lib/python2.7/site-packages/pip/utils/__init__.py", line 267, in renames
+        shutil.move(old, new)
+      File "/usr/lib64/python2.7/shutil.py", line 299, in move
+        rmtree(src)
+      File "/usr/lib64/python2.7/shutil.py", line 256, in rmtree
+        onerror(os.rmdir, path, sys.exc_info())
+      File "/usr/lib64/python2.7/shutil.py", line 254, in rmtree
+        os.rmdir(path)
+    OSError: [Errno 39] Directory not empty: '/usr/lib/python2.7/site-packages/chardet'
+
+Unfortunately, there is `a bug <https://github.com/moby/moby/issues/12327>`_ present in pip which prevents installation of different versions.
+
+You can resolve this issue by switching to a different graph backend, e.g. `devicemapper`.
+
+.. code-lbock:: bash
+
+    $ docker info | grep Storage
+    Storage Driver: devicemapper
