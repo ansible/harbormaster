@@ -65,13 +65,8 @@ services:
 secrets:
   # Each secret key is associated to a vault variable
   mysql:
-    docker:
-        username: db_username   # name of variable defined in vault
-        password: db_password
-    
-    openshift:
-        username: db_username
-        password: db_password
+    username: db_username   # variable defined in vault
+    password: db_password
 ```
 
 
