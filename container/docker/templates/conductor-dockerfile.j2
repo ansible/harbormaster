@@ -19,7 +19,7 @@ RUN yum -y update-minimal --disablerepo "*" \
 		   https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && \
     yum -y install --disablerepo "*" \
                    --enablerepo epel,rhel-7-server-rpms,rhel-7-server-optional-rpms \
-	           make gcc git python-devel rsync libffi-devel openssl-devel && \
+	           make gcc git python-devel curl rsync libffi-devel openssl-devel && \
     yum clean all
 {% elif distro in ["debian", "ubuntu"] %}
 RUN apt-get update -y && \
