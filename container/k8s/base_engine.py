@@ -188,6 +188,7 @@ class K8sBaseEngine(DockerEngine):
                                                'Valid tags include: start, stop, restart, destroy', indent=4)
         play['tasks'].append(self.deploy.get_namespace_task(state='present', tags=['start']))
         play['tasks'].append(self.deploy.get_namespace_task(state='absent', tags=['destroy']))
+        play['tasks'].extend(self.deploy.get_secret_tasks(tags=['start']))
         play['tasks'].extend(self.deploy.get_service_tasks(tags=['start']))
         play['tasks'].extend(self.deploy.get_deployment_tasks(engine_state='stop', tags=['stop', 'restart']))
         play['tasks'].extend(self.deploy.get_deployment_tasks(tags=['start', 'restart']))

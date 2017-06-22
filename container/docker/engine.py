@@ -107,7 +107,7 @@ class Engine(BaseEngine):
         'domainname', 'hostname', 'ipc', 'mac_address', 'mem_limit',
         'memswap_limit', 'mem_swappiness', 'mem_reservation', 'oom_score_adj',
         'privileged', 'read_only', 'restart', 'shm_size', 'stdin_open', 'tty',
-        'user', 'working_dir',
+        'user', 'working_dir', 'secrets',
     )
     display_name = u'Docker\u2122 daemon'
 
