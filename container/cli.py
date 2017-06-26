@@ -203,6 +203,10 @@ class HostCommand(object):
         return
 
     def subcmd_push_parser(self, parser, subparser):
+        subparser.add_argument('--roles-path', action='store', default=None,
+                               help=u'Specify a local path containing roles you '
+                                    u'used during the build process.')
+
         self.subcmd_common_parsers(parser, subparser, 'push')
 
     def subcmd_version_parser(self, parser, subparser):
