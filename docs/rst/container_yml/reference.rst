@@ -81,8 +81,7 @@ The following is a simple example of a ``settings`` section found in a ``contain
 
     version: '2'
     settings:
-      conductor:
-        base: 'ubuntu:xenial'
+      conductor_base: 'ubuntu:xenial'
       project_name: myproject
 
       k8s_namespace:
