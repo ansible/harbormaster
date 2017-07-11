@@ -154,14 +154,7 @@ class K8sBaseEngine(DockerEngine):
                             u"`ansible-container build`?".format(service_name)
                         )
                     image_tag = tag or self.get_build_stamp_for_image(image_id)
-                    if repository_prefix:
-                        image_name = "{}-{}".format(self.repository_prefix, service_name)
-                    elif repository_prefix is None:
-                        image_name = "{}-{}".format(self.project_name, service_name)
-                    elif repository_prefix == '':
-                        image_name = service_name
-                    repository = "{}/{}".format(namespace, image_name)
-                    image_name = "{}:{}".format(repository, image_tag)
+                    image_name = "{}-{}:{}".format(repository_prefix or self.project_name, service_name, image_tag)
                     pull_url = url if not pull_from_url else pull_from_url
                     self.services[service_name][u'image'] = "{}/{}/{}".format(pull_url.rstrip('/'), namespace,
                                                                               image_name)
