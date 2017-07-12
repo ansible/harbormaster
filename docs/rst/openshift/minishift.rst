@@ -13,7 +13,7 @@ Use the `minishift-up-role <https://galaxy.ansible.com/chouseknecht/minishift-up
 Specficially, the role performs the following tasks:
 
 - Downloads and installs the latest Minishift
-- Downloads and installs the OpenShift client
+- Copies the ``oc`` client to ``/usr/local/bin``
 - Installs the Docker Machine driver
 - Creates a Minishift instance 
 - Grants cluster admin to the *developer* account
@@ -166,10 +166,10 @@ After installing Docker Engine on a Fedora or RHEL platform, modify ``/etc/sysco
         DOCKER_CERT_PATH=/etc/docker
     fi
 
-Set the API version
-```````````````````
+Setting the API version
+```````````````````````
 
-After running ``eval $(minishift docker-env)`` to set your environment to use the Minishift VM's Docker daemon, you'll likely receive an API match error the first time you run a Docker command. For example:
+After running ``eval $(minishift docker-env)`` to set your environment to use the Minishift VM's Docker daemon, you may receive an API match error the first time you run a Docker command. For example:
 
 .. code-block:: bash
     
@@ -187,4 +187,12 @@ To fix the error, reset the *DOCKER_API_VERSION* environment variable to match t
     
     # Set the API version
     $ export DOCKER_API_VERSION=1.22
+
+Enable Pushing images to Minishift
+``````````````````````````````````
+
+If you plan to build images using a Docker daemon external to Minishift, and then need to push them to the Minishift registry, you can reference the registry using ``https://local.openshift``. When you executed the role, an entry for ``local.openshift`` was added to your ``/etc/hosts`` file, and a route was created to expose the registry. To successfully access the registry with this URL, you'll need to add ``local.openshift`` and ``172.30.0.0/16`` to the list of insecure registries passed to the external daemon at startup via the ``--insecure-registry`` option.
+
+
+
 
