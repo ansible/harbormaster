@@ -163,8 +163,7 @@ class K8sBaseEngine(DockerEngine):
                     repository = "{}/{}".format(namespace, image_name)
                     image_name = "{}:{}".format(repository, image_tag)
                     pull_url = url if not pull_from_url else pull_from_url
-                    self.services[service_name][u'image'] = "{}/{}/{}".format(pull_url.rstrip('/'), namespace,
-                                                                              image_name)
+                    self.services[service_name][u'image'] = "{}/{}".format(pull_url.rstrip('/'), image_name)
                 else:
                     # We're using a local image, so check that the image was built
                     image = self.get_latest_image_for_service(service_name)
