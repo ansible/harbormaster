@@ -40,6 +40,7 @@ class BaseEngine(object):
         self.devel = devel
         self.selinux = selinux
         self.volumes = kwargs.pop('volume_data', None)
+        self.secrets = kwargs.pop('secrets', None)
 
     @property
     def display_name(self):

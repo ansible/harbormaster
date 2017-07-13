@@ -1,4 +1,4 @@
-# Adding Secrets and Ansible Vault Support 
+# Adding Secrets and Ansible Vault Support
 
 ## Objectives
 
@@ -14,7 +14,7 @@
 ## Using a vault file
 
 A vault file will only be decrypted within the Conductor container, and the decryption will be handled by Ansible. Specifically, decryption will occur by passing vault files and credentials to `ansible-playbook`.
- 
+
 The decrypted contents of a vault will only be available at playbook runtime. They will not be available within ``container.yml``.
 
 Consider the following vault file:
@@ -55,13 +55,13 @@ The only reference that will be supported is in the top-level `secrets` directiv
 version: '2'
 services:
   db:
-    command: ['/start-db.sh'] 
+    command: ['/start-db.sh']
     secrets:
       mysql:
-        docker: 
+        docker:
         - mysql_uername
         - mysq_password
-    
+
 secrets:
   # Each secret key is associated to a vault variable
   mysql:
@@ -70,22 +70,22 @@ secrets:
 ```
 
 
-### Specifying vault files and passwords 
+### Specifying vault files and passwords
 
 The following CLI options will be added to support vault files:
 
 --vault-file
 > Accepts a file path to a vault.
- 
+
 --vault-password-file
-> Accepts a file path to a vault password file. 
+> Accepts a file path to a vault password file.
 
 --ask-vault-pass
-> Will prompt the user for a password. 
+> Will prompt the user for a password.
 
-If no password is specified using the command line options, the process will check for ANSIBLE_VAULT_PASSWORD_FILE in the environment, and if found, attempt to use the file it points to. 
+If no password is specified using the command line options, the process will check for ANSIBLE_VAULT_PASSWORD_FILE in the environment, and if found, attempt to use the file it points to.
 
-The actual vault will be mounted to the conductor. If there is a password file, it too will be mounted to the conductor. If the user is prompted for a password, the entered value will be passed to the conductor as part of the base64 encoded command parameters. 
+The actual vault will be mounted to the conductor. If there is a password file, it too will be mounted to the conductor. If the user is prompted for a password, the entered value will be passed to the conductor as part of the base64 encoded command parameters.
 
 ### Specifying vault files via container.yml
 
@@ -117,7 +117,7 @@ Here's how to create and use a secret in Docker:
 
 ```bash
 # Create a secret
-$ echo "opensesame" | docker secret create redis_password - 
+$ echo "opensesame" | docker secret create redis_password -
 
 # Grant a service access to the secret
 $ docker service  create --name="redis" --secret="redis_password" redis:alpine
@@ -134,10 +134,10 @@ services:
     ...
     secrets:
     - redis_password
-    
+
 secrets
   redis_password:
-    external: true     # Set 'external: true', if the secret was previously created using `docker secret` 
+    external: true     # Set 'external: true', if the secret was previously created using `docker secret`
 ```
 
 Or, alternatively:
@@ -149,7 +149,7 @@ services:
     ...
     secrets:
     - redis_password
-    
+
 secrets
   redis_password:
     file: ./redis-password.txt   # The secret does not yet exist. It will be created by reading the password from a non-encrypted file
@@ -176,7 +176,7 @@ services:
 > External secrets, or those created using the `docker secret` directive, fit the desired pattern, as they can easily be seeded from a vault. However, there is not currently an Ansible module for interacting with Docker's secret API. The `command` or `shell` module can be used initially, but longer term a module will be needed.
 
 
-### Kubernetes and secrets 
+### Kubernetes and secrets
 
 For context, the following summarizes how secrets are handled by K8s.
 
@@ -192,9 +192,9 @@ data:
   username: YWRtaW4=
   password: MWYyZDFlMmU2N2Rm
 ```
- 
-The values for `username` and `password` in the above are base64 encoded. It's expected that the user will provide the values already encoded. 
- 
+
+The values for `username` and `password` in the above are base64 encoded. It's expected that the user will provide the values already encoded.
+
 Use the secret in a pod by creating a volume, and then creating a volumeMount that mounts the volume to a container. The following configuration file demonstrates:
 
 ```yaml
@@ -276,8 +276,8 @@ spec:
 The following describes an approach to representing secrets in `container.yml`. It attempts to cover all of the options and variations required by each engine.
 
 ### Service level secrets
- 
-At the service level, we need the ability to specify engine specific attributes that control how a secret manifests in a container. For example, in the case of Docker there is a short form and long form for specifying a secret. In the case of K8s, a secret can be mounted as a volume, or it can be surfaced as an environment variable, and each option brings a set of attributes that users will want to set. 
+
+At the service level, we need the ability to specify engine specific attributes that control how a secret manifests in a container. For example, in the case of Docker there is a short form and long form for specifying a secret. In the case of K8s, a secret can be mounted as a volume, or it can be surfaced as an environment variable, and each option brings a set of attributes that users will want to set.
 
 The following shows an approach that provides maximum flexibility at the service level:
 
@@ -289,7 +289,7 @@ Here's the vault file:
 web_password: mysql
 ```
 
-And, here's the `container.yml`: 
+And, here's the `container.yml`:
 
 ```yaml
 version: '2'
@@ -302,55 +302,57 @@ services:
   web:
     command: []
     ports: []
-    
+
     secrets:
-    
+
       web_secret:  # the source of the secret, defined in top-level secrets
-        
+
         docker:
           - web_secret_password  # Short form
-          
+
           - source: web_secret_password   # Or, alternatively, the long form
             target: web_secret
             uid: '103'
             gid: '103'
             mode: 0440
-            
+
         k8s:
           - mount_path: /etc/foo  # mount as a volume
+            name: foo-secrets # Names the volume to match it to the volumeMount
             read_only: true
-        
-          # Or, alternatively... 
-        
-          - mount_path: /etc/foo  # mount as volume, using `items` to pick specific keys
+
+          # Or, alternatively...
+
+          - mount_path: /etc/foo  # mount as volume, using `items` to pick specific keys and name the volume after the secret 'web_secret'
             read_only: true
             items:
               - key: password
                 path: my-group/password
-          
+
           # Use as environment variable
           - env_variable: WEB_PASSWORD
             key: password
-                
+
         openshift:
           - mount_path: /etc/foo  # mount as a volume
+            name: foo-secrets # Names the volume to match it to the volumeMount
             read_only: true
-        
-          # Or, alternatively... 
-        
-          - mount_path: /etc/foo  # mount as volume, using `items` to pick specific keys
+
+          # Or, alternatively...
+
+          - mount_path: /etc/foo  # mount as volume, using `items` to pick specific keys and name the volume after the secret 'web_secret'
             read_only: true
             items:
               - key: password
                 path: my-group/password
-          
+
           # Use as environment variable
           - env_variable: WEB_PASSWORD
             key: password
-        
+
 secrets:
   web_secret:
-    password: web_password   # variable defined in vault   
+    password: web_password   # variable defined in vault
 ```
 
 ### Top-level secrets
@@ -383,12 +385,12 @@ The top-level directive, as demonstrated above, serves only to map key names to 
 
 ## Managing secrets
 
-### Docker 
+### Docker
 
-The Docker engine will combine the secret name with the key name, separated by '_' to create the name of the Docker secret object. For example, in the above, `web_secret` has a `password` key, so the actual Docker secret to be created is `web_secret_password`. Or, in the case of `mysql`, there will be two secrets created: `mysql_username` and `mysql_password`. 
+The Docker engine will combine the secret name with the key name, separated by '_' to create the name of the Docker secret object. For example, in the above, `web_secret` has a `password` key, so the actual Docker secret to be created is `web_secret_password`. Or, in the case of `mysql`, there will be two secrets created: `mysql_username` and `mysql_password`.
 
 All secrets will be treated as `external: true` when the `run` or `deploy` playbook is generated. That means that the first task(s) in the playbook will ensure that the secret(s) exist.
- 
+
 To create and manage Docker secrets we'll need to create an Ansible module for managing secrets. In the interim we likely can use the command module to execute `docker secret` commands.
 
 ### K8s and OpenShift
@@ -407,7 +409,7 @@ Any vault files will be added to the `var_files` directive on the play. At the t
 For example, given the `container.yml` and vault above, the playbook generated by the Docker engine would look like the following:
 
 ```yml
-... 
+...
 var_files:
   - vault.yml
 
@@ -419,7 +421,7 @@ tasks:
 The K8s and OpenShift engines will follow the same pattern. Tasks for creating secrets will be added prior to tasks that create deployments. And for tasks that manage secrets, no secret values will be written, but instead the template variable string will be written, including the `base64` filter. The following demonstrates:
 
 ```yml
-... 
+...
 var_files:
   - vault.yml
 

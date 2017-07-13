@@ -133,7 +133,7 @@ class K8sBaseEngine(DockerEngine):
 
     @conductor_only
     def generate_orchestration_playbook(self, url=None, namespace=None, settings=None, repository_prefix=None,
-                                        pull_from_url=None, tag=None, **kwargs):
+                                        pull_from_url=None, tag=None, vault_files=None, **kwargs):
         """
         Generate an Ansible playbook to orchestrate services.
         :param url: registry URL where images were pushed.
@@ -183,10 +183,12 @@ class K8sBaseEngine(DockerEngine):
         play['gather_facts'] = 'no'
         play['connection'] = 'local'
         play['roles'] = CommentedSeq()
+        play['vars_files'] = CommentedSeq()
         play['tasks'] = CommentedSeq()
         role = CommentedMap([
             ('role', 'ansible.kubernetes-modules')
         ])
+        play['vars_files'].extend(vault_files)
         play['roles'].append(role)
         play.yaml_set_comment_before_after_key(
             'roles', before='Include Ansible Kubernetes and OpenShift modules', indent=4)
@@ -194,6 +196,7 @@ class K8sBaseEngine(DockerEngine):
                                                'Valid tags include: start, stop, restart, destroy', indent=4)
         play['tasks'].append(self.deploy.get_namespace_task(state='present', tags=['start']))
         play['tasks'].append(self.deploy.get_namespace_task(state='absent', tags=['destroy']))
+        play['tasks'].extend(self.deploy.get_secret_tasks(tags=['start']))
         play['tasks'].extend(self.deploy.get_service_tasks(tags=['start']))
         play['tasks'].extend(self.deploy.get_deployment_tasks(engine_state='stop', tags=['stop', 'restart']))
         play['tasks'].extend(self.deploy.get_deployment_tasks(tags=['start', 'restart']))

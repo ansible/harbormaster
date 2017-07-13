@@ -27,7 +27,7 @@ class K8sBaseDeploy(object):
     DEFAULT_API_VERSION = 'v1'
     CONFIG_KEY = 'k8s'
 
-    def __init__(self, services=None, project_name=None, volumes=None, auth=None, namespace_name=None, 
+    def __init__(self, services=None, project_name=None, volumes=None, secrets=None, auth=None, namespace_name=None,
                  namespace_description=None, namespace_display_name=None):
         self._services = services
         self._project_name = project_name
@@ -35,6 +35,7 @@ class K8sBaseDeploy(object):
         self._namespace_description = namespace_description
         self._namespace_display_name = namespace_display_name
         self._volumes = volumes
+        self._secrets = secrets
         self._auth = auth
 
     @property
@@ -298,7 +299,10 @@ class K8sBaseDeploy(object):
                 elif key == 'environment':
                     expanded_vars = self.expand_env_vars(value)
                     if expanded_vars:
-                        container['env'] = expanded_vars
+                        if 'env' not in container:
+                            container['env'] = []
+
+                        container['env'].extend(expanded_vars)
                 elif key in ('ports', 'expose'):
                     if not container.get('ports'):
                         container['ports'] = []
@@ -312,13 +316,40 @@ class K8sBaseDeploy(object):
                 elif key == 'volumes':
                     vols, vol_mounts = self.get_k8s_volumes(value)
                     if vol_mounts:
-                        container['volumeMounts'] = vol_mounts
+                        if 'volumeMounts' not in container:
+                            container['volumeMounts'] = []
+
+                        container['volumeMounts'].extend(vol_mounts)
                     if vols:
                         volumes += vols
+                elif key == 'secrets':
+                    for secret, secret_config in value.items():
+                        if self.CONFIG_KEY in secret_config:
+                            print('GET THOSE K*S SECRETS')
+                            vols, vol_mounts, env_variables = self.get_k8s_secrets(secret, secret_config[self.CONFIG_KEY])
+
+                            print(vols)
+                            print(vol_mounts)
+                            if vol_mounts:
+                                if 'volumeMounts' not in container:
+                                    container['volumeMounts'] = []
+
+                                container['volumeMounts'].extend(vol_mounts)
+
+                            if vols:
+                                volumes += vols
+
+                            if env_variables:
+                                if 'env' not in container:
+                                    container['env'] = []
+
+                                container['env'].extend(env_variables)
                 elif key == 'working_dir':
                     container['workingDir'] = value
                 else:
                     container[key] = value
+
+                print(container)
 
             # Translate options:
             if service.get(self.CONFIG_KEY):
@@ -491,6 +522,54 @@ class K8sBaseDeploy(object):
                         tasks.append(task)
         return tasks
 
+    def get_secret_templates(self):
+        def _secret(secret_name, secret):
+            template = CommentedMap()
+            template['force'] = secret.get('force', False)
+            template['apiVersion'] = 'v1'
+            template = CommentedMap()
+            template['apiVersion'] = self.DEFAULT_API_VERSION
+            template['kind'] = "Secret"
+            template['metadata'] = CommentedMap([
+                ('name', secret_name),
+                ('namespace', self._namespace_name)
+            ])
+            template['type'] = 'Opaque'
+            template['data'] = {}
+
+            for key, vault_variable in secret.items():
+                template['data'][key] = "{{ %s | b64encode }}" % vault_variable
+
+            return template
+
+        templates = CommentedSeq()
+        if self._secrets:
+            for secret_name, secret_config in self._secrets.items():
+                secret = _secret(secret_name, secret_config)
+                templates.append(secret)
+
+        return templates
+
+    def get_secret_tasks(self, tags=[]):
+        module_name='k8s_v1_secret'
+        tasks = CommentedSeq()
+
+        for template in self.get_secret_templates():
+            task = CommentedMap()
+            task['name'] = 'Create Secret'
+            task[module_name] = CommentedMap()
+            task[module_name]['state'] = 'present'
+            if self._auth:
+                for key in self._auth:
+                    task[module_name][key] = self._auth[key]
+            task[module_name]['force'] = template.pop('force', False)
+            task[module_name]['resource_definition'] = template
+            if tags:
+                task['tags'] = copy.copy(tags)
+            tasks.append(task)
+
+        return tasks
+
     @staticmethod
     def get_service_ports(service):
         ports = []
@@ -624,6 +703,55 @@ class K8sBaseDeploy(object):
             ))
 
         return volumes, volume_mounts
+
+    @classmethod
+    def get_k8s_secrets(cls, secret_name, secrets):
+        """ Given an array of Docker secrets return a set of secrets and a set of volumeMounts """
+        volume_mounts = []
+        volumes = []
+        environment_variables = []
+
+        for secret_config in secrets:
+            if 'mount_path' in secret_config:
+                mount_path = secret_config['mount_path']
+                read_only = True
+                volume_name = secret_name
+
+                if 'read_only' in secret_config:
+                    read_only = secret_config['read_only']
+
+                if 'name' in secret_config:
+                    volume_name = secret_config['name']
+
+                secret_volume = dict(secretName=secret_name)
+
+                if 'items' in secret_config:
+                    secret_volume['items'] = secret_config['items']
+
+                volume_mounts.append(dict(
+                    mountPath=mount_path,
+                    name=volume_name,
+                    readOnly=read_only
+                ))
+
+                volumes.append(dict(
+                    name=volume_name,
+                    secret=secret_volume
+                ))
+            elif 'env_variable' in secret_config:
+                secret_key_ref=dict(
+                    secretKeyRef=dict(
+                        name=secret_name,
+                        key=secret_config['key']
+                    )
+                )
+
+                environment_variables.append(dict(
+                    name=secret_config['env_variable'],
+                    valueFrom=secret_key_ref
+                ))
+
+        return volumes, volume_mounts, environment_variables
 
     @classmethod
     def copy_attribute(cls, target, src_key, src_value):

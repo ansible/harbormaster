@@ -169,6 +169,9 @@ class HostCommand(object):
         subparser.add_argument('--local-images', action='store_true',
                                help=u'Prevents images from being pushed to the default registry',
                                default=False, dest='local_images')
+        subparser.add_argument('--vault-file', action='store',
+                               help=u'A vault file to use to populate secrets',
+                               nargs='+', default=[], dest='vault_files')
         self.subcmd_common_parsers(parser, subparser, 'deploy')
 
     def subcmd_run_parser(self, parser, subparser):
@@ -177,6 +180,15 @@ class HostCommand(object):
                                nargs='*')
         subparser.add_argument('-d', '--detached', action='store_true',
                                help=u'Run the application in detached mode', dest='detached')
+        subparser.add_argument('--vault-file', action='store',
+                               help=u'A vault file to use to populate secrets',
+                               nargs='+', default=[], dest='vault_files')
+        subparser.add_argument('--vault-password-file', action='store',
+                               help=u'An optional file containing the vault password',
+                               dest='vault_password_file')
+        subparser.add_argument('--ask-vault-pass', action='store_true',
+                               help=u'Asks for the fault file password at run time',
+                               dest='ask_vault_pass')
         self.subcmd_common_parsers(parser, subparser, 'run')
 
 
@@ -375,6 +387,7 @@ def conductor_commandline():
         conductor_config.services,
         volume_data=conductor_config.volumes,
         repository_data=conductor_config.registries,
+        secrets=conductor_config.secrets,
         **params)
 
 

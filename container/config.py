@@ -53,12 +53,13 @@ class BaseAnsibleContainerConfig(Mapping):
     engine_list = ['docker', 'openshift', 'k8s']
 
     @container.host_only
-    def __init__(self, base_path, var_file=None, engine_name=None, project_name=None):
+    def __init__(self, base_path, var_file=None, engine_name=None, project_name=None, vault_files=None):
         self.base_path = base_path
         self.var_file = var_file
         self.engine_name = engine_name
         self.config_path = path.join(self.base_path, 'container.yml')
         self.cli_project_name = project_name
+        self.cli_vault_files = vault_files
         self.remove_engines = set(self.engine_list) - set([engine_name])
         self.set_env('prod')
 
@@ -85,6 +86,22 @@ class BaseAnsibleContainerConfig(Mapping):
         if self._config.get('settings', {}).get('conductor', {}).get('base'):
             return self._config['settings']['conductor']['base']
         return DEFAULT_CONDUCTOR_BASE
+
+    @property
+    def vault_files(self):
+        if self.cli_vault_files:
+            # Give precedence to CLI args
+            return self.cli_vault_files
+        if self._config.get('settings', {}).get('vault_files'):
+            return self._config['settings']['vault_files']
+
+    @property
+    def vault_password_file(self):
+        if self.cli_vault_password_file:
+            # Give precedence to CLI args
+            return self.cli_vault_password_file
+        if self._config.get('settings', {}).get('vault_password_file'):
+            return self._config['settings']['vault_password_file']
 
     @property
     @abstractproperty
@@ -214,7 +231,8 @@ class BaseAnsibleContainerConfig(Mapping):
         'volumes',
         'services',
         'defaults',
-        'registries'
+        'registries',
+        'secrets'
     ]
 
     OPTIONS_KUBE_WHITELIST = []
@@ -291,7 +309,7 @@ class AnsibleContainerConductorConfig(Mapping):
 
     def _process_top_level_sections(self):
         self._config['settings'] = self._config.get('settings', yaml.compat.ordereddict())
-        for section in ['volumes', 'registries']:
+        for section in ['volumes', 'registries', 'secrets']:
             logger.debug('Processing section...', section=section)
             setattr(self, section, dict(self._process_section(self._config.get(section, yaml.compat.ordereddict()))))
 
@@ -339,10 +357,11 @@ class AnsibleContainerConductorConfig(Mapping):
 
     def __len__(self):
         # volumes, registries, services, and defaults
-        return 4
+        return 5
 
     def __iter__(self):
         yield self.defaults
         yield self.registries
         yield self.volumes
         yield self.services
+        yield self.secrets
