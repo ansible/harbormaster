@@ -42,10 +42,10 @@ conductor_dir = os.path.dirname(container.__file__)
 make_temp_dir = MakeTempDir
 
 
-def get_config(base_path, var_file=None, engine_name=None, project_name=None):
+def get_config(base_path, vars_files=None, engine_name=None, project_name=None):
     mod = importlib.import_module('.%s.config' % engine_name,
                                   package='container')
-    return mod.AnsibleContainerConfig(base_path, var_file=var_file, engine_name=engine_name, project_name=project_name)
+    return mod.AnsibleContainerConfig(base_path, vars_files=vars_files, engine_name=engine_name, project_name=project_name)
 
 
 def assert_initialized(base_path):

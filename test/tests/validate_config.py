@@ -27,11 +27,11 @@ class TestAnsibleContainerConfig(unittest.TestCase):
 
     def setUp(self):
         self.project_path = os.environ['PROJECT_PATH']
-        self.var_file = os.path.join(self.project_path, 'vars.yml')
+        self.vars_files = [os.path.join(self.project_path, 'vars.yml')]
         container.ENV = 'host'
         container.config.Templar = Templar
         container.config.AnsibleUnsafeText = AnsibleUnsafeText
-        self.config = get_config(self.project_path, var_file=None, engine_name='docker')
+        self.config = get_config(self.project_path, vars_files=None, engine_name='docker')
 
     def tearDown(self):
         pass
@@ -50,7 +50,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         self.assertEqual(self.config.project_name, os.path.basename(self.project_path))
 
     def test_should_have_project_name_equal_cli(self):
-        config = get_config(self.project_path, var_file=None, engine_name='docker', project_name='foo')
+        config = get_config(self.project_path, vars_files=None, engine_name='docker', project_name='foo')
         self.assertEqual(config.project_name, 'foo')
 
     def test_should_have_project_name_equal_settings(self):
@@ -59,7 +59,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
 
     def test_should_parse_yaml_file(self):
         result = {}
-        for key, value in self.config._get_variables_from_file(self.var_file):
+        for key, value in self.config._get_variables_from_file(self.vars_files[0]):
             result[key] = value
         self.assertEqual(result['debug'], 1, 'Failed to parse devel.yml - checked debug')
         self.assertEqual(result['web_image'], "python:2.7", "Failed to parse devel.yml - web_image")
@@ -84,7 +84,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
     def test_should_give_precedence_to_env_vars(self):
         # If an environment var exists, it should get precedence.
         os.environ.update({u'AC_FOO': 'cats'})
-        self.config.cli_var_file = self.var_file
+        self.config.cli_vars_files = self.vars_files
         self.config.set_env('prod')
         container.ENV = 'conductor'
         container.utils.DataLoader = DataLoader
@@ -97,7 +97,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         # If no environment var, then var defined in var_file should get precedence.
         if os.environ.get('AC_FOO'):
             del os.environ['AC_FOO']
-        self.config.cli_var_file = self.var_file
+        self.config.cli_vars_files = self.vars_files
         self.config.set_env('prod')
         container.ENV = 'conductor'
         container.utils.DataLoader = DataLoader
@@ -121,7 +121,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
 
     def test_should_replace_pwd_in_volumes(self):
         # test that $PWD gets resolved
-        self.config.cli_var_file = self.var_file
+        self.config.cli_vars_files = self.vars_files
         self.config.set_env('prod')
         container.ENV = 'conductor'
         container.utils.DataLoader = DataLoader
@@ -134,7 +134,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
 
     def test_should_also_replace_pwd_in_volumes(self):
         # test that ${PWD} gets resolved
-        self.config.cli_var_file = self.var_file
+        self.config.cli_vars_files = self.vars_files
         self.config.set_env('prod')
         container.ENV = 'conductor'
         container.utils.DataLoader = DataLoader
@@ -146,7 +146,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
                                                        json.dumps(conductor_config.services, indent=4)))
 
     def test_should_resolve_lookup(self):
-        self.config.cli_var_file = self.var_file
+        self.config.cli_vars_files = self.vars_files
         self.config.set_env('prod')
         container.ENV = 'conductor'
         container.utils.DataLoader = DataLoader
@@ -156,7 +156,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         self.assertIn(self.project_path, conductor_config['services']['web']['environment'][0])
 
     def test_should_use_dev_overrides(self):
-        self.config.cli_var_file = self.var_file
+        self.config.cli_vars_files = self.vars_files
         self.config.set_env('dev')
         container.ENV = 'conductor'
         container.utils.DataLoader = DataLoader

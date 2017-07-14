@@ -124,10 +124,10 @@ def hostcmd_init(base_path, project=None, force=False, **kwargs):
 
 
 @host_only
-def hostcmd_build(base_path, project_name, engine_name, var_file=None,
+def hostcmd_build(base_path, project_name, engine_name, vars_files=None,
                  **kwargs):
     conductor_cache = kwargs['cache'] and kwargs['conductor_cache']
-    config = get_config(base_path, var_file=var_file, engine_name=engine_name, project_name=project_name)
+    config = get_config(base_path, vars_files=vars_files, engine_name=engine_name, project_name=project_name)
     engine_obj = load_engine(['BUILD', 'RUN'],
                              engine_name, config.project_name,
                              config['services'], **kwargs)
@@ -166,10 +166,10 @@ def hostcmd_build(base_path, project_name, engine_name, var_file=None,
         'build', dict(config), base_path, kwargs, save_container=save_container)
 
 @host_only
-def hostcmd_deploy(base_path, project_name, engine_name, var_file=None,
+def hostcmd_deploy(base_path, project_name, engine_name, vars_files=None,
                    cache=True, **kwargs):
     assert_initialized(base_path)
-    config = get_config(base_path, var_file=var_file, engine_name=engine_name, project_name=project_name)
+    config = get_config(base_path, vars_files=vars_files, engine_name=engine_name, project_name=project_name)
     local_images = kwargs.get('local_images')
     output_path = kwargs.pop('deployment_output_path', None) or config.deployment_path
 
@@ -196,11 +196,11 @@ def hostcmd_deploy(base_path, project_name, engine_name, var_file=None,
         save_container=config.get('settings', {}).get('save_conductor_container', False))
 
 @host_only
-def hostcmd_run(base_path, project_name, engine_name, var_file=None, cache=True,
+def hostcmd_run(base_path, project_name, engine_name, vars_files=None, cache=True,
                 **kwargs):
     assert_initialized(base_path)
     logger.debug('Got extra args to `run` command', arguments=kwargs)
-    config = get_config(base_path, var_file=var_file, engine_name=engine_name, project_name=project_name)
+    config = get_config(base_path, vars_files=vars_files, engine_name=engine_name, project_name=project_name)
     if not kwargs['production']:
         config.set_env('dev')
 
@@ -228,10 +228,10 @@ def hostcmd_run(base_path, project_name, engine_name, var_file=None, cache=True,
         save_container=config.get('settings', {}).get('save_conductor_container', False))
 
 @host_only
-def hostcmd_destroy(base_path, project_name, engine_name, var_file=None, cache=True, **kwargs):
+def hostcmd_destroy(base_path, project_name, engine_name, vars_files=None, cache=True, **kwargs):
     assert_initialized(base_path)
     logger.debug('Got extra args to `destroy` command', arguments=kwargs)
-    config = get_config(base_path, var_file=var_file, engine_name=engine_name, project_name=project_name)
+    config = get_config(base_path, vars_files=vars_files, engine_name=engine_name, project_name=project_name)
     if not kwargs['production']:
         config.set_env('dev')
 
@@ -255,9 +255,9 @@ def hostcmd_destroy(base_path, project_name, engine_name, var_file=None, cache=T
         save_container=config.get('settings', {}).get('save_conductor_container', False))
 
 @host_only
-def hostcmd_stop(base_path, project_name, engine_name, var_file=None, force=False, services=[],
+def hostcmd_stop(base_path, project_name, engine_name, vars_files=None, force=False, services=[],
                  **kwargs):
-    config = get_config(base_path, var_file=var_file, engine_name=engine_name, project_name=project_name)
+    config = get_config(base_path, vars_files=vars_files, engine_name=engine_name, project_name=project_name)
     if not kwargs['production']:
         config.set_env('dev')
 
@@ -280,9 +280,9 @@ def hostcmd_stop(base_path, project_name, engine_name, var_file=None, force=Fals
 
 
 @host_only
-def hostcmd_restart(base_path, project_name, engine_name, var_file=None, force=False, services=[],
+def hostcmd_restart(base_path, project_name, engine_name, vars_files=None, force=False, services=[],
                     **kwargs):
-    config = get_config(base_path, var_file=var_file, engine_name=engine_name,  project_name=project_name)
+    config = get_config(base_path, vars_files=vars_files, engine_name=engine_name,  project_name=project_name)
     if not kwargs['production']:
         config.set_env('dev')
 
@@ -304,14 +304,14 @@ def hostcmd_restart(base_path, project_name, engine_name, var_file=None, force=F
 
 
 @host_only
-def hostcmd_push(base_path, project_name, engine_name, var_file=None, **kwargs):
+def hostcmd_push(base_path, project_name, engine_name, vars_files=None, **kwargs):
     """
     Push images to a registry. Requires authenticating with the registry prior to starting
     the push. If your engine's config file does not already contain an authorization for the
     registry, pass username and/or password. If you exclude password, you will be prompted.
     """
     assert_initialized(base_path)
-    config = get_config(base_path, var_file=var_file, engine_name=engine_name, project_name=project_name)
+    config = get_config(base_path, vars_files=vars_files, engine_name=engine_name, project_name=project_name)
 
     engine_obj = load_engine(['LOGIN', 'PUSH'],
                              engine_name, config.project_name,

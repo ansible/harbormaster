@@ -250,9 +250,10 @@ class HostCommand(object):
         parser.add_argument('--project-name', '-n', action='store', dest='project_name',
                             help=u'Specify an alternate name for your project. Defaults '
                                  u'to the directory it lives in.', default=None)
-        parser.add_argument('--var-file', action='store',
-                            help=u'Path to a YAML or JSON formatted file providing variables for '
-                                 u'Jinja2 templating in container.yml.', default=None)
+        parser.add_argument('--vars-files', '--var-file', '--vars-file', action='append',
+                            help=u'One or or more YAML or JSON formatted files providing variables for '
+                                 u'Jinja2 style variable substitution in container.yml.',
+                            default=[], dest='vars_files')
         parser.add_argument('--no-selinux', action='store_false', dest='selinux',
                             help=u"Disables the 'Z' option from being set on volumes automatically "
                                  u"mounted to the build container.", default=True)
