@@ -58,25 +58,22 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         self.assertEqual(self.config.project_name, 'baz')
 
     def test_should_parse_yaml_file(self):
-        self.config.var_file = self.var_file
         result = {}
-        for key, value in self.config._get_variables_from_file():
+        for key, value in self.config._get_variables_from_file(self.var_file):
             result[key] = value
         self.assertEqual(result['debug'], 1, 'Failed to parse devel.yml - checked debug')
         self.assertEqual(result['web_image'], "python:2.7", "Failed to parse devel.yml - web_image")
 
     def test_should_parse_json_file(self):
-        self.config.var_file = os.path.join(self.project_path, 'vars.txt')
         result = {}
-        for key, value in self.config._get_variables_from_file():
+        for key, value in self.config._get_variables_from_file(os.path.join(self.project_path, 'vars.txt')):
             result[key] = value
         self.assertEqual(result['debug'], 1, 'Failed to parse devel.txt - checked debug')
         self.assertEqual(result['web_image'], "python:2.7", "Failed to parse devel.txt - web_image")
 
     def test_should_raise_file_not_found_error(self):
-        self.config.var_file = os.path.join(self.project_path, 'foo')
         with self.assertRaises(AnsibleContainerConfigException) as exc:
-             self.config._get_variables_from_file()
+             self.config._get_variables_from_file(os.path.join(self.project_path, 'foo'))
         self.assertIn('not found', exc.exception.args[0])
 
     def test_should_read_environment_vars(self):
@@ -87,7 +84,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
     def test_should_give_precedence_to_env_vars(self):
         # If an environment var exists, it should get precedence.
         os.environ.update({u'AC_FOO': 'cats'})
-        self.config.var_file = self.var_file
+        self.config.cli_var_file = self.var_file
         self.config.set_env('prod')
         container.ENV = 'conductor'
         container.utils.DataLoader = DataLoader
@@ -100,7 +97,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         # If no environment var, then var defined in var_file should get precedence.
         if os.environ.get('AC_FOO'):
             del os.environ['AC_FOO']
-        self.config.var_file = self.var_file
+        self.config.cli_var_file = self.var_file
         self.config.set_env('prod')
         container.ENV = 'conductor'
         container.utils.DataLoader = DataLoader
@@ -113,7 +110,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         # If no environment var and no var_file, then the default value should be used.
         if os.environ.get('AC_FOO'):
             del os.environ['AC_FOO']
-        self.config.var_file = None
+        self.config.cli_var_file = None
         self.config.set_env('prod')
         container.ENV = 'conductor'
         container.utils.DataLoader = DataLoader
@@ -124,7 +121,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
 
     def test_should_replace_pwd_in_volumes(self):
         # test that $PWD gets resolved
-        self.config.var_file = self.var_file
+        self.config.cli_var_file = self.var_file
         self.config.set_env('prod')
         container.ENV = 'conductor'
         container.utils.DataLoader = DataLoader
@@ -137,7 +134,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
 
     def test_should_also_replace_pwd_in_volumes(self):
         # test that ${PWD} gets resolved
-        self.config.var_file = self.var_file
+        self.config.cli_var_file = self.var_file
         self.config.set_env('prod')
         container.ENV = 'conductor'
         container.utils.DataLoader = DataLoader
@@ -149,7 +146,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
                                                        json.dumps(conductor_config.services, indent=4)))
 
     def test_should_resolve_lookup(self):
-        self.config.var_file = self.var_file
+        self.config.cli_var_file = self.var_file
         self.config.set_env('prod')
         container.ENV = 'conductor'
         container.utils.DataLoader = DataLoader
@@ -159,7 +156,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         self.assertIn(self.project_path, conductor_config['services']['web']['environment'][0])
 
     def test_should_use_dev_overrides(self):
-        self.config.var_file = self.var_file
+        self.config.cli_var_file = self.var_file
         self.config.set_env('dev')
         container.ENV = 'conductor'
         container.utils.DataLoader = DataLoader
@@ -169,7 +166,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         self.assertIn('DEBUG', conductor_config['services']['web']['environment'][0])
 
     # def test_should_resolve_filter(self):
-    #     self.config.var_file = 'devel.yml'
+    #     self.config.cli_var_file = 'devel.yml'
     #     self.config.set_env('dev')
     #     self.assertEqual(self.config._config['services']['web']['environment'][2], 'VERSION={0}'.format(__version__))
 
