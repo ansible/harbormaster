@@ -38,6 +38,7 @@ try:
     from docker.errors import DockerException
     from docker.api.container import ContainerApiMixin
     from docker.models.containers import RUN_HOST_CONFIG_KWARGS
+    from docker.constants import DEFAULT_TIMEOUT_SECONDS
 except ImportError:
     raise ImportError(
         u'You must install Ansible Container with Docker(tm) support. '
@@ -83,6 +84,23 @@ def log_runs(fn):
         return fn(self, *args, **kwargs)
     return __wrapped__
 
+def get_timeout():
+    timeout = DEFAULT_TIMEOUT_SECONDS
+    source = None
+    if os.environ.get('DOCKER_CLIENT_TIMEOUT'):
+        timeout_value = os.environ.get('DOCKER_CLIENT_TIMEOUT')
+        source = 'DOCKER_CLIENT_TIMEOUT'
+    elif os.environ.get('COMPOSE_HTTP_TIMEOUT'):
+        timeout_value = os.environ.get('COMPOSE_HTTP_TIMEOUT')
+        source = 'COMPOSE_HTTP_TIMEOUT'
+    if source:
+        try:
+            timeout = int(timeout_value)
+        except ValueError:
+            raise Exception("Error: {0} set to '{1}'. Expected an integer.".format(source, timeout_value))
+    logger.debug("Setting Docker client timeout to {0}".format(timeout))
+    return timeout
+
 
 class Engine(BaseEngine):
 
@@ -120,7 +138,8 @@ class Engine(BaseEngine):
     def client(self):
         if not self._client:
             try:
-                self._client = docker.from_env(version='auto')
+                timeout = get_timeout()
+                self._client = docker.from_env(version='auto', timeout=timeout)
             except DockerException as exc:
                 if 'Connection refused' in str(exc):
                     raise exceptions.AnsibleContainerDockerConnectionRefused()
