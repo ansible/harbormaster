@@ -53,9 +53,9 @@ class BaseAnsibleContainerConfig(Mapping):
     engine_list = ['docker', 'openshift', 'k8s']
 
     @container.host_only
-    def __init__(self, base_path, var_file=None, engine_name=None, project_name=None):
+    def __init__(self, base_path, vars_files=None, engine_name=None, project_name=None):
         self.base_path = base_path
-        self.var_file = var_file
+        self.cli_vars_files = vars_files
         self.engine_name = engine_name
         self.config_path = path.join(self.base_path, 'container.yml')
         self.cli_project_name = project_name
@@ -155,8 +155,12 @@ class BaseAnsibleContainerConfig(Mapping):
             tmp_defaults.update(copy.deepcopy(config['defaults']), relax=True)
             config['defaults'] = tmp_defaults
         defaults = config.setdefault('defaults', yaml.compat.ordereddict())
-        if self.var_file:
-            defaults.update(self._get_variables_from_file(), relax=True)
+
+        vars_files = self.cli_vars_files or config.get('settings', {}).get('vars_files')
+        if vars_files:
+            for var_file in vars_files:
+                defaults.update(self._get_variables_from_file(var_file=var_file), relax=True)
+
         logger.debug('The default type is', defaults=str(type(defaults)), config=str(type(config)))
         if PY2 and type(defaults) == yaml.compat.ordereddict:
             defaults.update(self._get_environment_variables(), relax=True)
@@ -181,19 +185,19 @@ class BaseAnsibleContainerConfig(Mapping):
         logger.debug(u'Read environment variables', env_vars=env_vars)
         return env_vars
 
-    def _get_variables_from_file(self):
+    def _get_variables_from_file(self, var_file):
         """
         Looks for file relative to base_path. If not found, checks relative to base_path/ansible.
         If file extension is .yml | .yaml, parses as YAML, otherwise parses as JSON.
 
         :return: ruamel.yaml.compat.ordereddict
         """
-        abspath = path.abspath(self.var_file)
+        abspath = path.abspath(var_file)
         if not path.exists(abspath):
             dirname, filename = path.split(abspath)
             raise AnsibleContainerConfigException(
-                u'Variables file "%s" not found. (I looked in "%s" for it.)' % (
-                    filename, dirname))
+                u'Variables file "%s" not found. (I looked in "%s" for it.)' % (filename, dirname)
+            )
         logger.debug("Use variable file: %s", abspath, file=abspath)
 
         if path.splitext(abspath)[-1].lower().endswith(('yml', 'yaml')):

@@ -70,6 +70,8 @@ deployment_output_path The deployment_output_path is mounted to the Conductor co
 
 :ref:`k8s_namespace`   When deploying to a K8s or OpenShift cluster, set the namespace, or
                        project name in which to deploy the application
+vars_files             List of variable files to use for Jinja2 template rendering while
+                       parsing ``container.yml``
 ====================== =====================================================================
 
 Example
