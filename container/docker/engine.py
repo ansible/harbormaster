@@ -501,9 +501,10 @@ class Engine(BaseEngine):
 
     @conductor_only
     def pull_image_by_tag(self, image):
-        repo, tag = image.split(':')
-        if not tag:
-            tag = 'latest'
+        repo = image
+        tag = 'latest'
+        if ':' in image:
+            repo, tag = image.split(':')
         logger.debug("Pulling image {}:{}".format(repo, tag))
         try:
             image_id = self.client.images.pull(repo, tag=tag)
