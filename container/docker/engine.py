@@ -528,7 +528,7 @@ class Engine(BaseEngine):
         try:
             image_id = self.client.images.pull(repo, tag=tag)
         except docker_errors.APIError as exc:
-            raise exceptions.AnsibleContainerException("Failed to pull {}: {}".format(image_name, str(exc)))
+            raise exceptions.AnsibleContainerException("Failed to pull {}: {}".format(image, str(exc)))
         return image_id
 
     @log_runs
