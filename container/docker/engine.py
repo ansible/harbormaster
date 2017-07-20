@@ -732,7 +732,7 @@ class Engine(BaseEngine):
             for filename in ['ansible.cfg', 'ansible-requirements.txt',
                              'requirements.yml']:
                 file_path = os.path.join(source_dir, filename)
-                if os.path.exists(filename):
+                if os.path.exists(file_path):
                     tarball.add(file_path,
                                 arcname=os.path.join('build-src', filename))
             # Make an empty file just to make sure the build-src dir has something

@@ -29,8 +29,6 @@ if container.ENV == 'conductor':
 from .exceptions import AnsibleContainerConfigException, AnsibleContainerNotInitializedException
 from .utils import get_metadata_from_role, get_defaults_from_role
 
-# TODO: Actually do some schema validation
-
 # jag: Division of labor between outer utility and conductor:
 #
 # Out here, we will parse the container.yml and process AC_* environment
@@ -227,10 +225,19 @@ class BaseAnsibleContainerConfig(Mapping):
 
     SUPPORTED_COMPOSE_VERSIONS = ['1', '2']
 
+    REQUIRED_TOP_LEVEL_KEYS = ['services']
+
+    # TODO: Add more schema validation
+
     def _validate_config(self, config):
+        for key in self.REQUIRED_TOP_LEVEL_KEYS:
+            if not config.get(key):
+                raise AnsibleContainerConfigException("Missing expected key '{}'".format(key))
+
         for top_level in config:
             if top_level not in self.TOP_LEVEL_WHITELIST:
                 raise AnsibleContainerConfigException("invalid key '{0}'".format(top_level))
+
             if top_level == 'version':
                 if config['version'] not in self.SUPPORTED_COMPOSE_VERSIONS:
                     raise AnsibleContainerConfigException("requested version is not supported")
