@@ -41,7 +41,7 @@ try:
 except ImportError:
     raise ImportError(
         u'You must install Ansible Container with Docker(tm) support. '
-        u'Try:\npip install ansible-container==%s[docker]' % (
+        u'Try:\npip install ansible-container[docker]==%s' % (
         container.__version__
     ))
 
