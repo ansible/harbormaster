@@ -42,7 +42,7 @@ try:
 except ImportError:
     raise ImportError(
         u'You must install Ansible Container with Docker(tm) support. '
-        u'Try:\npip install ansible-container==%s[docker]' % (
+        u'Try:\npip install ansible-container[docker]==%s' % (
         container.__version__
     ))
 
@@ -751,7 +751,7 @@ class Engine(BaseEngine):
             for filename in ['ansible.cfg', 'ansible-requirements.txt',
                              'requirements.yml']:
                 file_path = os.path.join(source_dir, filename)
-                if os.path.exists(filename):
+                if os.path.exists(file_path):
                     tarball.add(file_path,
                                 arcname=os.path.join('build-src', filename))
             # Make an empty file just to make sure the build-src dir has something

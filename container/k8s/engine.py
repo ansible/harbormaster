@@ -14,7 +14,7 @@ try:
 except ImportError:
     raise ImportError(
         u'You must install Ansible Container with Kubernetes support. '
-        u'Try:\npip install ansible-container==%s[k8s]' % (
+        u'Try:\npip install ansible-container[k8s]==%s' % (
         container.__version__
     ))
 
