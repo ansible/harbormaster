@@ -723,7 +723,7 @@ def conductorcmd_build(engine_name, project_name, services, cache=True, local_py
                         pass
 
                     # Use the conductor's Python runtime
-                    run_kwargs['volumes'] = {engine.get_runtime_volume_id('/usr'): {'bind': '/_usr', 'mode': 'ro'}}
+                    run_kwargs['volumes'][engine.get_runtime_volume_id('/usr')] = {'bind': '/_usr', 'mode': 'ro'}
                     try:
                         run_kwargs['volumes'][engine.get_runtime_volume_id('/lib')] = {'bind': '/_lib', 'mode': 'ro'}
                         extra_library_paths += ":/_lib"

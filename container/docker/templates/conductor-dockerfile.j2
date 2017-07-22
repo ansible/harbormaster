@@ -9,6 +9,7 @@ RUN dnf update -y && \
 RUN yum update -y && \
     yum install -y epel-release && \
     yum install -y make gcc git python-devel curl rsync libffi-devel openssl-devel && \
+    yum remove -y python-chardet && \
     yum clean all
 {% elif "rhel" in distro %}
 RUN yum -y update-minimal --disablerepo "*" \
@@ -52,6 +53,13 @@ COPY /build-src /_ansible/build
 RUN ( test -f /_ansible/build/ansible-requirements.txt && pip install --no-cache-dir -r /_ansible/build/ansible-requirements.txt || true ) && \
     ( test -f /_ansible/build/requirements.yml && ansible-galaxy install -p /etc/ansible/roles -r /_ansible/build/requirements.yml || true ) && \
     ( test -f /_ansible/build/ansible.cfg && cp /_ansible/build/ansible.cfg /etc/ansible/ansible.cfg || true)
+
+{% if distro in ["centos"] %}
+# Removing python-chardet removed yum-utils, and now that we're done pip-installing things,
+# we'll put it back.
+RUN yum install -y yum-utils && \
+    yum clean all
+{% endif %}
 
 VOLUME /usr
 {% if distro in ["ubuntu", "debian", "alpine"] %}
