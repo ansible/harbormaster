@@ -231,7 +231,7 @@ class BaseAnsibleContainerConfig(Mapping):
 
     def _validate_config(self, config):
         for key in self.REQUIRED_TOP_LEVEL_KEYS:
-            if not config.get(key):
+            if config.get(key, None) is None:
                 raise AnsibleContainerConfigException("Missing expected key '{}'".format(key))
 
         for top_level in config:
