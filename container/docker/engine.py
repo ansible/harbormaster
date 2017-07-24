@@ -245,7 +245,7 @@ class Engine(BaseEngine):
 
         def _add_volume(vol):
             volume_parts = vol.split(':')
-            volume_parts[0] = os.path.normpath(os.path.expanduser(volume_parts[0]))
+            volume_parts[0] = os.path.normpath(os.path.abspath(os.path.expanduser(volume_parts[0])))
             volumes[volume_parts[0]] = {
                 'bind': volume_parts[1] if len(volume_parts) > 1 else volume_parts[0],
                 'mode': volume_parts[2] if len(volume_parts) > 2 else 'rw'
