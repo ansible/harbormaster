@@ -13,8 +13,8 @@ By default, Ansible Container commits the changes your playbook made to the base
 
 .. note::
 
-    The image is flattened by exporting the container to a tar file and re-importing the tar 
-    file as a new image. A side effect of performing this operation is a loss of image metadata. 
+    The image is flattened by exporting the container to a tar file and re-importing the tar
+    file as a new image. A side effect of performing this operation is a loss of image metadata.
 
 .. option:: --no-purge-last
 
@@ -50,9 +50,9 @@ Define one or more environment variables in the Conductor container. Format each
 
 Mount one or more volumes to the Conductor container. Specify volumes as strings using the Docker volume format.
 
-.. option:: --roles-path ROLES_PATH
+.. option:: --roles-path ROLES_PATH [ROLES_PATH ...]
 
-If using roles not found in the ``roles`` directory within the project, use this option to specify the local path containing the roles. The specified path will be mounted to the conductor container, making the roles available to the build process.
+If using roles not found in the ``roles`` directory within the project, use this option to specify one or more local paths containing the roles. The specified path(s) will be mounted to the conductor container, making the roles available to the build process.
 
 .. option:: --use-local-python
 

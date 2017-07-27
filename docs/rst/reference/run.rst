@@ -15,9 +15,9 @@ By default, any `dev_overrides` specified in ``container.yml`` will be used and 
 
 Remove containers for services not defined in ``container.yml``.
 
-.. option:: --roles-path ROLES_PATH
+.. option:: --roles-path ROLES_PATH [ROLES_PATH ...]
 
-If using roles not found in the ``roles`` directory within the project, use this option to specify the local path containing the roles. The specified path will be mounted to the conductor container, making the roles available.
+If using roles not found in the ``roles`` directory within the project, use this option to specify one or more local paths containing the roles. The specified path(s) will be mounted to the conductor container, making the roles available to the build process.
 
 .. option:: --with-variables WITH_VARIABLES [WITH_VARIABLES ...]
 

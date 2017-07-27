@@ -273,9 +273,13 @@ class Engine(BaseEngine):
             roles_path = params['roles_path']
         elif conductor_settings.get('roles_path'):
             roles_path = conductor_settings['roles_path']
+
+        expanded_roles_path = []
         if roles_path:
-            roles_path = os.path.normpath(os.path.abspath(os.path.expanduser(roles_path)))
-            volumes[roles_path] = {'bind': roles_path, 'mode': 'ro'}
+            for role_path in roles_path:
+                role_path = os.path.normpath(os.path.abspath(os.path.expanduser(role_path)))
+                expanded_roles_path.append(role_path)
+                volumes[role_path] = {'bind': role_path, 'mode': 'ro'}
 
         environ = {}
         if os.environ.get('DOCKER_HOST'):
@@ -306,7 +310,7 @@ class Engine(BaseEngine):
                 _add_var_list(conductor_settings['environment'])
 
         if roles_path:
-            environ['ANSIBLE_ROLES_PATH'] = "%s:/src/roles:/etc/ansible/roles" % roles_path
+            environ['ANSIBLE_ROLES_PATH'] = "%s:/src/roles:/etc/ansible/roles" % (':').join(expanded_roles_path)
         else:
             environ['ANSIBLE_ROLES_PATH'] = '/src/roles:/etc/ansible/roles'
 

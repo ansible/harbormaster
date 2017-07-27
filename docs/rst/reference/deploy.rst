@@ -14,7 +14,7 @@ Use the ``--engine`` option to choose the engine. For example:
 The ``deploy`` command maps your ``container.yml`` file to a cloud configuration, depending on the engine. See the :doc:`../../container_yml/reference`
 for details on how directives are mapped, and for cloud specific options.
 
-The playbook name will match the name of the project, and have a ``.yml`` extension. The playbook is created in in the ``ansible-deployment`` directory, which will be 
+The playbook name will match the name of the project, and have a ``.yml`` extension. The playbook is created in in the ``ansible-deployment`` directory, which will be
 created automatically. Use the *deployment_output_path* option in the *settings* section of ``container.yml`` to write the playbook to a different directory.
 
 .. note::
@@ -68,9 +68,9 @@ When passing a registry name defined in the *registries* section of ``container.
 If no ``--push-to`` option is passed, and the ``--local-images`` option is not passed, then the default registry will be used. The current default is
 set to ``https://index.docker.io/v1/``.
 
-.. option:: --roles-path ROLES_PATH
+.. option:: --roles-path ROLES_PATH [ROLES_PATH ...]
 
-If using roles not found in the ``roles`` directory within the project, use this option to specify the local path containing the roles. The specified path will be mounted to the conductor container, making the roles available.
+If using roles not found in the ``roles`` directory within the project, use this option to specify one or more local paths containing the roles. The specified path(s) will be mounted to the conductor container, making the roles available to the build process.
 
 .. option:: --tag
 

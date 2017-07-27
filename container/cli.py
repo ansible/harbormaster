@@ -64,7 +64,7 @@ class HostCommand(object):
 
     def subcmd_common_parsers(self, parser, subparser, cmd):
         if cmd in ('build', 'run', 'deploy', 'push', 'restart', 'stop', 'destroy'):
-            subparser.add_argument('--roles-path', action='store', default=None,
+            subparser.add_argument('--roles-path', action='store', default=[], nargs='+',
                                    help=u'Specify a local path containing Ansible roles.')
 
             subparser.add_argument('--with-volumes', '-v', action='store', nargs='+',
