@@ -3,7 +3,8 @@ ENV ANSIBLE_CONTAINER=1
 {% set distro = conductor_base.split(':')[0] %}
 {% if distro in ["fedora"] %}
 RUN dnf update -y && \
-    dnf install -y make gcc git python2 python2-devel curl rsync libffi-devel openssl-devel redhat-rpm-config python2-dnf tar redhat-rpm-config && \
+    dnf install -y make gcc git python2 python2-devel curl rsync libffi-devel openssl-devel redhat-rpm-config python2-dnf tar redhat-rpm-config \
+    https://kojipkgs.fedoraproject.org//packages/buildah/0.3/2.gitb9b2a8a.fc26/x86_64/buildah-0.3-2.gitb9b2a8a.fc26.x86_64.rpm && \
     dnf clean all
 {% elif distro in ["centos"] %}
 RUN yum update -y && \

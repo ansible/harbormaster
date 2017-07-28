@@ -9,7 +9,6 @@ logger = getLogger(__name__)
 
 import base64
 import datetime
-import functools
 import time
 import inspect
 import json
@@ -30,6 +29,7 @@ from container import host_only, conductor_only
 from container.engine import BaseEngine
 from container import utils, exceptions
 from container.utils import logmux, text, ordereddict_to_list
+from container.utils.visibility import log_runs
 
 try:
     import docker
@@ -68,21 +68,6 @@ DOCKER_CONFIG_FILEPATH_CASCADE = [
 
 REMOVE_HTTP = re.compile('^https?://')
 
-
-def log_runs(fn):
-    @functools.wraps(fn)
-    def __wrapped__(self, *args, **kwargs):
-        logger.debug(
-            u'Call: %s.%s' % (type(self).__name__, fn.__name__),
-            # because log_runs is a decorator, we need to override the caller
-            # line & function
-            caller_func='%s.%s' % (type(self).__name__, fn.__name__),
-            caller_line=inspect.getsourcelines(fn)[-1],
-            args=args,
-            kwargs=kwargs,
-        )
-        return fn(self, *args, **kwargs)
-    return __wrapped__
 
 def get_timeout():
     timeout = DEFAULT_TIMEOUT_SECONDS
