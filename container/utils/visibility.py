@@ -3,6 +3,7 @@
 # the conductor
 from __future__ import absolute_import
 
+import functools
 import inspect
 import logging
 import sys
@@ -111,3 +112,19 @@ def getLogger(name):
         ],
         wrapper_class=BoundLogger,
     )
+
+
+def log_runs(fn):
+    @functools.wraps(fn)
+    def __wrapped__(self, *args, **kwargs):
+        logging.debug(
+            u'Call: %s.%s' % (type(self).__name__, fn.__name__),
+            # because log_runs is a decorator, we need to override the caller
+            # line & function
+            caller_func='%s.%s' % (type(self).__name__, fn.__name__),
+            caller_line=inspect.getsourcelines(fn)[-1],
+            args=args,
+            kwargs=kwargs,
+        )
+        return fn(self, *args, **kwargs)
+    return __wrapped__

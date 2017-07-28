@@ -14,7 +14,7 @@ from six import add_metaclass
 from container import conductor_only, host_only
 from container import exceptions
 from container.docker.engine import Engine as DockerEngine, log_runs
-from container.utils.visibility import getLogger
+from container.utils.visibility import getLogger, log_runs
 
 logger = getLogger(__name__)
 
