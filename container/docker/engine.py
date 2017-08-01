@@ -557,7 +557,7 @@ class Engine(BaseEngine, DockerSecretsMixin):
         repo = image
         tag = 'latest'
         if ':' in image:
-            repo, tag = image.split(':')
+            repo, tag = image.rsplit(':',1)
         logger.debug("Pulling image {}:{}".format(repo, tag))
         try:
             image_id = self.client.images.pull(repo, tag=tag)
