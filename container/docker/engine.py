@@ -337,9 +337,9 @@ class Engine(BaseEngine, DockerSecretsMixin):
                 _add_var_list(conductor_settings['environment'])
 
         if roles_path:
-            environ['ANSIBLE_ROLES_PATH'] = "%s:/src/roles:/etc/ansible/roles" % (':').join(expanded_roles_path)
+            environ['ANSIBLE_ROLES_PATH'] = "%s:/src/roles:~/.ansible/roles:/etc/ansible/roles" % (':').join(expanded_roles_path)
         else:
-            environ['ANSIBLE_ROLES_PATH'] = '/src/roles:/etc/ansible/roles'
+            environ['ANSIBLE_ROLES_PATH'] = '/src/roles:~/.ansible/roles:/etc/ansible/roles'
 
         if params.get('devel'):
             conductor_path = os.path.dirname(container.__file__)
