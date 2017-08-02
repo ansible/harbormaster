@@ -792,7 +792,7 @@ class Engine(BaseEngine, DockerSecretsMixin):
         tag = tag or build_stamp
 
         if repository_prefix:
-            image_name = "{}-{}".format(self.repository_prefix, service_name)
+            image_name = "{}-{}".format(repository_prefix, service_name)
         elif repository_prefix is None:
             image_name = "{}-{}".format(self.project_name, service_name)
         elif repository_prefix == '':
