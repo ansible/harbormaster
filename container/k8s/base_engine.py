@@ -155,7 +155,7 @@ class K8sBaseEngine(DockerEngine):
                         )
                     image_tag = tag or self.get_build_stamp_for_image(image_id)
                     if repository_prefix:
-                        image_name = "{}-{}".format(self.repository_prefix, service_name)
+                        image_name = "{}-{}".format(repository_prefix, service_name)
                     elif repository_prefix is None:
                         image_name = "{}-{}".format(self.project_name, service_name)
                     elif repository_prefix == '':
