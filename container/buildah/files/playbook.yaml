@@ -1,0 +1,28 @@
+---
+- hosts: conductor
+  gather_facts: no
+  tasks:
+    # - name: Make sure python2-dnf is installed
+    #   command: dnf install -y python2-dnf
+    - name: Install required packages
+      dnf:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - buildah
+        - ansible
+        - make
+        - gcc
+        - git
+        - python2
+        - python2-devel
+        - curl
+        - rsync
+        - libffi-devel
+        - openssl-devel
+        - redhat-rpm-config
+        - python2-dnf
+        - tar
+        - docker
+        - python2-pip
+
