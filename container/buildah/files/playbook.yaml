@@ -1,0 +1,45 @@
+---
+# TODO:
+#  * turn this into a role
+#  * fail if the base is not fedora 26
+- hosts: conductor
+  gather_facts: no
+  environment:
+    ANSIBLE_CONTAINER: "true"
+  tasks:
+    # - name: Make sure python2-dnf is installed
+    #   command: dnf install -y python2-dnf
+    # - name: Install required packages
+    #   dnf:
+    #     name: "{{ item }}"
+    #     state: present
+    #   with_items:
+    #     - ansible
+    #     # - buildah
+    #     # - make
+    #     # - gcc
+    #     # - git
+    #     # - python3
+    #     # - python3-devel
+    #     # - curl
+    #     # - rsync
+    #     # - libffi-devel
+    #     # - openssl-devel
+    #     # - redhat-rpm-config
+    #     # - python3-dnf
+    #     # - tar
+    #     # - docker
+    #     # - python3-pip
+    - name: Copy required files
+      copy:
+        src: "{{ build_src }}"
+        dest: /opt/
+    - name: Install conductor dependencies
+      pip:
+        requirements: /opt/{{ target_dir_name }}/conductor-requirements.txt
+    - name: Install conductor
+      command: python3 setup.py develop -v
+      args:
+        chdir: /opt/{{ target_dir_name }}
+    - name: Install roles needed by conductor
+      command: ansible-galaxy install -p /etc/ansible/roles -r /opt/{{ target_dir_name }}/conductor-requirements.yml

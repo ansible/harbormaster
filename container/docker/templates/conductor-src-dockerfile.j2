@@ -7,7 +7,8 @@ ENV {{ envar }}
 {% endfor %}
 {% if distro in ["fedora"] %}
 RUN dnf update -y && \
-    dnf install -y make gcc git python2 python2-devel curl rsync libffi-devel openssl-devel redhat-rpm-config python2-dnf tar redhat-rpm-config && \
+    dnf install -y make gcc git python2 python2-devel curl rsync libffi-devel openssl-devel redhat-rpm-config python2-dnf tar redhat-rpm-config buildah atomic-registries \
+    https://kojipkgs.fedoraproject.org//packages/cri-o/1.0.4/1.git4aceede.fc26/x86_64/cri-o-1.0.4-1.git4aceede.fc26.x86_64.rpm && \
     dnf clean all
 {% elif distro in ["centos"] %}
 RUN yum update -y && \
