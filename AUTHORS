@@ -1,12 +1,12 @@
 Ansible Container has been contribued to by the following authors:
 This list is automatically generated - please file an issue for corrections)
 
-Joshua "jag" Ginsberg <jag@ansible.com>
 Chris Houseknecht <chouseknecht@ansible.com>
+Joshua "jag" Ginsberg <jag@ansible.com>
 Ryan Brown <sb@ryansb.com>
 Shubham Minglani <shubham@linux.com>
-Matt Clay <matt@mystile.com>
 Pierre-Louis Bonicoli <pierre-louis@libregerbil.fr>
+Matt Clay <matt@mystile.com>
 Greg DeKoenigsberg <greg.dekoenigsberg@gmail.com>
 Sandra Wills <swills@ansible.com>
 Eric D. Helms <ericdhelms@gmail.com>
@@ -18,8 +18,8 @@ Dylan Silva <thaumos@users.noreply.github.com>
 Tomas Tomecek <ttomecek@redhat.com>
 Fabian von Feilitzsch <fabianvf@users.noreply.github.com>
 Charlie Drage <charlie@charliedrage.com>
-Roderick Randolph <roderickrandolph@users.noreply.github.com>
 Marcus Levine <marcusianl@gmail.com>
+Roderick Randolph <roderickrandolph@users.noreply.github.com>
 Will Refvem <wbrefvem@gmail.com>
 Sebastien Plisson <sebastien.plisson@gmail.com>
 Mike Hume <mhumeSF@gmail.com>
@@ -52,12 +52,3 @@ szinck1 <szinck@gmail.com>
 Erik Nelson <erik@nsk.io>
 Chrrrles Paul <chrrrles@users.noreply.github.com>
 Andrea De Pirro <andrea.depirro@yameveo.com>
-Aaron Cowdin <aaronthebaron@users.noreply.github.com>
-fignew <thomas@vorget.com>
-Gabor Lekeny <gabor.lekeny@gmail.com>
-John R Barker <john@johnrbarker.com>
-Sidharth Surana <ssurana@vmware.com>
-grimmjow <ryanbrown.dev@gmail.com>
-Shea Stewart <shea.stewart@arctiq.ca>
-koralsky <karol.ossowski@gmail.com>
-Michael Carden <mike.carden@gmail.com>

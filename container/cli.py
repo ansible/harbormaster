@@ -59,7 +59,7 @@ class HostCommand(object):
                           # 'purge': 'Delete all Ansible Container instances, volumes, and images',
                           # FIXME: implement status command
                           # 'status': 'Query the status of your project's containers/images',
-                          'deploy': 'Deploy your built images into production'
+                          'deploy': 'Deploy your built images into production',
                           }
 
     def subcmd_common_parsers(self, parser, subparser, cmd):
@@ -341,7 +341,6 @@ class HostCommand(object):
             sys.exit(1)
 
 host_commandline = HostCommand()
-
 
 def decode_b64json(encoded_params):
     # Using object_pairs_hook to preserve the original order of any dictionaries

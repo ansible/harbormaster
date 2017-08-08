@@ -2,12 +2,13 @@ import os
 import sys
 import shlex
 import shutil
+import distutils.cmd
+import distutils.log
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
 from setuptools.command.sdist import sdist as SDistCommand
 from pip.req import parse_requirements
 import container
-
 
 class PlaybookAsTests(TestCommand):
     user_options = [('ansible-args=', None, "Extra ansible arguments")]
@@ -44,6 +45,38 @@ class BundleConductorFiles(SDistCommand):
                         'container/docker/files/conductor-requirements.yml')
         return SDistCommand.run(self)
 
+class PrebakeConductors(distutils.cmd.Command):
+    description = 'Pre-bake Conductor base images'
+    user_options = [
+        # The format is (long option, short option, description).
+        ('debug', None, 'Enable debug output'),
+        ('no-cache', None, 'Cache me offline, how bout dat?'),
+        ('ignore-errors', None, 'Ignore build failures and continue building other distros'),
+        ('distros=', None, 'Only pre-bake certain supported distros. Comma-separated.')
+    ]
+
+    def initialize_options(self):
+        """Set default values for options."""
+        # Each user option must be listed here with their default value.
+        self.debug = False
+        self.ignore_errors = False
+        self.distros = ''
+
+    def finalize_options(self):
+        self.distros = self.distros.strip().split(',') if self.distros else []
+        self.cache = not getattr(self, 'no_cache', False)
+
+    def run(self):
+        """Run command."""
+        from container.cli import LOGGING
+        from logging import config
+        from container import core
+        if self.debug:
+            LOGGING['loggers']['container']['level'] = 'DEBUG'
+        config.dictConfig(LOGGING)
+        core.hostcmd_prebake(self.distros, debug=self.debug, cache=self.cache,
+                             ignore_errors=self.ignore_errors)
+
 if container.ENV == 'host':
     install_reqs = parse_requirements('requirements.txt', session=False)
     setup_kwargs = dict(
@@ -64,7 +97,8 @@ if container.ENV == 'host':
         #    'https://github.com/ansible/ansible/archive/devel.tar.gz#egg=ansible-2.4.0',
         #],
         cmdclass={'test': PlaybookAsTests,
-                  'sdist': BundleConductorFiles},
+                  'sdist': BundleConductorFiles,
+                  'prebake': PrebakeConductors},
         entry_points={
             'console_scripts': [
                 'ansible-container = container.cli:host_commandline']

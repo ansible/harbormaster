@@ -1,6 +1,7 @@
 FROM {{ conductor_base }}
 ENV ANSIBLE_CONTAINER=1
 {% set distro = conductor_base.split(':')[0] %}
+{% set distro_version = conductor_base.split(':')[1] %}
 {% if distro in ["fedora"] %}
 RUN dnf update -y && \
     dnf install -y make gcc git python2 python2-devel curl rsync libffi-devel openssl-devel redhat-rpm-config python2-dnf tar redhat-rpm-config && \
@@ -17,10 +18,10 @@ RUN yum -y update-minimal --disablerepo "*" \
                           --security --sec-severity=Important --sec-severity=Critical --setopt=tsflags=nodocs && \
     yum -y install --disablerepo "*" \
                    --enablerepo rhel-7-server-rpms \
-		   https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && \
+                   https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && \
     yum -y install --disablerepo "*" \
                    --enablerepo epel,rhel-7-server-rpms,rhel-7-server-optional-rpms \
-	           make gcc git python-devel curl rsync libffi-devel openssl-devel && \
+                   make gcc git python-devel curl rsync libffi-devel openssl-devel tar redhat-rpm-config&& \
     yum clean all
 {% elif distro in ["debian", "ubuntu"] %}
 RUN apt-get update -y && \
@@ -28,13 +29,19 @@ RUN apt-get update -y && \
     cd /usr/bin && \
     rm -f lsb_release && \
     ln -fs python2.7 python && \
+    {% if distro_version in ["precise"] %}
+    cd /usr && \
+    ln -fs ../../include/python2.7 local/include/python2.7 && \
+    {% endif %}
     apt-get clean
 {% elif distro in ["alpine"] %}
-RUN apk add --no-cache -U python2-dev make git curl rsync libffi libffi-dev openssl openssl-dev gcc musl-dev tar openssh
+# openssh is necessary until this is fixed: https://github.com/ansible/ansible/issues/24705
+RUN apk add --no-cache -U python-dev make git curl rsync libffi libffi-dev openssl openssl-dev gcc musl-dev tar openssh
 {% endif %}
 
-COPY /contrib/get-pip.py /get-pip.py
-RUN python /get-pip.py && \
+ADD https://get.docker.com/builds/Linux/x86_64/docker-{{ docker_version }}.tgz /tmp/docker.tgz
+ADD https://bootstrap.pypa.io/get-pip.py /tmp/get-pip.py
+RUN python /tmp/get-pip.py && \
     mkdir -p /etc/ansible/roles /_ansible/src && \
     curl https://get.docker.com/builds/Linux/x86_64/docker-{{ docker_version }}.tgz \
     | tar -zxC /usr/local/bin/ --strip-components=1
