@@ -61,6 +61,13 @@ RUN yum install -y yum-utils && \
     yum clean all
 {% endif %}
 
+{% if distro in ["centos"] %}
+# Removing python-chardet removed yum-utils, and now that we're done pip-installing things,
+# we'll put it back.
+RUN yum install -y yum-utils && \
+    yum clean all
+{% endif %}
+
 VOLUME /usr
 {% if distro in ["ubuntu", "debian", "alpine"] %}
 VOLUME /lib

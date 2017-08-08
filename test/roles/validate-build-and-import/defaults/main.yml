@@ -10,8 +10,11 @@ distros:
     httpd_pageroot: "/var/www/html/"
     httpd_logdir: "/var/log/httpd"
     httpd_rundir: "/run/httpd"
+    httpd_pid_file: "/run/httpd/httpd.pid"
     httpd_bin: "/usr/sbin/httpd"
     httpd_user: "apache"
+    httpd_run_group: "apache"
+    httpd_lock_dir: "/run/httpd"
 
   - name: "ubuntu"
     base_image: "ubuntu:trusty"
@@ -22,8 +25,11 @@ distros:
     httpd_pageroot: "/var/www/html/"
     httpd_logdir: "/var/log/apache2"
     httpd_rundir: "/run/apache2"
+    httpd_pid_file: "/var/run/apache2/apache2.pid"
     httpd_bin: "/usr/sbin/apache2"
     httpd_user: "www-data"
+    httpd_run_group: "www-data"
+    httpd_lock_dir: "/var/run/apache2"
 
 #  - name: "alpine"
 #    base_image: "alpine:3.5"

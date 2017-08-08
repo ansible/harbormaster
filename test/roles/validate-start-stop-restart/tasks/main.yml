@@ -26,12 +26,38 @@
 
 - include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"
 
+- name: Wait for containers to start
+  wait_for:
+    timeout: 10
+
+- name: Get docker_ps
+  command: docker ps -a
+  register: docker_ps
+
+- name: Show docker_ps
+  debug: var=docker_ps.stdout_lines
+
+- name: Get docker_logs
+  command: docker logs "test{{ item.name }}_{{ item.name }}_1"
+  with_items: "{{ distros }}"
+  register: docker_logs
+
+- name: Show docker_logs
+  debug: var=docker_logs.results
+
 - name: Wait until built containers are running
-  docker_container:
-    name: "test{{ item.name }}_{{ item.name }}_1"
+  command: "docker inspect test{{ item.name }}_{{ item.name }}_1 --format '{% raw %}{{ .State.Status }}{% endraw %}'"
   with_items: "{{ distros }}"
   register: container_run_status
-  until: container_run_status.ansible_facts.docker_container.State.Status == 'running'
+  until: container_run_status.stdout == 'running'
+  tags:
+    - restart
+    - run
+
+- name: Get container start times
+  command: "docker inspect test{{ item.name }}_{{ item.name }}_1 --format '{% raw %}{{ .State.StartedAt }}{% endraw %}'"
+  with_items: "{{ distros }}"
+  register: container_run_startedat
   tags:
     - restart
     - run
@@ -51,22 +77,28 @@
 
 - include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"
 
-- name: Get new container start times
-  docker_container:
-    name: "test{{ item.name }}_{{ item.name }}_1"
+- name: Wait until restarted containers are running
+  command: "docker inspect test{{ item.name }}_{{ item.name }}_1 --format '{% raw %}{{ .State.Status }}{% endraw %}'"
   with_items: "{{ distros }}"
   register: container_restart_status
-  until: container_restart_status.ansible_facts.docker_container.State.Status == 'running'
+  until: container_restart_status.stdout == 'running'
+  tags:
+    - restart
+
+- name: Get container restart times
+  command: "docker inspect test{{ item.name }}_{{ item.name }}_1 --format '{% raw %}{{ .State.StartedAt }}{% endraw %}'"
+  with_items: "{{ distros }}"
+  register: container_restart_startedat
   tags:
     - restart
 
 - name: Ensure containers were restarted
   assert:
     that:
-      - item.0.ansible_facts.docker_container.State.StartedAt  != item.1.ansible_facts.docker_container.State.StartedAt
+      - item.0.stdout != item.1.stdout
   with_together:
-    - "{{ container_run_status.results }}"
-    - "{{ container_restart_status.results }}"
+    - "{{ container_run_startedat.results }}"
+    - "{{ container_restart_startedat.results }}"
   tags:
     - restart
 
@@ -89,13 +121,18 @@
 
 - include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"
 
-- name: Ensure containers were stopped
-  docker_container:
-    name: 'test{{ item.name }}_{{ item.name }}_1'
-    state: 'stopped'
+- name: Get container status
+  command: "docker inspect test{{ item.name }}_{{ item.name }}_1 --format '{% raw %}{{ .State.Status }}{% endraw %}'"
   with_items: "{{ distros }}"
-  register: output
-  failed_when: output.changed
+  register: container_status
   tags:
     - stop
 
+- name: Ensure containers stop
+  assert:
+    that:
+      - item.0.stdout == 'exited'
+  with_together:
+    - "{{ container_status.results }}"
+  tags:
+    - stop
