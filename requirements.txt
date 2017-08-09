@@ -1,4 +1,5 @@
 Jinja2>=2.9
+pip>=6.0
 PyYAML>=3.12
 requests>=2
 ruamel.yaml>=0.14.2
