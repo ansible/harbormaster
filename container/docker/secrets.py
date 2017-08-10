@@ -67,9 +67,9 @@ class DockerSecretsMixin(object):
                 if isinstance(secret, dict):
                     for key, value in iteritems(secret):
                         full_name = "{}_{}".format(secret_name, key)
-                        secrets_to_disk[secret_name] = {
+                        secrets_to_disk[full_name] = {
                             'variable': value,
-                            'paths': ['/run/secrets/{}'.format(full_name)]
+                            'path': os.path.join(os.sep, 'run', 'secrets', full_name)
                         }
                 else:
                     raise exceptions.AnsibleContainerException(
@@ -90,12 +90,11 @@ class DockerSecretsMixin(object):
         if secrets_to_disk:
             tasks = []
             for secret_name, secret in iteritems(secrets_to_disk):
-                for path in secret['paths']:
-                    tasks.append({
-                        'name': 'Write secret to Docker volume',
-                        'shell': "echo '{{ " + secret['variable'] + " }}' >" + path,
-                        'tags': ['start', 'restart', 'stop']
-                    })
+                tasks.append({
+                    'name': 'Write secret to Docker volume',
+                    'shell': "echo '{{ " + secret['variable'] + " }}' >" + secret['path'],
+                    'tags': ['start', 'restart', 'stop']
+                })
 
             play = CommentedMap([
                 ('name', 'Create secrets'),

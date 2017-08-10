@@ -198,7 +198,7 @@ def hostcmd_deploy(base_path, project_name, engine_name, vars_files=None,
         'deploy', dict(config), base_path, params, save_container=config.save_conductor)
 
 @host_only
-def hostcmd_run(base_path, project_name, engine_name, vars_files=None, cache=True, ask_vault_password=False,
+def hostcmd_run(base_path, project_name, engine_name, vars_files=None, cache=True, ask_vault_pass=False,
                 **kwargs):
     assert_initialized(base_path)
     logger.debug('Got extra args to `run` command', arguments=kwargs)
@@ -225,7 +225,7 @@ def hostcmd_run(base_path, project_name, engine_name, vars_files=None, cache=Tru
 
     logger.debug('Params passed to conductor for run', params=params)
 
-    if ask_vault_password:
+    if ask_vault_pass:
         params['vault_password'] = getpass.getpass(u"Enter the vault password: ")
 
     engine_obj.await_conductor_command(
@@ -548,6 +548,12 @@ def run_playbook(playbook, engine, service_map, ansible_options='', local_python
 
         if vault_password_file:
             vault_password_file = '--vault-password-file {}'.format(vault_password_file)
+        elif vault_password:
+            # User entered password
+            vault_pass_path = os.path.join(output_dir, '.vault-pass.txt')
+            with open(vault_pass_path, 'w') as ofs:
+                ofs.write(vault_password)
+            vault_password_file = '--vault-password-file {}'.format(vault_pass_path)
 
         ansible_args = dict(inventory=quote(inventory_path),
                             playbook=quote(playbook_path),
@@ -568,8 +574,6 @@ def run_playbook(playbook, engine, service_map, ansible_options='', local_python
 
         env = {}
         env.update(os.environ)
-        if vault_password:
-            env['ANSIBLE_VAULT_PASSWORD'] = vault_password
 
         ansible_cmd = ('{ansible_playbook} '
                        '{debug_maybe} '

@@ -659,7 +659,7 @@ class Engine(BaseEngine, DockerSecretsMixin):
         """
         states = ['start', 'restart', 'stop', 'destroy']
         service_def = {}
-        for service_name, service in self.services.items():
+        for service_name, service in iteritems(self.services):
             service_definition = {}
             if service.get('roles'):
                 if url and namespace:
@@ -690,16 +690,16 @@ class Engine(BaseEngine, DockerSecretsMixin):
                 if extra in service:
                     service_definition[extra] = service[extra]
 
-            if service.get(u'secrets'):
+            if 'secrets' in service:
                 service_secrets = []
                 for secret, secret_engines in iteritems(service[u'secrets']):
-                    if secret_engines.get(u'docker'):
+                    if 'docker' in secret_engines:
                         service_secrets += secret_engines[u'docker']
                 if service_secrets:
                     service_definition[u'secrets'] = service_secrets
                 if self.CAP_SIM_SECRETS:
                     # Simulate external secrets using a Docker volume
-                    if not service_definition.get('volumes'):
+                    if not 'volumes' in service_definition:
                         service_definition['volumes'] = []
                     service_definition['volumes'].append("{}:/run/secrets:ro".format(self.secrets_volume_name))
 
