@@ -178,6 +178,10 @@ class Engine(BaseEngine, DockerSecretsMixin):
                 break
         return result
 
+    @property
+    def secrets_mount_path(self):
+        return os.path.join(os.sep, 'run', 'secrets')
+
     def container_name_for_service(self, service_name):
         return u'%s_%s' % (self.project_name, service_name)
 
@@ -263,7 +267,7 @@ class Engine(BaseEngine, DockerSecretsMixin):
         if command != 'destroy' and self.CAP_SIM_SECRETS:
             self.create_secret_volume()
             volumes[self.secrets_volume_name] = {
-                'bind': '/run/secrets',
+                'bind': self.secrets_mount_path,
                 'mode': 'rw'
             }
 

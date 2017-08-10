@@ -68,8 +68,9 @@ class DockerSecretsMixin(object):
                     for key, value in iteritems(secret):
                         full_name = "{}_{}".format(secret_name, key)
                         secrets_to_disk[full_name] = {
+                            'subdir': os.path.join(self.secrets_mount_path, secret_name),
                             'variable': value,
-                            'path': os.path.join(os.sep, 'run', 'secrets', full_name)
+                            'paths': [os.path.join(self.secrets_mount_path, secret_name, key)]
                         }
                 else:
                     raise exceptions.AnsibleContainerException(
@@ -83,18 +84,19 @@ class DockerSecretsMixin(object):
                     for docker_secret in service['secrets']['docker']:
                         if isinstance(docker_secret, dict):
                             if docker_secret.get('source') and docker_secret.get('target'):
-                                if secrets_to_disk[docker_secret['source']]:
-                                    secrets_to_disk[docker_secret['source']]['paths'].append(
-                                        '/run/secrets/{}'.format(docker_secret['target']))
+                                secrets_to_disk[docker_secret['source']]['paths'].append(
+                                    os.path.join(self.secrets_mount_path, docker_secret['target']))
 
         if secrets_to_disk:
             tasks = []
             for secret_name, secret in iteritems(secrets_to_disk):
-                tasks.append({
-                    'name': 'Write secret to Docker volume',
-                    'shell': "echo '{{ " + secret['variable'] + " }}' >" + secret['path'],
-                    'tags': ['start', 'restart', 'stop']
-                })
+                for path in secret['paths']:
+                    tasks.append({
+                        'name': 'Write secret to Docker volume',
+                        'shell': "mkdir -p " + secret['subdir'] + " && echo '{{ " + secret['variable'] + " }}' >" +\
+                                 path,
+                        'tags': ['start', 'restart', 'stop']
+                    })
 
             play = CommentedMap([
                 ('name', 'Create secrets'),
