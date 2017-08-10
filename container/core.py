@@ -127,8 +127,7 @@ def hostcmd_init(base_path, project=None, force=False, **kwargs):
 
 
 @host_only
-def hostcmd_build(base_path, project_name, engine_name, vars_files=None,
-                 **kwargs):
+def hostcmd_build(base_path, project_name, engine_name, vars_files=None, **kwargs):
     conductor_cache = kwargs['cache'] and kwargs['conductor_cache']
     config = get_config(base_path, vars_files=vars_files, engine_name=engine_name, project_name=project_name)
     engine_obj = load_engine(['BUILD', 'RUN'],
@@ -151,6 +150,9 @@ def hostcmd_build(base_path, project_name, engine_name, vars_files=None,
                         env_vars.append('{}={}'.format(key, value))
                 else:
                     env_vars = environment
+            if kwargs.get('with_variables'):
+                env_vars += kwargs['with_variables']
+
             engine_obj.build_conductor_image(
                 base_path,
                 config.conductor_base,
