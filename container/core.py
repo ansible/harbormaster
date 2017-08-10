@@ -28,6 +28,8 @@ except ImportError:
     from pipes import quote
 
 import requests
+
+from six import iteritems
 from six.moves.urllib.parse import urljoin
 
 from .exceptions import AnsibleContainerAlreadyInitializedException,\
@@ -141,10 +143,19 @@ def hostcmd_build(base_path, project_name, engine_name, vars_files=None,
     if conductor_image_id is None or not kwargs.get('devel'):
         #TODO once we get a conductor running, figure out how to know it's running
         if engine_obj.CAP_BUILD_CONDUCTOR:
+            env_vars = []
+            if config.get('settings', {}).get('conductor', {}).get('environment', {}):
+                environment = config['settings']['conductor']['environment']
+                if isinstance(environment, dict):
+                    for key, value in iteritems(environment):
+                        env_vars.append('{}={}'.format(key, value))
+                else:
+                    env_vars = environment
             engine_obj.build_conductor_image(
                 base_path,
                 config.conductor_base,
-                cache=conductor_cache
+                cache=conductor_cache,
+                environment=env_vars
             )
         else:
             logger.warning(u'%s does not support building the Conductor image.',

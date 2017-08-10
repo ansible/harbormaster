@@ -825,7 +825,7 @@ class Engine(BaseEngine, DockerSecretsMixin):
 
     @log_runs
     @host_only
-    def build_conductor_image(self, base_path, base_image, cache=True):
+    def build_conductor_image(self, base_path, base_image, cache=True, environment=[]):
         with utils.make_temp_dir() as temp_dir:
             logger.info('Building Docker Engine context...')
             tarball_path = os.path.join(temp_dir, 'context.tar')
@@ -874,7 +874,8 @@ class Engine(BaseEngine, DockerSecretsMixin):
                                        'conductor-dockerfile.j2', temp_dir,
                                        'Dockerfile',
                                        conductor_base=base_image,
-                                       docker_version=DOCKER_VERSION)
+                                       docker_version=DOCKER_VERSION,
+                                       environment=environment)
             tarball.add(os.path.join(temp_dir, 'Dockerfile'),
                         arcname='Dockerfile')
 
