@@ -679,8 +679,7 @@ def conductorcmd_build(engine_name, project_name, services, cache=True, local_py
                     "Failed to find image {}. Try `docker image pull {}`".format(service['from'])
                 )
         # the fingerprint hash tracks cacheability
-        service_defaults = json.dumps(service['defaults']) if service.get('defaults') else ''
-        fingerprint_hash = hashlib.sha256('%s::%s' % (cur_image_id, service_defaults))
+        fingerprint_hash = hashlib.sha256('%s::' % cur_image_id)
         logger.debug(u'Base fingerprint hash = %s', fingerprint_hash.hexdigest(),
                      service=service_name, hash=fingerprint_hash.hexdigest())
         cache_busted = not cache
