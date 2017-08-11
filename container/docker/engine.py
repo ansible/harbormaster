@@ -291,7 +291,11 @@ class Engine(BaseEngine, DockerSecretsMixin):
             params['vault_files'] = vault_paths
 
         permissions = 'ro' if command != 'install' else 'rw'
-        volumes[base_path] = {'bind': '/src', 'mode': permissions}
+        if params.get('src_mount_path'):
+            src_path = params['src_mount_path']
+        else:
+            src_path = base_path
+        volumes[src_path] = {'bind': '/src', 'mode': permissions}
 
         if params.get('deployment_output_path'):
             deployment_path = params['deployment_output_path']
