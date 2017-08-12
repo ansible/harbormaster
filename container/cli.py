@@ -71,6 +71,10 @@ class HostCommand(object):
                                    help=u'Mount one or more volumes to the Conductor. '
                                         u'Specify volumes as strings using the Docker volume format.',
                                    default=[])
+            subparser.add_argument('--volume-driver', action='store',
+                                   help=u'Specify volume driver to use when mounting named volumes '
+                                        u'to the Conductor.',
+                                   default=None)
             subparser.add_argument('--with-variables', '-e', action='store', nargs='+',
                                    help=u'Define one or more environment variables in the '
                                         u'Conductor. Format each variable as a key=value string.',

@@ -387,6 +387,10 @@ class Engine(BaseEngine, DockerSecretsMixin):
         # require privileged=True
         run_kwargs['privileged'] = True
 
+        # Support optional volume driver for mounting named volumes to the Conductor
+        if params.get('volume_driver'):
+            run_kwargs['volume_driver'] = params['volume_driver']
+
         logger.debug('Docker run:', image=image_id, params=run_kwargs)
         try:
             container_obj = self.client.containers.run(
