@@ -22,4 +22,7 @@ Releases
 .. toctree::
    :maxdepth: 2
 
-   Current: Release 0.3.0 <roadmap_0_3_0>
+   Current: Release 0.1.0 <roadmap_1_0_0>
+   Release 0.9.0 <roadmap_0_9_0>
+   Release 0.3.0 <roadmap_0_3_0>
+   Release 0.2.0 <roadmap_0_2_0>
