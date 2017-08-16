@@ -1,4 +1,3 @@
-docker>=2.4.0
 Jinja2>=2.9
 pip>=6.0
 PyYAML>=3.12
