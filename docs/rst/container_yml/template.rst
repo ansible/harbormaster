@@ -220,6 +220,26 @@ Ansible Container will detect the environment variable, remove ``AC_`` from the 
 and send the result to Jinja. Thus ``AC_WEB_IMAGE`` becomes ``web_image`` and gets transposed in ``container.yml`` to
 ``centos:7``.
 
+It is often necessary to manage variables outside the project (e.g. in a CI/CD context, build/dev environment, etc).
+Environmental variables from the shell/parent process can be expanded inside the following sections.
+
+* A service's ``environment`` section, making them available to the container process.
+* Values inside ``vars-files`` and the ``defaults`` section, making them available to roles and playbooks in the 
+  ``ansible-container`` workflow.
+
+.. code-block:: yaml
+
+    defaults:
+        env: '$CI_ENVIRONMENT_NAME'             # Default 'env' here from the environment 
+                                                # unless set in a 'var-file'
+
+    services:
+        web:
+            environment:
+                - ENV_NAME={{ env }}            # Set the ENV_NAME docker ENV variable for the container
+                - HTTP_PROXY=$HTTP_PROXY        # Allow container process(es) to use the same proxy
+                - HTTPS_PROXY=$HTTP_PROXY       # settings as those of a build/CI environment
+                - POSTGRES_DB_NAME=$CI_ENV-foo  # Expand to 'dev-foo', 'test-foo', 'prod-foo', etc
 
 Providing defaults
 ------------------
