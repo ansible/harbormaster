@@ -138,6 +138,12 @@ class BaseAnsibleContainerConfig(Mapping):
                 dev_overrides = service_config.pop('dev_overrides', {})
                 if env == 'dev':
                     service_config.update(dev_overrides)
+            if 'environment' in service_config:
+                # Expand environment variables from the shell
+                updated_envvars = []
+                for var in service_config['environment']:
+                    updated_envvars.append(path.expandvars(var))
+                service_config['environment'] = updated_envvars
             if 'volumes' in service_config:
                 # Expand ~, ${HOME}, ${PWD}, etc. found in the volume src path
                 updated_volumes = []
@@ -173,6 +179,7 @@ class BaseAnsibleContainerConfig(Mapping):
             # convert config['defaults'] to an ordereddict()
             tmp_defaults = yaml.compat.ordereddict()
             tmp_defaults.update(copy.deepcopy(config['defaults']), relax=True)
+            tmp_defaults = self._dict_expand_envvars(tmp_defaults)
             config['defaults'] = tmp_defaults
         defaults = config.setdefault('defaults', yaml.compat.ordereddict())
 
@@ -205,6 +212,21 @@ class BaseAnsibleContainerConfig(Mapping):
         logger.debug(u'Read environment variables', env_vars=env_vars)
         return env_vars
 
+    def _dict_expand_envvars(self, dict):
+        """
+        Takes a dict and expands environmental variables in all keys, recursively.
+
+        :return: dict
+        """
+        ordered_dict = yaml.compat.ordereddict()
+        for key, val in dict.iteritems():
+            if isinstance(val, Mapping):
+                ordered_dict[key] = _dict_expand_envvars(dict.get(key, {}))
+            else:
+                if isinstance(dict[key], str):
+                    ordered_dict[key] = path.expandvars(dict[key])
+        return ordered_dict
+
     def _get_variables_from_file(self, var_file):
         """
         Looks for file relative to base_path. If not found, checks relative to base_path/ansible.
@@ -222,7 +244,8 @@ class BaseAnsibleContainerConfig(Mapping):
 
         if path.splitext(abspath)[-1].lower().endswith(('yml', 'yaml')):
             try:
-                config = yaml.round_trip_load(open(abspath))
+                tmp_config = yaml.round_trip_load(open(abspath))
+                config = self._dict_expand_envvars(tmp_config)
             except yaml.YAMLError as exc:
                 raise AnsibleContainerConfigException(u"YAML exception: %s" % unicode(exc))
         else:
