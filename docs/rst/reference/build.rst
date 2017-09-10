@@ -22,7 +22,7 @@ By default, upon successful completion of a build, the previously latest builds 
 your hosts are deleted and purged from the engine. Specifying this option, the prior builds
 are retained.
 
-.. option:: --save-conductor-container
+.. option:: --save-container-conductor
 
 Leave the Ansible Conductor Container intact upon build completion. Use for debugging and testing.
 
