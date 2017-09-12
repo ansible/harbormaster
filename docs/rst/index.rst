@@ -27,7 +27,6 @@ deployment.
    reference/index
    container_yml/index
    roles/index
-   releases
    Roadmap<roadmaps/index>
    community/index
    openshift/index
