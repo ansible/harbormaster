@@ -39,9 +39,9 @@ You don't have to use our ready-built Conductor base images. You can build your
 own, if you like, or you can build your own derivative of ours. Any Conductor base
 image should:
 
-1. It should be named ``conductor-container-$DISTRO-$TAG:$ANSIBLE_CONTAINER_VERSION``,
+1. It should be named ``container-conductor-$DISTRO-$TAG:$ANSIBLE_CONTAINER_VERSION``,
    so if you're building a Conductor base for OpenSuse 42.3 using Ansible Container
-   1.0rc1, your Conductor base image should be named ``conductor-container-opensuse-42.3:1.0rc1``.
+   1.0rc1, your Conductor base image should be named ``container-conductor-opensuse-42.3:1.0rc1``.
 2. It should have the very latest Ansible and all of its dependencies.
 3. It should have Ansible Container inside of it, as well as the requirements
    defined in ``container/conductor-build/conductor-requirements.txt``.
