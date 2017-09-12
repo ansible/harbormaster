@@ -128,7 +128,7 @@ class HostCommand(object):
                                     u'previously built image for your hosts. Disable '
                                     u'that with this flag.',
                                dest='purge_last', default=True)
-        subparser.add_argument('--save-container-conductor', action='store_true',
+        subparser.add_argument('--save-conductor-container', action='store_true',
                                help=u'Leave the Ansible Builder Container intact upon build completion. '
                                     u'Use for debugging and testing.', default=False)
         subparser.add_argument('--services', action='store',
