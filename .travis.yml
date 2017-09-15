@@ -2,54 +2,44 @@ language: python
 dist: trusty
 sudo: required
 env:
-  - BASE_DISTRO: 'centos:7'
-  - BASE_DISTRO: 'fedora:26'
-  - BASE_DISTRO: 'fedora:25'
-  - BASE_DISTRO: 'fedora:24'
-  - BASE_DISTRO: 'debian:jessie'
-  - BASE_DISTRO: 'debian:stretch'
-  - BASE_DISTRO: 'debian:wheezy'
-  - BASE_DISTRO: 'ubuntu:precise'
-  - BASE_DISTRO: 'ubuntu:trusty'
-  - BASE_DISTRO: 'ubuntu:xenial'
-  - BASE_DISTRO: 'ubuntu:zesty'
-  - BASE_DISTRO: 'alpine:3.5'
-  - BASE_DISTRO: 'alpine:3.4'
-
+  global:
+  - secure: xR435k0fnX6duGaDQNXO3QG7eDXywvghaIWY6NwJPfN9CkoDgGTzl82mKW91rkPHiFzubN5IMrKUfHNo7jt7lIQ1oI5zYM2YiIJ/ISseEsyc2afc770Z/xgIcLo90OoEzCV50bezcVk6koPMM0U218fQP64weLO73O+a2OWcewn0nax2cRBBe2xS6jbRGo+1t8ex6aqYSuWIfyCutADg8J8lMu4gxSyQjmMVdBEx1N5sxW0J9o5yTrNO2su4bbwtpgZ9n9vhjh9mqRUW07S7cMxf7SCqURwBAsD+FZQs9Os78xfO2BKdRCgb87kKVJx9vwjJUv0QHdgoDazcclQAX1+p8ulZcoojxkGJuUWuE/CCnV8ypB4rI/guNDiD09g5pNB9ethww2L+0Zc6LrzsDYH8bzlOj1/HWyfcsuLENrb7B024TU1QJRByC6WvvJsq9hnIp3zkvqxGVTmwri1Hog0PjprpfJ8cO09UQEMGtyDGc4ky5hqUHLE4BADY1oOgsdaXHYbztcP5B0B7nlCzzbyz0UfoqEi46bov9eSLeJMW+wxByyFmHSVhcihGtVyGlkEsDlQfOsRVkB6iBpotIdQByltl506Orn8VRRcK+0l1SOPi/wHjMO8zJMErTQH9JV5niy3Qb3pb9xN0xbW0c8DJgzkg960rhBVYHAGVr4w=
+  - secure: aCXignTfVVwE81JzrUUI5Fq5qTbm1nA1t1V5uSM4I3Q2hHik7U1MAT+p6C8zdMZDrxfuapv5tJk6auwZQ+EzHPSK9z/sqpr9UA3PdbsHGh1xrBD89oyBNnDcTCba94crslbGs5W3vQ9PEOcfY8kngBfB4bB/m8B6tlarXubFRIjlUzu4tc3HxFjfgamUnftsms7ML/hFTDQO3QjQV6fQAIvcRUxKgxR6RvakWDwSrYmw0Za7egKPBS4NNWKmxYWlvKvoJ7LAk+s4ZQAtjBor8WG6kQV3foM6ccGkPm06TUxDbABPFpFjVVX1KflGdCu+GQCApZNTsZjaWbLJ61JHA5kks8TfEn4sT+vvoYtxKSpya4njNHLs//v4xhaD1rdJz/P9VhsjWk12DVxnP0RCymxxzBPuC5Z7EqCaw8XSTawH52sfvXKv4JUJuYdVMmqP7jsPcqQXcb67GCNYBxvFcDdBSshkcuLL5D3kjY2nMFWTqlW7kVIR5alzZzbu1oC5mi6GLWZw+eDBAvBG+iXFR89s3ophOAIFIM16H0V0fqMp37JJEb11JrbBOIOqFFdjWPRS5zkcwfe8VDHIh/q6yKO8A3O+k05tx5/v9BtLB9B8hev8oZ7/TKxWGmvpgKTgJ0lOwcV15Cx5aZv+/h4Noa91W+njbXrJI1LrhC7BQyU=
+  matrix:
+  - BASE_DISTRO: centos:7
+  - BASE_DISTRO: fedora:26
+  - BASE_DISTRO: fedora:25
+  - BASE_DISTRO: fedora:24
+  - BASE_DISTRO: debian:jessie
+  - BASE_DISTRO: debian:stretch
+  - BASE_DISTRO: debian:wheezy
+  - BASE_DISTRO: ubuntu:precise
+  - BASE_DISTRO: ubuntu:trusty
+  - BASE_DISTRO: ubuntu:xenial
+  - BASE_DISTRO: ubuntu:zesty
+  - BASE_DISTRO: alpine:3.5
+  - BASE_DISTRO: alpine:3.4
 services:
-  - docker
-
+- docker
 before_install:
-  - sudo apt-add-repository 'deb http://archive.ubuntu.com/ubuntu trusty-backports universe'
-  - sudo apt-get update -qq
-  # - sudo apt-get install -y shellcheck
-  - pip install --upgrade setuptools
-
+- sudo apt-add-repository 'deb http://archive.ubuntu.com/ubuntu trusty-backports universe'
+- sudo apt-get update -qq
+- pip install --upgrade setuptools
 script:
-  # Intall Ansible here, even though it's part of test rquirements.
-  #  If not, `python ./setup.py test` fails while installing pycparser
-  - pip install 'ansible>=2.3'
-  - ansible --version
-
-  - pip install -U --force-reinstall -r requirements.txt
-  # Install Ansible Container
-  - pip install -e .[docker]
-  # Establish a tmp directory
-  - mkdir tmp 
-  - export TMPDIR=${PWD}/tmp
-
-  # run tests
-  - python ./setup.py prebake --distros $BASE_DISTRO --debug
-  - python ./setup.py test --ansible-args="-vvv"
-  - if [ -f ./task.output ]; then cat task.output; fi
-
+- pip install 'ansible>=2.3'
+- ansible --version
+- pip install -U --force-reinstall -r requirements.txt
+- pip install -e .[docker]
+- mkdir tmp
+- export TMPDIR=${PWD}/tmp
+- python ./setup.py prebake --distros $BASE_DISTRO --debug
+- python ./setup.py test --ansible-args="-vvv"
+- if [ -f ./task.output ]; then cat task.output; fi
 after_success:
-  - bash <(curl -s https://codecov.io/bash) -F unit        -f test/reports/unit/coverage.xml
-  - bash <(curl -s https://codecov.io/bash) -F integration -f test/reports/integration/coverage.xml
-
+- bash <(curl -s https://codecov.io/bash) -F unit        -f test/reports/unit/coverage.xml
+- bash <(curl -s https://codecov.io/bash) -F integration -f test/reports/integration/coverage.xml
 after_failure:
-  - docker logs `docker ps -lq`
-  - docker inspect `docker ps -lq`
-
+- docker logs `docker ps -lq`
+- docker inspect `docker ps -lq`
 notifications:
   email: false
