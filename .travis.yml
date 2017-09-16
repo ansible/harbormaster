@@ -25,17 +25,19 @@ before_install:
 - sudo apt-add-repository 'deb http://archive.ubuntu.com/ubuntu trusty-backports universe'
 - sudo apt-get update -qq
 - pip install --upgrade setuptools
-script:
 - pip install 'ansible>=2.3'
 - ansible --version
 - pip install -U --force-reinstall -r requirements.txt
 - pip install -e .[docker]
 - mkdir tmp
 - export TMPDIR=${PWD}/tmp
+script:
 - python ./setup.py prebake --distros $BASE_DISTRO --debug
 - python ./setup.py test --ansible-args="-vvv"
 - if [ -f ./task.output ]; then cat task.output; fi
 after_success:
+- if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then docker login -u ${DOCKER_HUB_USER} -p ${DOCKER_HUB_PASSWORD} fi
+- if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then python ./prebake.py fi
 - bash <(curl -s https://codecov.io/bash) -F unit        -f test/reports/unit/coverage.xml
 - bash <(curl -s https://codecov.io/bash) -F integration -f test/reports/integration/coverage.xml
 after_failure:
