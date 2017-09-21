@@ -246,6 +246,8 @@ def get_role_fingerprint(role_name):
         meta_main_path = os.path.join(role_path, 'meta', 'main.yml')
         if os.path.exists(meta_main_path):
             meta_main = yaml.safe_load(open(meta_main_path))
+            if not meta_main:
+                yield None
             for dependency in meta_main.get('dependencies', []):
                 yield dependency.get('role', None)
         else:
