@@ -313,7 +313,7 @@ def list_to_ordereddict(config):
 def roles_to_install(base_path):
     path = os.path.join(base_path, 'requirements.yml')
     if os.path.exists(path) and os.path.isfile(path):
-        roles = yaml.safe_load(open(path, 'ro'))
+        roles = yaml.safe_load(open(path, 'r'))
         if roles:
             return True
     return False
@@ -322,7 +322,7 @@ def roles_to_install(base_path):
 def modules_to_install(base_path):
     path = os.path.join(base_path, 'ansible-requirements.txt')
     if os.path.exists(path) and os.path.isfile(path):
-        with open(path, 'ro') as fs:
+        with open(path, 'r') as fs:
             line = fs.read().strip()
             if not line.startswith('#'):
                 return True
