@@ -90,13 +90,16 @@ def metadata_to_image_config(metadata):
     def ports_to_exposed_ports(list_of_ports):
         to_return = {}
         for port_spec in list_of_ports:
-            exposed_ports = port_spec.rsplit(':')[-1]
+            exposed_ports = port_spec.rsplit(':', 1)[-1]
+            protocol = 'tcp'
+            if '/' in exposed_ports:
+                exposed_ports, protocol = exposed_ports.split('/')
             if '-' in exposed_ports:
                 low, high = exposed_ports.split('-', 1)
                 for port in range(int(low), int(high)+1):
-                    to_return[str(port)] = {}
+                    to_return['{}/{}'.format(str(port), protocol)] = {}
             else:
-                to_return[exposed_ports] = {}
+                to_return['{}/{}'.format(exposed_ports, protocol)] = {}
         return to_return
 
     def format_environment(environment):
@@ -146,7 +149,7 @@ def metadata_to_image_config(metadata):
         Labels={},
         OnBuild=[]
     )
-
+    
     for metadata_key, (key, translator) in iteritems(TRANSLATORS):
         if metadata_key in metadata:
             config[key] = (translator(metadata[metadata_key]) if translator
