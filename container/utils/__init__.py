@@ -36,7 +36,8 @@ __all__ = ['conductor_dir', 'make_temp_dir', 'get_config', 'assert_initialized',
            'metadata_to_image_config', 'create_role_from_templates',
            'resolve_role_to_path', 'get_role_fingerprint', 'get_content_from_role',
            'get_metadata_from_role', 'get_defaults_from_role', 'text',
-           'ordereddict_to_list', 'list_to_ordereddict']
+           'ordereddict_to_list', 'list_to_ordereddict', 'modules_to_install',
+           'roles_to_install', 'ansible_config_exists', 'create_file']
 
 conductor_dir = os.path.dirname(container.__file__)
 make_temp_dir = MakeTempDir
@@ -317,7 +318,6 @@ def roles_to_install(base_path):
             return True
     return False
 
-
 @container.host_only
 def modules_to_install(base_path):
     path = os.path.join(base_path, 'ansible-requirements.txt')
@@ -334,3 +334,17 @@ def ansible_config_exists(base_path):
     if os.path.exists(path) and os.path.isfile(path):
         return True
     return False
+
+@container.host_only
+def create_file(file_path, contents):
+    if not os.path.exists(file_path):
+        try:
+            os.makedirs(os.path.dirname(file_path), mode=0o775)
+        except Exception:
+            pass
+
+        try:
+            with open(file_path, 'w') as fs:
+                fs.write(contents)
+        except Exception:
+            raise

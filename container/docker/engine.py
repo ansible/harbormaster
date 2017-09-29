@@ -34,7 +34,7 @@ from container import host_only, conductor_only
 from container.engine import BaseEngine
 from container import utils, exceptions
 from container.utils import (logmux, text, ordereddict_to_list, roles_to_install, modules_to_install,
-                             ansible_config_exists)
+                             ansible_config_exists, create_file)
 from .secrets import DockerSecretsMixin
 
 try:
@@ -399,6 +399,7 @@ class Engine(BaseEngine, DockerSecretsMixin):
 
         if command in ('login', 'push', 'build'):
             config_path = params.get('config_path') or self.auth_config_path
+            create_file(config_path, '{}')
             volumes[config_path] = {'bind': config_path,
                                     'mode': 'rw'}
 
