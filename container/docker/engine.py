@@ -33,7 +33,8 @@ import container
 from container import host_only, conductor_only
 from container.engine import BaseEngine
 from container import utils, exceptions
-from container.utils import logmux, text, ordereddict_to_list
+from container.utils import (logmux, text, ordereddict_to_list, roles_to_install, modules_to_install,
+                             ansible_config_exists)
 from .secrets import DockerSecretsMixin
 
 try:
@@ -879,7 +880,8 @@ class Engine(BaseEngine, DockerSecretsMixin):
                 else:
                     plainLogger.debug(line)
 
-    def _prepare_prebake_manifest(self, base_path, base_image, temp_dir, tarball):
+    @staticmethod
+    def _prepare_prebake_manifest(base_path, base_image, temp_dir, tarball):
         utils.jinja_render_to_temp(TEMPLATES_PATH,
                                    'conductor-src-dockerfile.j2', temp_dir,
                                    'Dockerfile',
@@ -945,9 +947,20 @@ class Engine(BaseEngine, DockerSecretsMixin):
                 container.__version__
             )
 
+        run_commands = []
+        if modules_to_install(base_path):
+            run_commands.append('pip install --no-cache-dir -r /_ansible/build/ansible-requirements.txt')
+        if roles_to_install(base_path):
+            run_commands.append('ansible-galaxy install -p /etc/ansible/roles -r /_ansible/build/requirements.yml')
+        if ansible_config_exists(base_path):
+            run_commands.append('cp /_ansible/build/ansible.cfg /etc/ansible/ansible.cfg')
+        separator = ' && \\\r\n'
+        install_requirements = separator.join(run_commands)
+
         utils.jinja_render_to_temp(TEMPLATES_PATH,
                                    'conductor-local-dockerfile.j2', temp_dir,
                                    'Dockerfile',
+                                   install_requirements=install_requirements,
                                    original_base=base_image,
                                    conductor_base=conductor_base,
                                    docker_version=DOCKER_VERSION)

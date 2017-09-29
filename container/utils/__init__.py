@@ -308,3 +308,29 @@ def list_to_ordereddict(config):
             result[key] = value
     return result
 
+@container.host_only
+def roles_to_install(base_path):
+    path = os.path.join(base_path, 'requirements.yml')
+    if os.path.exists(path) and os.path.isfile(path):
+        roles = yaml.safe_load(open(path, 'ro'))
+        if roles:
+            return True
+    return False
+
+
+@container.host_only
+def modules_to_install(base_path):
+    path = os.path.join(base_path, 'ansible-requirements.txt')
+    if os.path.exists(path) and os.path.isfile(path):
+        with open(path, 'ro') as fs:
+            line = fs.read().strip()
+            if not line.startswith('#'):
+                return True
+    return False
+
+@container.host_only
+def ansible_config_exists(base_path):
+    path = os.path.join(base_path, 'ansible.cfg')
+    if os.path.exists(path) and os.path.isfile(path):
+        return True
+    return False
