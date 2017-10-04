@@ -323,9 +323,9 @@ def modules_to_install(base_path):
     path = os.path.join(base_path, 'ansible-requirements.txt')
     if os.path.exists(path) and os.path.isfile(path):
         with open(path, 'r') as fs:
-            line = fs.read().strip()
-            if not line.startswith('#'):
-                return True
+            for line in fs:
+                if not line.strip().startswith('#'):
+                    return True
     return False
 
 @container.host_only
