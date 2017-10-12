@@ -324,6 +324,9 @@ class HostCommand(object):
         except exceptions.AnsibleContainerConfigException as e:
             logger.error('Invalid container.yml: {}'.format(e), exc_info=False)
             sys.exit(1)
+        except exceptions.AnsibleContainerRequestException as e:
+            logger.error("Invalid request: {}".format(e), exc_info=False)
+            sys.exit(1)
         except requests.exceptions.ConnectionError:
             logger.error('Could not connect to container host. Check your docker config', exc_info=False)
             sys.exit(1)
