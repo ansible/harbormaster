@@ -166,6 +166,8 @@ class Engine(BaseEngine, DockerSecretsMixin):
             except DockerException as exc:
                 if 'Connection refused' in str(exc):
                     raise exceptions.AnsibleContainerDockerConnectionRefused()
+                elif 'Connection aborted' in str(exc):
+                    raise exceptions.AnsibleContainerDockerConnectionAborted(u"%s" % str(exc))
                 else:
                     raise
         return self._client
