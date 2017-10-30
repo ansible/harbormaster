@@ -112,7 +112,7 @@ def metadata_to_image_config(metadata):
         )
         if isinstance(environment, list):
             environment = {k: v for (k, v) in
-                           [item.split('=', 1) for item in environment]}
+                           [item.split('=', 1) for item in environment if '=' in item]}
         to_return.update(environment)
         return ['='.join(tpl) for tpl in iteritems(to_return)]
 

@@ -246,6 +246,8 @@ def hostcmd_run(base_path, project_name, engine_name, vars_files=None, cache=Tru
     services = kwargs.pop('service')
     config.check_requested_services(services)
     config.set_services(services)
+    conductor_env = config.get_conductor_environment() 
+    config.set_conductor_environment(conductor_env)
 
     logger.debug('hostcmd_run configuration', config=config.__dict__)
 
@@ -259,7 +261,7 @@ def hostcmd_run(base_path, project_name, engine_name, vars_files=None, cache=Tru
         'deployment_output_path': config.deployment_path,
         'host_user_uid': os.getuid(),
         'host_user_gid': os.getgid(),
-        'settings': config.get('settings', {})
+        'settings': config.get('settings', {}), 
     }
     if kwargs:
         params.update(kwargs)
@@ -336,6 +338,8 @@ def hostcmd_restart(base_path, project_name, engine_name, vars_files=None, force
     services = kwargs.pop('service')
     config.check_requested_services(services)
     config.set_services(services)
+    conductor_env = config.get_conductor_environment()
+    config.set_conductor_environment(conductor_env)
 
     engine_obj = load_engine(['RUN'],
                              engine_name, config.project_name,

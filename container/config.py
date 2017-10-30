@@ -113,6 +113,38 @@ class BaseAnsibleContainerConfig(Mapping):
         # When pushing images or deploying, we need to know the default namespace
         pass
 
+    def get_conductor_environment(self):
+        """
+        Return a copy of settings.conductor.environment + any undefined variables found in the service definitions.
+        Attempts to set undefined variables from a corresponding values found in the local environment. 
+        """  
+        conductor_env = copy.deepcopy(self._config.get('settings', {}).get('conductor', {}).get('environment', {}))
+        if isinstance(conductor_env, list):
+            # convert to a dict 
+            new_env = {}
+            for item in [e.split('=', 1) for e in conductor_env if '=' in e]:
+                new_env[item[0]] = item[1]
+            conductor_env = new_env
+        
+        for name, options in iteritems(self._config['services']):
+            if options.get('environment'):
+                if isinstance(options['environment'], list):
+                    for e in options['environment']:
+                        if '=' not in e and os.environ.get(e) and not conductor_env.get(e):
+                            conductor_env[e] = os.environ[e]
+                elif isinstance(options['environment'], dict):
+                    for key, value in iteritems(options['environment']):
+                        if value is None and os.environ.get(key) and not conductor_env.get(key):
+                            conductor_env[key] = os.environ[key]    
+        return conductor_env 
+
+    def set_conductor_environment(self, environment):
+        if self._config.get('settings') is None: 
+            self._config['settings'] = {}
+        if self._config['settings'].get('conductor') is None:
+            self._config['settings']['conductor'] = {}
+        self._config['settings']['conductor']['environment'] = environment
+
     @abstractmethod
     def set_env(self, env, config=None):
         """
