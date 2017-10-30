@@ -115,8 +115,9 @@ class BaseAnsibleContainerConfig(Mapping):
 
     def get_conductor_environment(self):
         """
-        Return a copy of settings.conductor.environment + any undefined variables found in the service definitions.
-        Attempts to set undefined variables from a corresponding values found in the local environment. 
+        Return a copy of settings.conductor.environment + any undefined environment variables found in 
+        any service definitions. Sets any undefined variables to corresponding variables found in the 
+        local environment. 
         """  
         conductor_env = copy.deepcopy(self._config.get('settings', {}).get('conductor', {}).get('environment', {}))
         if isinstance(conductor_env, list):
@@ -124,8 +125,10 @@ class BaseAnsibleContainerConfig(Mapping):
             new_env = {}
             for item in [e.split('=', 1) for e in conductor_env if '=' in e]:
                 new_env[item[0]] = item[1]
+            for item in [e for e in conductor_env if '=' not in e]:
+                new_env[item] = None
             conductor_env = new_env
-        
+         
         for name, options in iteritems(self._config['services']):
             if options.get('environment'):
                 if isinstance(options['environment'], list):
@@ -136,6 +139,11 @@ class BaseAnsibleContainerConfig(Mapping):
                     for key, value in iteritems(options['environment']):
                         if value is None and os.environ.get(key) and not conductor_env.get(key):
                             conductor_env[key] = os.environ[key]    
+
+        for key in conductor_env.keys():
+            if conductor_env[key] is None:
+                conductor_env[key] = os.environ.get(key)
+
         return conductor_env 
 
     def set_conductor_environment(self, environment):
