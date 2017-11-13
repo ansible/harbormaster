@@ -220,6 +220,8 @@ with a checkmark in the *Supported* column can be used.
 Directive             Definition                                               Supported?
 ===================== ======================================================== ============
 build                 Run Dockerfile based build
+:ref:`build_over`     Service level directives that apply only in container
+                      build time                                               |checkmark|
 cap_add               Add container capabilities
 cap_drop              Drop container capabilities
 command               Command executed by the container at startup             |checkmark|
@@ -289,6 +291,39 @@ Implementation
 ``````````````
 
 The following provides details about how specific directives are implemented.
+
+.. _build_over:
+
+build_overrides
+.............
+
+Use for directives that should only be applied during the execution of the ``build`` command. For example,
+consider the following ``container.yml`` file:
+
+.. code-block:: yaml
+
+    version: '2'
+    services:
+      web:
+        from: centos:7
+        command: [nginx]
+        entrypoint: [/usr/bin/entrypoint.sh]
+        ports:
+          - 8000:8000
+        build_overrides:
+          command: /usr/sbin/init
+          user: root
+          working_dir: /somepath
+          environment:
+            - container: docker
+
+
+In this example, when ``ansible-container build`` is executed, the options found in *build_overrides* will
+take effect, and the building container will run command ``/usr/sbin/init`` rather than default ``sh -c "while true; do sleep 1; done``, have extra environment variables ``container=docker`` mapped to the container's environment and the container's working directory will be ``/somepath``.
+
+The ``run`` and ``deploy`` commands ignore *build_overrides*. When ``run`` or ``deploy`` executes, the container will not run the command or use environment variables specified in ``build_overrides`` directive.
+
+Supported directives in ``build_overrides`` are ``command``, ``user``, ``working_dir``, ``privileged`` and ``environment``
 
 .. _depends_on:
 

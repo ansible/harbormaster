@@ -781,6 +781,13 @@ def conductorcmd_build(engine_name, project_name, services, cache=True, local_py
                     environment=dict(ANSIBLE_CONTAINER=1)
                 )
 
+                if service.get('build_overrides'):
+                    for key in service['build_overrides']:
+                        if key in ['user', 'working_dir', 'command', 'privileged']:
+                            run_kwargs[key] = service['build_overrides'][key]
+
+                    run_kwargs['environment'].update(service['build_overrides']['environment'])
+
                 if service.get('volumes'):
                     for volume in service['volumes']:
                         pieces = volume.split(':')
