@@ -760,6 +760,9 @@ class Engine(BaseEngine, DockerSecretsMixin):
                         service_definition['volumes'] = []
                     service_definition['volumes'].append("{}:/run/secrets:ro".format(self.secrets_volume_name))
 
+            if 'extra_hosts' in service:
+                service_definition['extra_hosts'] = service['extra_hosts']
+
             logger.debug(u'Adding new service to definition',
                          service=service_name, definition=service_definition)
             service_def[service_name] = service_definition
