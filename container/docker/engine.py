@@ -141,7 +141,7 @@ class Engine(BaseEngine, DockerSecretsMixin):
     COMPOSE_WHITELIST = (
         'links', 'depends_on', 'cap_add', 'cap_drop', 'command', 'devices',
         'dns', 'dns_opt', 'tmpfs', 'entrypoint', 'environment', 'expose',
-        'external_links', 'labels', 'links', 'logging', 'log_opt', 'networks',
+        'external_links', 'extra_hosts', 'labels', 'links', 'logging', 'log_opt', 'networks',
         'network_mode', 'pids_limit', 'ports', 'security_opt', 'stop_grace_period',
         'stop_signal', 'sysctls', 'ulimits', 'userns_mode', 'volumes',
         'volume_driver', 'volumes_from', 'cpu_shares', 'cpu_quota', 'cpuset',
@@ -759,9 +759,6 @@ class Engine(BaseEngine, DockerSecretsMixin):
                     if not 'volumes' in service_definition:
                         service_definition['volumes'] = []
                     service_definition['volumes'].append("{}:/run/secrets:ro".format(self.secrets_volume_name))
-
-            if 'extra_hosts' in service:
-                service_definition['extra_hosts'] = service['extra_hosts']
 
             logger.debug(u'Adding new service to definition',
                          service=service_name, definition=service_definition)
