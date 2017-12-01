@@ -300,7 +300,7 @@ class BaseAnsibleContainerConfig(Mapping):
                 config = json.load(open(abspath))
             except Exception as exc:
                 raise AnsibleContainerConfigException(u"JSON exception: %s" % text_type(exc))
-        return iteritems(config)
+        return iteritems(config) if config else []
 
     TOP_LEVEL_WHITELIST = [
         'version',
