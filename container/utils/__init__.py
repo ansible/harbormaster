@@ -13,7 +13,7 @@ from datetime import datetime
 from distutils import dir_util
 from jinja2 import Environment, FileSystemLoader
 from ruamel import yaml
-from six import iteritems, string_types
+from six import iteritems, string_types, text_type
 
 
 from ..exceptions import AnsibleContainerException, \
@@ -126,7 +126,7 @@ def metadata_to_image_config(metadata):
             environment = {k: v for (k, v) in
                            [item.split('=', 1) for item in environment if '=' in item]}
         to_return.update(environment)
-        return ['='.join(tpl) for tpl in iteritems(to_return)]
+        return ['='.join(map(text_type, tpl)) for tpl in iteritems(to_return)]
 
     TRANSLATORS = {
         # Keys are the key found in the service_data
