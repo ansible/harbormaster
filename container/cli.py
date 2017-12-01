@@ -364,6 +364,8 @@ def decode_b64json(encoded_params):
     return json.loads(base64.b64decode(encoded_params).decode())
 
 
+BYPASS_SERVICE_PROCESSING = ['push', 'install']
+
 @container.conductor_only
 def conductor_commandline():
     sys.stderr.write('Parsing conductor CLI args.\n')
@@ -395,8 +397,8 @@ def conductor_commandline():
     config.dictConfig(LOGGING)
 
     containers_config = decoding_fn(args.config)
-    conductor_config = AnsibleContainerConductorConfig(list_to_ordereddict(containers_config))
-
+    conductor_config = AnsibleContainerConductorConfig(list_to_ordereddict(containers_config),
+                                                       skip_services=args.command in BYPASS_SERVICE_PROCESSING)
     logger.debug('Starting Ansible Container Conductor: %s', args.command, services=conductor_config.services)
     getattr(core, 'conductorcmd_%s' % args.command)(
         args.engine,

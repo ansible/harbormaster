@@ -363,7 +363,8 @@ class AnsibleContainerConductorConfig(Mapping):
     _config = None
 
     @container.conductor_only
-    def __init__(self, container_config):
+    def __init__(self, container_config, skip_services=False):
+        self._skip_services = skip_services
         self._config = container_config
         self._templar = Templar(loader=None, variables={})
         self._process_defaults()
@@ -410,36 +411,37 @@ class AnsibleContainerConductorConfig(Mapping):
 
     def _process_services(self):
         services = ordereddict()
-        for service, service_data in self._config.get('services', ordereddict()).items():
-            logger.debug('Processing service...', service=service, service_data=service_data)
-            processed = ordereddict()
-            service_defaults = self.defaults.copy()
-            for idx in range(len(service_data.get('volumes', []))):
-                # To mount the project directory, let users specify `$PWD` and
-                # have that filled in with the project path
-                service_data['volumes'][idx] = re.sub(r'\$(PWD|\{PWD\})', self._config['settings'].get('pwd'),
-                                                      service_data['volumes'][idx])
-            for role_spec in service_data.get('roles', []):
-                if isinstance(role_spec, dict):
-                    # A role with parameters to run it with
-                    role_spec_copy = copy.deepcopy(role_spec)
-                    role_name = role_spec_copy.pop('role')
-                    role_args = role_spec_copy
-                else:
-                    role_name = role_spec
-                    role_args = {}
-                role_metadata = get_metadata_from_role(role_name)
-                processed.update(role_metadata, relax=True)
-                service_defaults.update(get_defaults_from_role(role_name),
-                                        relax=True)
-                service_defaults.update(role_args, relax=True)
-            processed.update(service_data, relax=True)
-            logger.debug('Rendering service keys from defaults', service=service, defaults=service_defaults)
-            services[service] = self._process_section(
-                processed,
-                templar=Templar(loader=None, variables=service_defaults)
-            )
-            services[service]['defaults'] = service_defaults
+        if not self._skip_services:
+            for service, service_data in self._config.get('services', ordereddict()).items():
+                logger.debug('Processing service...', service=service, service_data=service_data)
+                processed = ordereddict()
+                service_defaults = self.defaults.copy()
+                for idx in range(len(service_data.get('volumes', []))):
+                    # To mount the project directory, let users specify `$PWD` and
+                    # have that filled in with the project path
+                    service_data['volumes'][idx] = re.sub(r'\$(PWD|\{PWD\})', self._config['settings'].get('pwd'),
+                                                          service_data['volumes'][idx])
+                for role_spec in service_data.get('roles', []):
+                    if isinstance(role_spec, dict):
+                        # A role with parameters to run it with
+                        role_spec_copy = copy.deepcopy(role_spec)
+                        role_name = role_spec_copy.pop('role')
+                        role_args = role_spec_copy
+                    else:
+                        role_name = role_spec
+                        role_args = {}
+                    role_metadata = get_metadata_from_role(role_name)
+                    processed.update(role_metadata, relax=True)
+                    service_defaults.update(get_defaults_from_role(role_name),
+                                            relax=True)
+                    service_defaults.update(role_args, relax=True)
+                processed.update(service_data, relax=True)
+                logger.debug('Rendering service keys from defaults', service=service, defaults=service_defaults)
+                services[service] = self._process_section(
+                    processed,
+                    templar=Templar(loader=None, variables=service_defaults)
+                )
+                services[service]['defaults'] = service_defaults
         self.services = services
 
     def __getitem__(self, key):
