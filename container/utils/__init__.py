@@ -102,7 +102,7 @@ def metadata_to_image_config(metadata):
 
     def ports_to_exposed_ports(list_of_ports):
         to_return = {}
-        for port_spec in list_of_ports:
+        for port_spec in map(text_type, list_of_ports):
             exposed_ports = port_spec.rsplit(':', 1)[-1]
             protocol = 'tcp'
             if '/' in exposed_ports:
