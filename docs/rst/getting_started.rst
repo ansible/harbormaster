@@ -181,7 +181,7 @@ orchestration of the containers in your app for both development and production 
 app, we have Django application server, a PostgreSQL database server, and an nginx web server.
 
 This ``container.yml`` file has an additional top-level key called `defaults`, mapping variables to
-some sane default values:
+some same default values:
 
 .. code-block:: yaml
 
