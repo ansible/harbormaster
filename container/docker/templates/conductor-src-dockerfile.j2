@@ -15,6 +15,10 @@ RUN yum update -y && \
     yum install -y make gcc git python-devel curl rsync libffi-devel openssl-devel && \
     # yum remove -y python-chardet && \
     yum clean all
+{% elif distro in ["amazonlinux"] %}
+RUN yum -y update && \
+    yum -y install make git gcc python27-devel rsync libffi-devel openssl-devel && \
+    yum clean all
 {% elif "rhel" in distro %}
 RUN yum -y update-minimal --disablerepo "*" \
                           --enablerepo rhel-7-server-rpms,rhel-7-server-optional-rpms \

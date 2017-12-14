@@ -7,6 +7,7 @@ env:
   - BASE_DISTRO: fedora:26
   - BASE_DISTRO: fedora:25
   - BASE_DISTRO: fedora:24
+  - BASE_DISTRO: amazonlinux:2
   - BASE_DISTRO: debian:jessie
   - BASE_DISTRO: debian:stretch
   - BASE_DISTRO: debian:wheezy
@@ -33,7 +34,7 @@ script:
 - python ./setup.py test --ansible-args="-vvv"
 - if [ -f ./task.output ]; then cat task.output; fi
 - |
-  if [ "${TRAVIS_PULL_REQUEST}" == "false" ] && [ "${DOCKER_HUB_USER}" != "" ]; then 
+  if [ "${TRAVIS_PULL_REQUEST}" == "false" ] && [ "${DOCKER_HUB_USER}" != "" ]; then
       # If not a PR, and secrets exist, create and push the prebake
       export DOCKER_CONFIG=${PWD};
       docker login -u ${DOCKER_HUB_USER} -p ${DOCKER_HUB_PASSWORD};
