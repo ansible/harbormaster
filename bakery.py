@@ -19,10 +19,10 @@ BASE_DISTRO = os.getenv('BASE_DISTRO');
 
 if BASE_DISTRO:
     subprocess.check_call(['python', 'setup.py', 'prebake', '--distros', BASE_DISTRO])
-else: 
+else:
     subprocess.check_call(['python', 'setup.py', 'prebake'])
 
-for distro in [BASE_DISTRO] or PREBAKED_DISTROS:
+for distro in ([BASE_DISTRO] if BASE_DISTRO else PREBAKED_DISTROS):
     print('Uploading %s...' % distro)
     distro_key = distro.replace(':', '-')
     print(['docker', 'tag',

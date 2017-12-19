@@ -44,7 +44,7 @@
 
 - name: Run ansible-container import
   shell: >
-    ansible-container --debug --project-path
+    ansible-container --debug --devel --project-path
     {{ tempdir.path|quote }}/test-{{ distro.name|quote }} import
     {{ tempdir.path|quote }}/{{ distro.name|quote }} >>task.output 2>&1
   register: output
@@ -67,7 +67,7 @@
 
 - name: Run ansible-container build
   shell: >
-    ansible-container --debug --project-path
+    ansible-container --debug --devel --project-path
     {{ tempdir.path|quote }}/test-{{ distro.name|quote }} build --no-cache >>task.output 2>&1
   register: output
   ignore_errors: yes

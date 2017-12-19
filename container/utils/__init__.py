@@ -13,7 +13,7 @@ from datetime import datetime
 from distutils import dir_util
 from jinja2 import Environment, FileSystemLoader
 from ruamel import yaml
-from six import iteritems, string_types
+from six import iteritems, string_types, text_type
 
 
 from ..exceptions import AnsibleContainerException, \
@@ -30,11 +30,17 @@ if container.ENV == 'conductor':
         # Prior to ansible/ansible@8f97aef1a365, this was not in its own module
         from ansible.vars import VariableManager
     from ansible.parsing.dataloader import DataLoader
+    from ansible.playbook.play import Play
+    from ansible.playbook.play_context import PlayContext
+    from ansible.executor.play_iterator import PlayIterator
+    from ansible.inventory.manager import InventoryManager
+    from ansible.inventory.host import Host
 
 __all__ = ['conductor_dir', 'make_temp_dir', 'get_config', 'assert_initialized',
            'create_path', 'jinja_template_path', 'jinja_render_to_temp',
            'metadata_to_image_config', 'create_role_from_templates',
-           'resolve_role_to_path', 'get_role_fingerprint', 'get_content_from_role',
+           'resolve_role_to_path', 'generate_playbook_for_role',
+           'get_role_fingerprint', 'get_content_from_role',
            'get_metadata_from_role', 'get_defaults_from_role', 'text',
            'ordereddict_to_list', 'list_to_ordereddict', 'modules_to_install',
            'roles_to_install', 'ansible_config_exists', 'create_file']
@@ -42,17 +48,31 @@ __all__ = ['conductor_dir', 'make_temp_dir', 'get_config', 'assert_initialized',
 conductor_dir = os.path.dirname(container.__file__)
 make_temp_dir = MakeTempDir
 
+FILE_COPY_MODULES = ['synchronize', 'copy']
 
-def get_config(base_path, vars_files=None, engine_name=None, project_name=None, vault_files=None):
+
+def get_config(base_path, vars_files=None, engine_name=None, project_name=None, vault_files=None, config_file=None):
     mod = importlib.import_module('.%s.config' % engine_name,
                                   package='container')
     return mod.AnsibleContainerConfig(base_path, vars_files=vars_files, engine_name=engine_name,
-                                      project_name=project_name, vault_files=vault_files)
+                                      project_name=project_name, vault_files=vault_files, config_file=config_file)
 
 
-def assert_initialized(base_path):
+def resolve_config_path(base_path, config_file):
+    if not config_file:
+        raise AnsibleContainerNotInitializedException(
+            "Missing config_file. This is a bug, as it should have defaulted to 'container.yml'. "
+            "Please report this incident, so we can put a halt to such shinanigans!"
+        )
+    # The config file may live outside the project path. However, when no path specified, look for it in project path.
+    if os.path.dirname(config_file):
+        return config_file
+    return os.path.join(base_path, config_file)
+
+
+def assert_initialized(base_path, config_file=None):
     ansible_dir = os.path.normpath(base_path)
-    container_file = os.path.join(ansible_dir, 'container.yml')
+    container_file = resolve_config_path(base_path, config_file)
     if not all((
         os.path.exists(ansible_dir), os.path.isdir(ansible_dir),
         os.path.exists(container_file), os.path.isfile(container_file),
@@ -90,7 +110,7 @@ def metadata_to_image_config(metadata):
 
     def ports_to_exposed_ports(list_of_ports):
         to_return = {}
-        for port_spec in list_of_ports:
+        for port_spec in map(text_type, list_of_ports):
             exposed_ports = port_spec.rsplit(':', 1)[-1]
             protocol = 'tcp'
             if '/' in exposed_ports:
@@ -114,7 +134,7 @@ def metadata_to_image_config(metadata):
             environment = {k: v for (k, v) in
                            [item.split('=', 1) for item in environment if '=' in item]}
         to_return.update(environment)
-        return ['='.join(tpl) for tpl in iteritems(to_return)]
+        return ['='.join(map(text_type, tpl)) for tpl in iteritems(to_return)]
 
     TRANSLATORS = {
         # Keys are the key found in the service_data
@@ -202,23 +222,42 @@ def create_role_from_templates(role_name=None, role_path=None,
 
 
 @container.conductor_only
-def resolve_role_to_path(role_name):
+def resolve_role_to_path(role):
+    """
+    Given a role definition from a service's list of roles, returns the file path to the role
+    """
     loader = DataLoader()
     try:
         variable_manager = VariableManager(loader=loader)
     except TypeError:
         # If Ansible prior to ansible/ansible@8f97aef1a365
         variable_manager = VariableManager()
-    role_obj = RoleInclude.load(data=role_name, play=None,
+    role_obj = RoleInclude.load(data=role, play=None,
                                 variable_manager=variable_manager,
                                 loader=loader)
-    role_path = role_obj._role_path
-    return role_path
-
+    return role_obj._role_path
 
 @container.conductor_only
-def get_role_fingerprint(role_name):
+def generate_playbook_for_role(service_name, vars, role):
+    playbook = [
+        {'hosts': service_name,
+         'vars': vars or {},
+         'roles': [role],
+         }
+    ]
 
+    if isinstance(role, dict) and 'gather_facts' in role:
+        # Allow disabling gather_facts at the role level
+        playbook[0]['gather_facts'] = role.pop('gather_facts')
+    logger.debug('Playbook generated: %s', playbook)
+    return playbook
+
+@container.conductor_only
+def get_role_fingerprint(role, service_name, config_vars):
+    """
+    Given a role definition from a service's list of roles, returns a hexdigest based on the role definition,
+    the role contents, and the hexdigest of each dependency
+    """
     def hash_file(hash_obj, file_path):
         blocksize = 64 * 1024
         with open(file_path, 'rb') as ifs:
@@ -238,13 +277,33 @@ def get_role_fingerprint(role_name):
                 hash_file(hash_obj, abs_file_path)
 
     def hash_role(hash_obj, role_path):
-        # A role is easy to hash - the hash of the role content with the
+        # Role content is easy to hash - the hash of the role content with the
         # hash of any role dependencies it has
         hash_dir(hash_obj, role_path)
         for dependency in get_dependencies_for_role(role_path):
             if dependency:
                 dependency_path = resolve_role_to_path(dependency)
                 hash_role(hash_obj, dependency_path)
+        # However tasks within that role might reference files outside of the
+        # role, like source code
+        loader = DataLoader()
+        var_man = VariableManager(loader=loader)
+        play = Play.load(generate_playbook_for_role(service_name, config_vars, role)[0])
+        play_context = PlayContext(play=play)
+        inv_man = InventoryManager(loader, sources=['%s,' % service_name])
+        host = Host(service_name)
+        iterator = PlayIterator(inv_man, play, play_context, var_man, config_vars)
+        while True:
+            _, task = iterator.get_next_task_for_host(host)
+            if task is None: break
+            if task.action in FILE_COPY_MODULES:
+                src = task.args.get('src')
+                if not os.path.exists(src) or not src.startswith(('/', '..')): continue
+                src = os.path.realpath(src)
+                if os.path.isfile(src):
+                    hash_file(hash_obj, src)
+                else:
+                    hash_dir(hash_obj, src)
 
     def get_dependencies_for_role(role_path):
         meta_main_path = os.path.join(role_path, 'meta', 'main.yml')
@@ -259,9 +318,9 @@ def get_role_fingerprint(role_name):
 
     hash_obj = hashlib.sha256()
     # Account for variables passed to the role by including the invocation string
-    hash_obj.update((json.dumps(role_name) if not isinstance(role_name, string_types) else role_name) + '::')
+    hash_obj.update((json.dumps(role) if not isinstance(role, string_types) else role) + '::')
     # Add each of the role's files and directories
-    hash_role(hash_obj, resolve_role_to_path(role_name))
+    hash_role(hash_obj, resolve_role_to_path(role))
     return hash_obj.hexdigest()
 
 

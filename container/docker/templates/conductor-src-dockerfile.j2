@@ -13,7 +13,6 @@ RUN dnf update -y && \
 RUN yum update -y && \
     yum install -y epel-release && \
     yum install -y make gcc git python-devel curl rsync libffi-devel openssl-devel && \
-    # yum remove -y python-chardet && \
     yum clean all
 {% elif distro in ["amazonlinux"] %}
 RUN yum -y update && \
@@ -48,22 +47,18 @@ RUN apk add --no-cache -U python-dev make git curl rsync libffi libffi-dev opens
 
 RUN (curl https://bootstrap.pypa.io/get-pip.py | python - --no-cache-dir ) && \
     mkdir -p /etc/ansible/roles /_ansible/src && \
+    mkdir -p /licenses && \
     (curl https://get.docker.com/builds/Linux/x86_64/docker-{{ docker_version }}.tgz \
        | tar -zxC /usr/local/bin/ --strip-components=1 docker/docker )
 
+ADD LICENSE /licenses/LICENSE
+ADD help.1 /help.1
+
 # The COPY here will break cache if the version of Ansible Container changed
 COPY /container-src /_ansible/container
+
 RUN cd /_ansible && \
     pip install --no-cache-dir -r container/conductor-build/conductor-requirements.txt && \
     PYTHONPATH=. LC_ALL="en_US.UTF-8" python container/conductor-build/setup.py develop -v -N && \
     ansible-galaxy install -p /etc/ansible/roles -r container/conductor-build/conductor-requirements.yml
-
-{% if distro in ["centos"] %}
-# Removing python-chardet removed yum-utils, and now that we're done pip-installing things,
-# we'll put it back.
-#RUN yum install -y yum-utils && \
-#    yum clean all
-{% endif %}
-
-
 

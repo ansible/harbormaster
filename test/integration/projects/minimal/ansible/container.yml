@@ -1,7 +1,0 @@
-version: "1"
-services:
-  minimal:
-    image: busybox
-    command: /bin/true
-    volumes:
-      - '/tmp/volume'

@@ -1,0 +1,11 @@
+version: "2"
+settings:
+  conductor:
+    base: centos:7
+services:
+  foo:
+    from: centos:7
+    roles:
+      - one
+      - two
+      - three

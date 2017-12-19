@@ -1,0 +1,15 @@
+# handlers/main.yml
+---
+- name: Cleanup temp dir
+  file:
+    name: "{{ tempdir.path }}"
+    state: absent
+- name: Cleanup Docker container droppings
+  shell: "docker ps -a | grep rebuild_foo | awk '{print $1}' | xargs docker rm -fv"
+  ignore_errors: yes
+  listen: Cleanup rebuild features containers and images
+- name: Cleanup Docker image droppings
+  shell: "docker images | grep ^rebuild- | awk '{print $3}' | xargs docker rmi -f"
+  ignore_errors: yes
+  listen: Cleanup rebuild features containers and images
+

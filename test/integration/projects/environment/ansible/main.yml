@@ -1,9 +1,0 @@
-- hosts: all
-  gather_facts: yes
-  tasks:
-    - name: Debug when environment defined 
-      debug: msg="{{ inventory_hostname }} MYVAR={{ ansible_env.MYVAR }} ANSIBLE_CONTAINER={{ ansible_env.ANSIBLE_CONTAINER }}" 
-      when: ansible_env.MYVAR is defined
-    - name: Debug when environment not defined
-      debug: msg="{{ inventory_hostname }} ANSIBLE_CONTAINER={{ ansible_env.ANSIBLE_CONTAINER }}" 
-      when: ansible_env.MYVAR is undefined

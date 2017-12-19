@@ -1,6 +1,7 @@
 language: python
 dist: trusty
 sudo: required
+group: deprecated-2017Q4
 env:
   matrix:
   - BASE_DISTRO: centos:7
@@ -30,15 +31,18 @@ before_install:
 - mkdir tmp
 - export TMPDIR=${PWD}/tmp
 script:
+- python -c 'import os,sys,fcntl; flags = fcntl.fcntl(sys.stdout, fcntl.F_GETFL); fcntl.fcntl(sys.stdout, fcntl.F_SETFL, flags&~os.O_NONBLOCK);'
 - python ./setup.py prebake --distros ${BASE_DISTRO} --debug
 - python ./setup.py test --ansible-args="-vvv"
 - if [ -f ./task.output ]; then cat task.output; fi
 - |
   if [ "${TRAVIS_PULL_REQUEST}" == "false" ] && [ "${DOCKER_HUB_USER}" != "" ]; then
-      # If not a PR, and secrets exist, create and push the prebake
-      export DOCKER_CONFIG=${PWD};
-      docker login -u ${DOCKER_HUB_USER} -p ${DOCKER_HUB_PASSWORD};
-      python ./bakery.py;
+      if ["${TRAVIS_BRANCH}" == "develop" ] || [ "${TRAVIS_BRANCH}" == "master"]; then
+        # If not a PR, and secrets exist, create and push the prebake
+        export DOCKER_CONFIG=${PWD};
+        docker login -u ${DOCKER_HUB_USER} -p ${DOCKER_HUB_PASSWORD};
+        python ./bakery.py;
+      fi
   fi
 after_success:
 - bash <(curl -s https://codecov.io/bash) -F unit        -f test/reports/unit/coverage.xml

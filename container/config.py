@@ -16,7 +16,9 @@ from six import add_metaclass, iteritems, PY2, string_types, text_type
 
 from collections import Mapping
 from .utils.ordereddict import ordereddict
+from .utils import resolve_config_path
 from ruamel import yaml
+import jsonschema
 import container
 
 if container.ENV == 'conductor':
@@ -52,11 +54,12 @@ class BaseAnsibleContainerConfig(Mapping):
     engine_list = ['docker', 'openshift', 'k8s']
 
     @container.host_only
-    def __init__(self, base_path, vars_files=None, engine_name=None, project_name=None, vault_files=None):
+    def __init__(self, base_path, vars_files=None, engine_name=None, project_name=None, vault_files=None,
+                 config_file=None):
         self.base_path = base_path
         self.cli_vars_files = vars_files
         self.engine_name = engine_name
-        self.config_path = path.join(self.base_path, 'container.yml')
+        self.config_path = resolve_config_path(base_path, config_file)
         self.cli_project_name = project_name
         self.cli_vault_files = vault_files
         self.remove_engines = set(self.engine_list) - set([engine_name])
@@ -72,10 +75,14 @@ class BaseAnsibleContainerConfig(Mapping):
     def project_name(self):
         if self.cli_project_name:
             # Give precedence to CLI args
+            self._validate_project_name(self.cli_project_name)
             return self.cli_project_name
         if self._config.get('settings', {}).get('project_name', None):
             # Look for settings.project_name
+            self._validate_project_name(self._config['settings']['project_name'])
             return self._config['settings']['project_name']
+        logger.info("Setting project_name not defined. Fallback to current directory name.")
+        self._validate_project_name(os.path.basename(self.base_path))
         return os.path.basename(self.base_path)
 
     @property
@@ -294,7 +301,7 @@ class BaseAnsibleContainerConfig(Mapping):
                 config = json.load(open(abspath))
             except Exception as exc:
                 raise AnsibleContainerConfigException(u"JSON exception: %s" % text_type(exc))
-        return iteritems(config)
+        return iteritems(config) if config else []
 
     TOP_LEVEL_WHITELIST = [
         'version',
@@ -310,29 +317,24 @@ class BaseAnsibleContainerConfig(Mapping):
 
     OPTIONS_OPENSHIFT_WHITELIST = []
 
-    SUPPORTED_COMPOSE_VERSIONS = ['1', '2']
-
-    REQUIRED_TOP_LEVEL_KEYS = ['services']
-
-    # TODO: Add more schema validation
 
     def _validate_config(self, config):
-        for key in self.REQUIRED_TOP_LEVEL_KEYS:
-            if config.get(key, None) is None:
-                raise AnsibleContainerConfigException("Missing expected key '{}'".format(key))
+        schema_path = os.path.join(os.path.dirname(__file__), 'schema.yml')
+        schema = yaml.safe_load(open(schema_path))
+        try:
+            jsonschema.validate(config, schema)
+        except jsonschema.ValidationError, e:
+            logger.error('The container.yml file is invalid: %s', e.message)
+            logger.debug(text_type(e))
 
-        for top_level in config:
-            if top_level not in self.TOP_LEVEL_WHITELIST:
-                raise AnsibleContainerConfigException("invalid key '{0}'".format(top_level))
-
-            if top_level == 'version':
-                if config['version'] not in self.SUPPORTED_COMPOSE_VERSIONS:
-                    raise AnsibleContainerConfigException("requested version is not supported")
-                if config['version'] == '1':
-                    logger.warning("Version '1' is deprecated. Consider upgrading to version '2'.")
-            else:
-                if config[top_level] is None:
-                    config[top_level] = ordereddict()
+    def _validate_project_name(self, project_name):
+        """
+        Validates that the project_name starts with an alphanumeric value.
+        Raises an Exception if the project_name is invalid
+        """
+        if re.match(r"^[a-zA-Z0-9]{1}.*", project_name) == None:
+            raise AnsibleContainerConfigException(u"Invalid project_name {0}\n".format(project_name)
+                + u"The project_name has to start with an alphanumeric character.")
 
     def __getitem__(self, item):
         return self._config[item]
@@ -348,7 +350,8 @@ class AnsibleContainerConductorConfig(Mapping):
     _config = None
 
     @container.conductor_only
-    def __init__(self, container_config):
+    def __init__(self, container_config, skip_services=False):
+        self._skip_services = skip_services
         self._config = container_config
         self._templar = Templar(loader=None, variables={})
         self._process_defaults()
@@ -398,33 +401,36 @@ class AnsibleContainerConductorConfig(Mapping):
         for service, service_data in self._config.get('services', ordereddict()).items():
             logger.debug('Processing service...', service=service, service_data=service_data)
             processed = ordereddict()
-            service_defaults = self.defaults.copy()
-            for idx in range(len(service_data.get('volumes', []))):
-                # To mount the project directory, let users specify `$PWD` and
-                # have that filled in with the project path
-                service_data['volumes'][idx] = re.sub(r'\$(PWD|\{PWD\})', self._config['settings'].get('pwd'),
-                                                      service_data['volumes'][idx])
-            for role_spec in service_data.get('roles', []):
-                if isinstance(role_spec, dict):
-                    # A role with parameters to run it with
-                    role_spec_copy = copy.deepcopy(role_spec)
-                    role_name = role_spec_copy.pop('role')
-                    role_args = role_spec_copy
-                else:
-                    role_name = role_spec
-                    role_args = {}
-                role_metadata = get_metadata_from_role(role_name)
-                processed.update(role_metadata, relax=True)
-                service_defaults.update(get_defaults_from_role(role_name),
-                                        relax=True)
-                service_defaults.update(role_args, relax=True)
-            processed.update(service_data, relax=True)
-            logger.debug('Rendering service keys from defaults', service=service, defaults=service_defaults)
-            services[service] = self._process_section(
-                processed,
-                templar=Templar(loader=None, variables=service_defaults)
-            )
-            services[service]['defaults'] = service_defaults
+            if not self._skip_services:
+                service_defaults = self.defaults.copy()
+                for idx in range(len(service_data.get('volumes', []))):
+                    # To mount the project directory, let users specify `$PWD` and
+                    # have that filled in with the project path
+                    service_data['volumes'][idx] = re.sub(r'\$(PWD|\{PWD\})', self._config['settings'].get('pwd'),
+                                                          service_data['volumes'][idx])
+                for role_spec in service_data.get('roles', []):
+                    if isinstance(role_spec, dict):
+                        # A role with parameters to run it with
+                        role_spec_copy = copy.deepcopy(role_spec)
+                        role_name = role_spec_copy.pop('role')
+                        role_args = role_spec_copy
+                    else:
+                        role_name = role_spec
+                        role_args = {}
+                    role_metadata = get_metadata_from_role(role_name)
+                    processed.update(role_metadata, relax=True)
+                    service_defaults.update(get_defaults_from_role(role_name),
+                                            relax=True)
+                    service_defaults.update(role_args, relax=True)
+                processed.update(service_data, relax=True)
+                logger.debug('Rendering service keys from defaults', service=service, defaults=service_defaults)
+                services[service] = self._process_section(
+                    processed,
+                    templar=Templar(loader=None, variables=service_defaults)
+                )
+                services[service]['defaults'] = service_defaults
+            else:
+                services[service] = service_data
         self.services = services
 
     def __getitem__(self, key):

@@ -1,0 +1,58 @@
+---
+- name: Make temporary workspace
+  tempfile:
+    path: "{{ lookup('env', 'TMPDIR')|default(omit, boolean=True) }}"
+    state: directory
+  register: tempdir
+  notify: "Cleanup temp dir"
+- name: Copy test context to tempspace
+  synchronize:
+    src: "project/"
+    dest: "{{ tempdir.path }}/rebuild"
+- name: Build it
+  command: "ansible-container --project-path {{ tempdir.path }}/rebuild --devel build --no-cache"
+  notify: Cleanup rebuild features containers and images
+- name: Validate build artifacts
+  shell: pytest tests/validate_build_artifacts.py
+  environment:
+    IMAGE_NAME: "rebuild-foo:latest"
+    BASE_IMAGE_NAME: "centos:7"
+- name: Grab the intermediate container ids
+  shell: "docker ps -a | grep rebuild_foo | cut -c1-12"
+  register: int_containers
+- debug: var=int_containers
+- name: Grab the image layer ids
+  shell: "docker history rebuild-foo:latest | grep 'Ansible Container' | cut -c1-12"
+  register: image_layers
+- name: Rebuild should reuse all layers
+  command: "ansible-container --project-path {{ tempdir.path }}/rebuild --devel build"
+- name: Grab image layers after rebuild
+  shell: "docker history rebuild-foo:latest | grep 'Ansible Container' | cut -c1-12"
+  register: rebuild_image_layers
+- name: Nothing should have changed
+  assert:
+    that:
+      - rebuild_image_layers.stdout == image_layers.stdout
+- name: Modify role two
+  lineinfile:
+    path: "{{ tempdir.path }}/rebuild/roles/two/tasks/main.yml"
+    line: "- debug: msg=Foo"
+- name: Rebuild should reuse 2nd container, recommit layers 2 and 3
+  command: "ansible-container --project-path {{ tempdir.path }}/rebuild --devel --debug build"
+- name: Grab the intermediate container ids
+  shell: "docker ps -a | grep rebuild_foo | cut -c1-12"
+  register: rebuild_int_containers
+- debug: var=rebuild_int_containers
+- name: Ensure only 3 containers and only 3rd one is new (list is reverse sorted)
+  assert:
+    that:
+      - rebuild_int_containers.stdout_lines|length == 3
+      - rebuild_int_containers.stdout_lines[0] != int_containers.stdout_lines[0]
+      - rebuild_int_containers.stdout_lines[1] == int_containers.stdout_lines[1]
+      - rebuild_int_containers.stdout_lines[2] == int_containers.stdout_lines[2]
+
+
+
+
+
+

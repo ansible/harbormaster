@@ -19,9 +19,8 @@ Ways to submit feedback:
 
 Releases
 --------
-- `Future: Release 1.1.0 <./docs/rst/roadmaps/roadmap_1_1_0.rst>`_ 
-- `Future: Release 1.0.0 <./docs/rst/roadmaps/roadmap_1_0_0.rst>`_ 
-- `Current: Release 0.9.2 <./docs/rst/roadmaps/roadmap_0_9_2.rst>`_
+- `In development: Release 0.9.3 <./docs/rst/roadmaps/roadmap_0_9_3.rst>`_ 
+- `Release 0.9.2 <./docs/rst/roadmaps/roadmap_0_9_2.rst>`_
 - `Release 0.9.0 <./docs/rst/roadmaps/roadmap_0_9_0.rst>`_
 - `Release 0.3.0 <./docs/rst/roadmaps/roadmap_0_3_0.rst>`_
 - `Release 0.2.0 <./docs/rst/roadmaps/roadmap_0_2_0.rst>`_

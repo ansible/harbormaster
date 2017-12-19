@@ -1,0 +1,5 @@
+---
+- name: Touch me
+  file:
+    path: /one.txt
+    state: touch
