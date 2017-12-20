@@ -48,6 +48,7 @@ class AnsibleContainerConfig(BaseAnsibleContainerConfig):
             for vol_key in self._config['volumes']:
                 if 'docker' in self._config['volumes'][vol_key]:
                     settings = copy.deepcopy(self._config['volumes'][vol_key][self.engine_name])
+                    settings.setdefault('name', vol_key)
                     self._config['volumes'][vol_key] = settings
                 else:
                     # remove non-docker settings
