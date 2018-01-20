@@ -15,7 +15,7 @@ env:
   - BASE_DISTRO: ubuntu:precise
   - BASE_DISTRO: ubuntu:trusty
   - BASE_DISTRO: ubuntu:xenial
-  - BASE_DISTRO: ubuntu:zesty
+  - BASE_DISTRO: ubuntu:artful
   - BASE_DISTRO: alpine:3.5
   - BASE_DISTRO: alpine:3.4
 services:

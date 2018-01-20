@@ -53,14 +53,14 @@
       - name: "rhel-7"
         base_image: "rhel7:latest"
         template: *redhat
+      - name: "fedora-27"
+        base_image: "fedora:27"
+        template: *redhat
       - name: "fedora-26"
         base_image: "fedora:26"
         template: *redhat
       - name: "fedora-25"
         base_image: "fedora:25"
-        template: *redhat
-      - name: "fedora-24"
-        base_image: "fedora:24"
         template: *redhat
       - name: "amazonlinux-2"
         base_image: "amazonlinux:2"
@@ -84,7 +84,7 @@
         base_image: "ubuntu:xenial"
         template: *debian
       - name: "ubuntu-zesty"
-        base_image: "ubuntu:zesty"
+        base_image: "ubuntu:artful"
         template: *debian
       - name: "alpine-34"
         base_image: "alpine:3.4"
