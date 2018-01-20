@@ -77,9 +77,9 @@ REMOVE_HTTP = re.compile('^https?://')
 # A map of distros and their aliases that we build pre-baked builders for
 PREBAKED_DISTROS = {
     'centos:7': ['centos:latest', 'centos:centos7'],
-    'fedora:26': ['fedora:latest'],
+    'fedora:27': ['fedora:latest'],
+    'fedora:26': [],
     'fedora:25': [],
-    'fedora:24': [],
     'amazonlinux:2': ['amazonlinux:2'],
     'debian:jessie': ['debian:8', 'debian:latest', 'debian:jessie-slim'],
     'debian:stretch': ['debian:9', 'debian:stretch-slim'],
