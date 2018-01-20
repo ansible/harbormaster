@@ -323,7 +323,7 @@ class BaseAnsibleContainerConfig(Mapping):
         schema = yaml.safe_load(open(schema_path))
         try:
             jsonschema.validate(config, schema)
-        except jsonschema.ValidationError, e:
+        except jsonschema.ValidationError as e:
             logger.error('The container.yml file is invalid: %s', e.message)
             logger.debug(text_type(e))
 
