@@ -198,6 +198,7 @@ class DockerfileParser(object):
         if not self.parsed:
             raise ValueError(u'Finish parsing the Dockerfile first')
         container_yml = CommentedMap()
+        container_yml['version'] = '2'
         container_yml['settings'] = CommentedMap()
         container_yml['settings']['conductor_base'] = self.meta['from']
         container_yml['services'] = CommentedMap()
