@@ -399,8 +399,8 @@ def conductor_commandline():
 
     # Copy a filtered subset of the mounted source into /src for use in builds
     logger.info('Copying build context into Conductor container.')
-    p_obj = subprocess.Popen("rsync -q -a --filter=':- /_src/.dockerignore' /_src/ /src",
-                             shell=True, stderr=subprocess.PIPE)
+    p_obj = subprocess.Popen("rsync -av --filter=':- /_src/.dockerignore' /_src/ /src",
+                             shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
     p_obj.wait()
     if p_obj.returncode:
         logger.error('Error copying build context: %s', p_obj.stderr.read())
