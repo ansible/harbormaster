@@ -401,8 +401,11 @@ def conductor_commandline():
     logger.info('Copying build context into Conductor container.')
     p_obj = subprocess.Popen("rsync -av --filter=':- /_src/.dockerignore' /_src/ /src",
                              shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-    p_obj.wait()
-    if p_obj.returncode:
+    for stdout_line in iter(p_obj.stdout.readline, b''):
+        logger.debug(stdout_line)
+    p_obj.stdout.close()
+    return_code = p_obj.wait()
+    if return_code:
         logger.error('Error copying build context: %s', p_obj.stderr.read())
         sys.exit(p_obj.returncode)
 
