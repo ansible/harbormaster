@@ -84,11 +84,11 @@ if container.ENV == 'host':
         tests_require=[
             'ansible>=2.3.0',
             'pytest>=3',
-            'docker>=2.4.0',
+            'docker>=2.4.0,<=2.7.0',
             'jmespath>=0.9'
         ],
         extras_require={
-            'docker': ['docker>=2.4.0'],
+            'docker': ['docker>=2.4.0,<=2.7.0'],
             'docbuild': ['Sphinx>=1.5.0'],
             'openshift': ['openshift==0.0.1'],
             'k8s': ['openshift==0.0.1']
