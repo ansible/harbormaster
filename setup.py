@@ -90,8 +90,8 @@ if container.ENV == 'host':
         extras_require={
             'docker': ['docker>=2.4.0,<3.0'],
             'docbuild': ['Sphinx>=1.5.0'],
-            'openshift': ['openshift==0.0.1'],
-            'k8s': ['openshift==0.0.1']
+            'openshift': ['openshift>=0.0.1'],
+            'k8s': ['openshift>=0.0.1']
         },
         #dependency_links=[
         #    'https://github.com/ansible/ansible/archive/devel.tar.gz#egg=ansible-2.4.0',
