@@ -6,3 +6,5 @@ ruamel.yaml>=0.15.34
 six>=1.10
 structlog[dev]>=16.1
 jsonschema==2.6.0
+docker>=2.4.0,<3.0
+openshift==0.3.4
