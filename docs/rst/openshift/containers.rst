@@ -24,7 +24,7 @@ Before creating a local OpenShift cluster, you'll need the following installed:
 
   The following will install *socat* using `homebrew <http://brew.sh/>`_:
 
-    .. code-block:: bash
+    .. code-block:: console
 
         # Install socat
         $ brew install socat
@@ -59,7 +59,7 @@ release was `v1.3.1 <https://github.com/openshift/origin/releases/tag/v1.3.1>`_.
 Unzip the downloaded release file, and move the executable into a directory that is part of your *PATH*. The following example demonstrates installing the
 client on Mac OSX:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Set the working directory to your Downloads directory
     $ cd ~/Downloads
@@ -78,7 +78,7 @@ client on Mac OSX:
 
 Now make sure you can execute the ``oc`` command by running the following test:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Set the path to your home directory
     $ cd ~
@@ -88,7 +88,7 @@ Now make sure you can execute the ``oc`` command by running the following test:
 
 You should see a response similar to the following:
 
-.. code-block:: bash
+.. code-block:: console
 
     oc v1.3.1
     kubernetes v1.3.0+52492b4
@@ -109,21 +109,21 @@ and look for the *inet* address. On linux hosts, use the command ``ip addr show 
 Once you have the IP address, open */etc/hosts* in your favorite editor using a privileged account. For example, the following
 will open the file using ``vi`` as the *root* user:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Open /etc/hosts in vi as root
     $ sudo vi /etc/hosts
 
 Add the following line, replacing the IP address with your IP address, and separating the IP and the hostname with a minimum of one space:
 
-.. code-block:: bash
+.. code-block:: none
 
     # Local OpenShift registry access
     192.168.14.30  local.openshift
 
 After saving your changes, check that you can ``ping`` the new hostname by running the following:
 
-.. code-block:: bash
+.. code-block:: console
 
     # ping our new hostname
     $ ping -c 3 local.openshift
@@ -143,7 +143,7 @@ Create the cluster
 The first time you attempt to create the cluster, you will likely get an error about needing to set the ``--insecure-registry``
 option, as pictured in the following example:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Create the cluster
     $ oc cluster up
@@ -198,7 +198,7 @@ Create the cluster
 After adding the insecure registries, run the ``oc cluster up`` command again. The following shows the command completing
 successfully:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Create the cluster
     $ oc cluster up
@@ -226,7 +226,7 @@ Error restarting the cluster
 If you're using Docker for Mac, you may receive an error when you run the ``oc cluster up`` command multiple times, as
 pictured in the following:
 
-.. code-block:: bash
+.. code-block:: none
 
    -- Finding server IP ... FAIL
    Error: cannot determine a server IP to use
@@ -235,14 +235,14 @@ This is likely caused by one or more ``socat`` processes that are still running 
 to terminate them before attempting to restart the cluster. The following command will prompt for the *root* password and
 execute the ``kill`` command for each process:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Terminate any running socat processes
     $ sudo kill -9 $(ps -ef | grep socat | awk '{ print $2 }')
 
 Now attempt to restart the cluster:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Create the cluster
     $ oc cluster up
@@ -262,7 +262,7 @@ Grant admin access
 
 Start by giving the developer account admin access to the cluster by running the following commands:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Log in as the system user
     $ oc login -u system:admin
@@ -290,7 +290,7 @@ With the route in place the registry will be accessible using the new hostname.
 
 Copy the following YAML to a local file called *registry.yml*:
 
-.. code-block:: bash
+.. code-block:: console
 
     apiVersion: v1
     kind: Route
@@ -322,7 +322,7 @@ The above configuration defines a route object that allows the registry to be ac
 Now execute the following to actually create the route by using the ``oc create`` command to read the definition from the file
 you just created:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Create the route
     $ oc create -f registry.yml
@@ -330,7 +330,7 @@ you just created:
 To test registry access, log in with the ``docker login`` command, using *developer* as the username and the OpenShift access
 token as the password. Execute the following command to perform the login:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Log into the OpenShift registry
     $ docker login https://local.openshift -u developer -p $(oc whoami -t)
@@ -343,7 +343,7 @@ Create a persistent volume
 Copy the following definition to a file called *persistent.yml*, replacing the *path* with a path that works in your environment.
 You will use this definition to create a 10GB persistent volume named *project-data* that will exist as long as the cluster exists.
 
-.. code-block:: bash
+.. code-block:: yaml
 
     apiVersion: v1
     kind: PersistentVolume
@@ -363,7 +363,7 @@ You will use this definition to create a 10GB persistent volume named *project-d
 Now execute the following to actually create the volume by using ``oc create`` to read the definition from the file you just
 created:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Create the persistent volume
     $ oc create -f persistent.yml
@@ -375,7 +375,7 @@ Remove the cluster
 
 When you're done with the cluster, you can remove it by simply running the following:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Remove the cluster
     $ oc cluster down
@@ -385,7 +385,7 @@ The above will completely remove the OpenShift containers.
 If you're running Docker for Mac, you will also want to remove any lingering ``socat`` processes. Executing the follwogin will
 prompt for the *root* password and then execute the ``kill`` command on each:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Stop any lingering socat processes
     $ sudo kill -9 $(ps -ef | grep socat | awk '{ print $2 }')

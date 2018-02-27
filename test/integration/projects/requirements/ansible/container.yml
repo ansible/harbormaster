@@ -1,9 +1,0 @@
-version: "1"
-services:
-  web:
-      image: python:2.7 
-      ports:
-        - "8000:80"
-      command: ['sleep 600']
-
-registries: {}

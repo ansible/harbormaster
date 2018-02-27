@@ -1,0 +1,15 @@
+FROM {{ conductor_base }}
+{% set distro = original_base.split(':')[0] %}
+# The COPY here will break cache if the requirements or ansible.cfg has changed
+COPY /build-src /_ansible/build
+
+{% if install_requirements %}
+RUN {{ install_requirements }}
+{% endif %}
+
+VOLUME /usr
+{% if distro in ["ubuntu", "debian", "alpine"] %}
+VOLUME /lib
+{% endif %}
+
+

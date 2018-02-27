@@ -1,9 +1,14 @@
 version: "2"
 settings:
-  # The Conductor container does the heavy lifting, and provides a portable
-  # Python runtime for building your target containers. It should be derived
-  # from the same distribution as you're building your target containers with.
-  conductor_base: {{ default_base }}
+
+  conductor:
+    # The Conductor container does the heavy lifting, and provides a portable
+    # Python runtime for building your target containers. It should be derived
+    # from the same distribution as you're building your target containers with.
+    base: {{ default_base }}
+    # roles_path:   # Specify a local path containing Ansible roles
+    # volumes:      # Provide a list of volumes to mount
+    # environment:  # List or mapping of environment variables
 
   # Set the name of the project. Defaults to basename of the project directory.
   # For built services, concatenated with service name to form the built image name.
@@ -60,3 +65,4 @@ registries: {}
   #  google:
   #    url: https://gcr.io
   #    namespace: my-cool-project-xxxxxx   
+

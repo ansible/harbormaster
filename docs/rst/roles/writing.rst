@@ -136,7 +136,7 @@ In a variable file called ``develop.yml``, provide the username and password val
     postgres_password: mypassword
 
 
-.. code-block:: bash
+.. code-block:: console
 
 Then pass in the variable file using ``--var-file``:
 
@@ -144,7 +144,7 @@ Then pass in the variable file using ``--var-file``:
 
 Or as an alternative to a variable file, pass in the values using ``AC_`` environment variables:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ export AC_POSTGRES_USERNAME=admin
     $ export AC_POSTGRES_PASSWORD=mypassword

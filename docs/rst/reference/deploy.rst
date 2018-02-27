@@ -9,12 +9,13 @@ The cloud platform is determined by the engine used to generate the deployment. 
 Use the ``--engine`` option to choose the engine. For example:
 
 .. code-block:: bash
+
     $ ansible-container --engine k8s deploy
 
 The ``deploy`` command maps your ``container.yml`` file to a cloud configuration, depending on the engine. See the :doc:`../../container_yml/reference`
 for details on how directives are mapped, and for cloud specific options.
 
-The playbook name will match the name of the project, and have a ``.yml`` extension. The playbook is created in in the ``ansible-deployment`` directory, which will be 
+The playbook name will match the name of the project, and have a ``.yml`` extension. The playbook is created in in the ``ansible-deployment`` directory, which will be
 created automatically. Use the *deployment_output_path* option in the *settings* section of ``container.yml`` to write the playbook to a different directory.
 
 .. note::
@@ -68,6 +69,14 @@ When passing a registry name defined in the *registries* section of ``container.
 If no ``--push-to`` option is passed, and the ``--local-images`` option is not passed, then the default registry will be used. The current default is
 set to ``https://index.docker.io/v1/``.
 
+.. option:: --roles-path ROLES_PATH [ROLES_PATH ...]
+
+If using roles not found in the ``roles`` directory within the project, use this option to specify one or more local paths containing the roles. The specified path(s) will be mounted to the conductor container, making the roles available to the build process.
+
+.. option:: --tag
+
+Tag the images prior to pushing.
+
 .. option:: --with-variables WITH_VARIABLES [WITH_VARIABLES ...]
 
 Define one or more environment variables in the Ansible Builder Container. Format each variable as a key=value string.
@@ -75,10 +84,6 @@ Define one or more environment variables in the Ansible Builder Container. Forma
 .. option:: --with-volumes WITH_VOLUMES [WITH_VOLUMES ...]
 
 Mount one or more volumes to the Conductor container. Specify volumes as strings using the Docker volume format.
-
-.. option:: --roles-path LOCAL_PATH
-
-If you have Ansible roles in a local path other than your `ansible/` directory that you wish to use, specify that path with this option.
 
 .. option:: --username
 
@@ -93,6 +98,6 @@ be prompted for a password.
 
 If registry authentication requires an email address, use to pass the email address.
 
-.. option:: --tag
+.. option:: --vault-file VAULT_FILES [VAULT_FILES ...]
 
-Tag the images prior to pushing.
+Path to a vault file that will be used to populate secrets.

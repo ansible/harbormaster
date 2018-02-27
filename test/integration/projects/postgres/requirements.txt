@@ -1,5 +1,0 @@
-Django>=1.8,<1.9
-psycopg2==2.6.1
-gunicorn==19.4.5
-dj-database-url==0.4.1
-

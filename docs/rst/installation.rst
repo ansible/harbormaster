@@ -32,13 +32,13 @@ brackets as part of your ``pip install`` command. For example, if you intended t
 use Docker for local container development but deploy your project into Kubernetes,
 you would want to install the ``docker`` and ``k8s`` engines like so:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ sudo pip install ansible-container[docker,k8s]
 
 If you do not have root privileges, you'll need to use a ``virtualenv`` to create a Python sandbox:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ virtualenv venv
     $ source venv/bin/activate
@@ -62,7 +62,7 @@ Prerequisites:
 
 Clone the repo:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ git clone https://github.com/ansible/ansible-container.git
 
@@ -72,14 +72,14 @@ See `the virtualenv docs <https://virtualenv.pypa.io/en/stable/>`_ for instructi
 Then, again specifying in square-brackets the engines you wish installed, use
 pip to install the cloned code:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ cd ansible-container
     $ pip install -e .[docker,openshift]
 
 If you run into the following error, you likely have an older version of setuptools installed:
 
-.. code-block:: bash
+.. code-block:: pytb
 
     Traceback (most recent call last):
       File "./setup.py", line 11, in <module>
@@ -88,7 +88,7 @@ If you run into the following error, you likely have an older version of setupto
 
 Use the following to upgrade to the latest release, and then run the install command again:
 
-.. code-block:: bash 
+.. code-block:: console
 
     $ pip install --upgrade setuptools
 

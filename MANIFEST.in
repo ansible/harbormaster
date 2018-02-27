@@ -1,6 +1,7 @@
 recursive-include container/templates *
 recursive-include container/docker/files *
 recursive-include container/docker/templates *
+include container/schema.yml
 include *.yml
 include *.txt
 include *.md

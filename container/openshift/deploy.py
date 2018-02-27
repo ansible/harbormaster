@@ -40,9 +40,12 @@ class Deploy(K8sBaseDeploy):
         return task
 
     def get_deployment_templates(self, default_api=None, defualt_kind=None, default_strategy=None, engine_state=None):
+        strategy = {
+            'type': 'Rolling',
+        }
         return super(Deploy, self).get_deployment_templates(default_api='v1',
                                                             default_kind='deployment_config',
-                                                            default_strategy='Rolling',
+                                                            default_strategy=strategy,
                                                             engine_state=engine_state)
 
     def get_deployment_tasks(self, module_name=None, engine_state=None, tags=[]):

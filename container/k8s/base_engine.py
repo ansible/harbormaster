@@ -9,7 +9,7 @@ import subprocess
 
 from abc import ABCMeta, abstractproperty, abstractmethod
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
-from six import add_metaclass
+from six import add_metaclass, iteritems
 
 from container import conductor_only, host_only
 from container import exceptions
@@ -133,33 +133,60 @@ class K8sBaseEngine(DockerEngine):
 
     @conductor_only
     def generate_orchestration_playbook(self, url=None, namespace=None, settings=None, repository_prefix=None,
-                                        **kwargs):
+                                        pull_from_url=None, tag=None, vault_files=None, **kwargs):
         """
         Generate an Ansible playbook to orchestrate services.
-        :param url: registry URL where images will be pulled from
+        :param url: registry URL where images were pushed.
         :param namespace: registry namespace
         :param repository_prefix: prefix to use for the image name
         :param settings: settings dict from container.yml
+        :param pull_from_url: if url to pull from is different than url
         :return: playbook dict
         """
-        for service_name, service_config in self.services.iteritems():
-            if service_config.get('roles'):
-                if url and namespace:
-                    # Reference previously pushed image
-                    image_name = "{}-{}".format(repository_prefix or self.project_name, service_name)
-                    self.services[service_name][u'image'] = "{}/{}/{}".format(url.rstrip('/'), namespace, image_name)
+
+        def _update_service(service_name, service_config):
+            if url and namespace:
+                # Reference previously pushed image
+                image_id = self.get_latest_image_id_for_service(service_name)
+                if not image_id:
+                    raise exceptions.AnsibleContainerConductorException(
+                        u"Unable to get image ID for service {}. Did you forget to run "
+                        u"`ansible-container build`?".format(service_name)
+                    )
+                image_tag = tag or self.get_build_stamp_for_image(image_id)
+                if repository_prefix:
+                    image_name = "{}-{}".format(repository_prefix, service_name)
+                elif repository_prefix is None:
+                    image_name = "{}-{}".format(self.project_name, service_name)
                 else:
-                    # We're using a local image, so check that the image was built
-                    image = self.get_latest_image_for_service(service_name)
-                    if image is None:
-                        raise exceptions.AnsibleContainerConductorException(
-                            u"No image found for service {}, make sure you've run `ansible-container "
-                            u"build`".format(service_name)
-                        )
-                    self.services[service_name][u'image'] = image.tags[0]
+                    image_name = service_name
+                repository = "{}/{}".format(namespace, image_name)
+                image_name = "{}:{}".format(repository, image_tag)
+                pull_url = pull_from_url if pull_from_url else url
+                service_config['image'] = "{}/{}".format(pull_url.rstrip('/'), image_name)
             else:
-                # Not a built image
-                self.services[service_name][u'image'] = service_config['from']
+                # We're using a local image, so check that the image was built
+                image = self.get_latest_image_for_service(service_name)
+                if image is None:
+                    raise exceptions.AnsibleContainerConductorException(
+                        u"No image found for service {}, make sure you've run `ansible-container "
+                        u"build`".format(service_name)
+                    )
+                service_config['image'] = image.tags[0]
+
+        for service_name, service in iteritems(self.services):
+            # set the image property of each container
+            if service.get('containers'):
+                for container in service['containers']:
+                    if container.get('roles'):
+                        container_service_name = "{}-{}".format(service_name, container['container_name'])
+                        _update_service(container_service_name, container)
+                    else:
+                        container['image'] = container['from']
+            elif service.get('roles'):
+                _update_service(service_name, service)
+            else:
+                service['image'] = service['from']
 
         play = CommentedMap()
         play['name'] = u'Manage the lifecycle of {} on {}'.format(self.project_name, self.display_name)
@@ -167,10 +194,13 @@ class K8sBaseEngine(DockerEngine):
         play['gather_facts'] = 'no'
         play['connection'] = 'local'
         play['roles'] = CommentedSeq()
+        play['vars_files'] = CommentedSeq()
         play['tasks'] = CommentedSeq()
         role = CommentedMap([
             ('role', 'ansible.kubernetes-modules')
         ])
+        if vault_files:
+            play['vars_files'].extend(vault_files)
         play['roles'].append(role)
         play.yaml_set_comment_before_after_key(
             'roles', before='Include Ansible Kubernetes and OpenShift modules', indent=4)
@@ -178,6 +208,7 @@ class K8sBaseEngine(DockerEngine):
                                                'Valid tags include: start, stop, restart, destroy', indent=4)
         play['tasks'].append(self.deploy.get_namespace_task(state='present', tags=['start']))
         play['tasks'].append(self.deploy.get_namespace_task(state='absent', tags=['destroy']))
+        play['tasks'].extend(self.deploy.get_secret_tasks(tags=['start']))
         play['tasks'].extend(self.deploy.get_service_tasks(tags=['start']))
         play['tasks'].extend(self.deploy.get_deployment_tasks(engine_state='stop', tags=['stop', 'restart']))
         play['tasks'].extend(self.deploy.get_deployment_tasks(tags=['start', 'restart']))

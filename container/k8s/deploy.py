@@ -29,13 +29,20 @@ class Deploy(K8sBaseDeploy):
         return task
 
     def get_deployment_templates(self, default_api=None, defualt_kind=None, default_strategy=None, engine_state=None):
-        return super(Deploy, self).get_deployment_templates(default_api='extensions/v1beta1',
+        strategy = {
+            'type': 'RollingUpdate',
+            'rolling_update': {
+                'max_unavailable': '10%',
+                'max_surge': '10%'
+            }
+        }
+        return super(Deploy, self).get_deployment_templates(default_api='apps/v1beta1',
                                                             default_kind='deployment',
-                                                            default_strategy='RollingUpdate',
+                                                            default_strategy=strategy,
                                                             engine_state=engine_state)
 
     def get_deployment_tasks(self, module_name=None, engine_state=None, tags=[]):
-        return super(Deploy, self).get_deployment_tasks(module_name='k8s_v1beta1_deployment',
+        return super(Deploy, self).get_deployment_tasks(module_name='k8s_apps_v1beta1_deployment',
                                                         engine_state=engine_state,
                                                         tags=tags)
 

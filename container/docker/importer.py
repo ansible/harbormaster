@@ -25,6 +25,8 @@ from six import iteritems
 from six.moves.urllib.parse import urlparse
 
 from container.exceptions import AnsibleContainerConductorException
+from container.exceptions import AnsibleContainerImportDirDockerException
+from container.exceptions import AnsibleContainerImportExistsException
 from container.utils import create_role_from_templates
 
 # Known issues:
@@ -196,6 +198,7 @@ class DockerfileParser(object):
         if not self.parsed:
             raise ValueError(u'Finish parsing the Dockerfile first')
         container_yml = CommentedMap()
+        container_yml['version'] = '2'
         container_yml['settings'] = CommentedMap()
         container_yml['settings']['conductor_base'] = self.meta['from']
         container_yml['services'] = CommentedMap()
@@ -268,7 +271,7 @@ class DockerfileParser(object):
             if '=' in label:
                 k, v = label.split('=', 1)
             elif ' ' in label:
-                # handle: 'maintainer me@foobar.com' 
+                # handle: 'maintainer me@foobar.com'
                 k, v = shlex.split(label)
             else:
                 continue
@@ -282,7 +285,7 @@ class DockerfileParser(object):
 
     def parse_EXPOSE(self, payload, comments):
         # Ensure all variable references are quoted, so we can use shlex
-        payload = re.sub(r'(\{\{[^}]+\}\})', r'"\1"', payload)
+        payload = re.sub(r'(.*\{\{[^}]+\}\}.*)', r'"\1"', payload)
         ports = shlex.split(payload)
         self.meta.setdefault('ports', CommentedSeq()).extend(ports)
         self.meta.yaml_set_comment_before_after_key('ports',
@@ -299,7 +302,7 @@ class DockerfileParser(object):
                                                                        before=u'\n'.join(comments))
         else:
             # Ensure all variable references are quoted, so we can use shlex
-            payload = re.sub(r'=(\{\{[^}]+\}\})', r'="\1"', payload)
+            payload = re.sub(r'=(.*\{\{[^}]+\}\}.*)', r'="\1"', payload)
             kv_parts = shlex.split(payload)
             kv_pairs = [part.split(u'=', 1) for part in kv_parts]
             self.meta.setdefault('environment', CommentedMap()).update(kv_pairs)
@@ -331,6 +334,8 @@ class DockerfileParser(object):
         ]))
 
         for src_spec in src_list:
+            if os.path.isdir(os.path.join(self.path, src_spec)):
+                url_and_tarball = False
             # ADD src can be a URL - look for a scheme
             if url_and_tarball and urlparse(src_spec).scheme in ['http', 'https']:
                 task = CommentedMap()
@@ -436,8 +441,9 @@ class DockerfileImport(object):
     project_name = None
     import_from = None
     base_path = None
+    force = None
 
-    def __init__(self, base_path, project_name, import_from, bundle_files):
+    def __init__(self, base_path, project_name, import_from, bundle_files, force):
         # The path to write the Ansible Container project to
         self.base_path = base_path
         # The name of the Ansible Container project
@@ -447,6 +453,8 @@ class DockerfileImport(object):
         # Whether to bundle files in import_from into the role or to leave them
         # as part of the build context
         self.bundle_files = bundle_files
+        # Force overwrite of existing Ansible Container project
+        self.force = force
 
     @property
     def role_path(self):
@@ -474,13 +482,23 @@ class DockerfileImport(object):
                 dir_util.mkpath(target)
         else:
             target = self.base_path
+        if self.force:
+            files = os.listdir(self.import_from)
+            logger.debug('Files to import: %s' % files)
+            for f in files:
+                path = os.path.join(target, f)
+                if os.path.exists(path):
+                    if os.path.isdir(path):
+                        shutil.rmtree(path)
+                    else:
+                        os.remove(path)
         self.copytree(self.import_from,
                       target,
                       ignore=lambda dir, files: ['Dockerfile']
                       if dir == self.import_from else [])
 
     def run(self):
-        # FIXME: ensure self.base_path is empty
+        self.sanity_check_directories()
         parser = DockerfileParser(self.import_from,
                                   default_vars={'playbook_debug': False})
         try:
@@ -568,9 +586,15 @@ class DockerfileImport(object):
         logger.info(u'variables by Ansible in your build and run operations.\n')
         logger.info(u'Good luck!')
 
-
-
-
+    def sanity_check_directories(self):
+        if os.path.isdir(self.base_path):
+            # This only works if the Dockerfile is called 'Dockerfile' - is there a better way?
+            if os.path.exists(os.path.join(self.base_path, 'Dockerfile')):
+                raise AnsibleContainerImportDirDockerException(u'Dockerfile in import directory', self.base_path)
+            if os.path.exists(os.path.join(self.base_path, 'container.yml')) and not self.force:
+                raise AnsibleContainerImportExistsException(u'container.yml in import directory', self.base_path)
+            if os.path.exists(os.path.join(self.base_path, 'roles')) and not self.force:
+                raise AnsibleContainerImportExistsException(u'roles dir in import directory', self.base_path)
 
 
 

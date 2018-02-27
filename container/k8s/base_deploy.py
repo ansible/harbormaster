@@ -9,7 +9,7 @@ import string_utils
 
 from abc import ABCMeta, abstractmethod
 
-from six import string_types, add_metaclass
+from six import iteritems, string_types, add_metaclass
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 from container.utils.visibility import getLogger
@@ -27,7 +27,7 @@ class K8sBaseDeploy(object):
     DEFAULT_API_VERSION = 'v1'
     CONFIG_KEY = 'k8s'
 
-    def __init__(self, services=None, project_name=None, volumes=None, auth=None, namespace_name=None, 
+    def __init__(self, services=None, project_name=None, volumes=None, secrets=None, auth=None, namespace_name=None,
                  namespace_description=None, namespace_display_name=None):
         self._services = services
         self._project_name = project_name
@@ -35,6 +35,7 @@ class K8sBaseDeploy(object):
         self._namespace_description = namespace_description
         self._namespace_display_name = namespace_display_name
         self._volumes = volumes
+        self._secrets = secrets
         self._auth = auth
 
     @property
@@ -99,9 +100,9 @@ class K8sBaseDeploy(object):
                     ])
                     # Translate options:
                     if service.get(self.CONFIG_KEY):
-                        for key, value in service[self.CONFIG_KEY].items():
+                        for key, value in iteritems(service[self.CONFIG_KEY]):
                             if key == 'service':
-                                for service_key, service_value in value.items():
+                                for service_key, service_value in iteritems(value):
                                     if service_key == 'force':
                                         continue
                                     elif service_key == 'metadata':
@@ -112,10 +113,29 @@ class K8sBaseDeploy(object):
 
         templates = CommentedSeq()
         if self._services:
-            for name, service in self._services.items():
-                template = _create_service(name, service)
-                if template:
-                    templates.append(template)
+            for name, service in iteritems(self._services):
+                if service.get('containers'):
+                    ports = []
+                    expose = []
+                    for container in service['containers']:
+                        if container.get('ports'):
+                            ports += container['ports']
+                        if container.get('expose'):
+                            expose += container['expose']
+                    if ports or expose:
+                        composite = {
+                            'ports': ports,
+                            'expose': expose
+                        }
+                        if service.get(self.CONFIG_KEY):
+                            composite[self.CONFIG_KEY] = copy.deepcopy(service[self.CONFIG_KEY])
+                        template = _create_service(name, composite)
+                        if template:
+                            templates.append(template)
+                else:
+                    template = _create_service(name, service)
+                    if template:
+                        templates.append(template)
 
                 if service.get('links'):
                     # create services for aliased links
@@ -147,7 +167,7 @@ class K8sBaseDeploy(object):
             tasks.append(task)
         if self._services:
             # Remove an services where state is 'absent'
-            for name, service in self._services.items():
+            for name, service in iteritems(self._services):
                 if service.get(self.CONFIG_KEY, {}).get('state', 'present') == 'absent':
                     task = CommentedMap()
                     task['name'] = 'Remove service'
@@ -258,15 +278,19 @@ class K8sBaseDeploy(object):
     @abstractmethod
     def get_deployment_templates(self, default_api=None, default_kind=None, default_strategy=None, engine_state=None):
 
-        def _service_to_container(name, service):
+        def _service_to_k8s_container(name, config, container_name=None):
             container = CommentedMap()
-            container['name'] = name
+
+            if container_name:
+                container['name'] = container_name
+            else:
+                container['name'] = container['name'] if config.get('container_name') else name
+
             container['securityContext'] = CommentedMap()
             container['state'] = 'present'
-
             volumes = []
-            pod = {}
-            for key, value in service.items():
+
+            for key, value in iteritems(config):
                 if key in self.IGNORE_DIRECTIVES:
                     pass
                 elif key == 'cap_add':
@@ -289,7 +313,7 @@ class K8sBaseDeploy(object):
                     else:
                         container['args'] = copy.copy(value)
                 elif key == 'container_name':
-                        container['name'] = value
+                    pass
                 elif key == 'entrypoint':
                     if isinstance(value, string_types):
                         container['command'] = shlex.split(value)
@@ -298,7 +322,10 @@ class K8sBaseDeploy(object):
                 elif key == 'environment':
                     expanded_vars = self.expand_env_vars(value)
                     if expanded_vars:
-                        container['env'] = expanded_vars
+                        if 'env' not in container:
+                            container['env'] = []
+
+                        container['env'].extend(expanded_vars)
                 elif key in ('ports', 'expose'):
                     if not container.get('ports'):
                         container['ports'] = []
@@ -312,28 +339,67 @@ class K8sBaseDeploy(object):
                 elif key == 'volumes':
                     vols, vol_mounts = self.get_k8s_volumes(value)
                     if vol_mounts:
-                        container['volumeMounts'] = vol_mounts
+                        if 'volumeMounts' not in container:
+                            container['volumeMounts'] = []
+
+                        container['volumeMounts'].extend(vol_mounts)
                     if vols:
                         volumes += vols
+                elif key == 'secrets':
+                    for secret, secret_config in iteritems(value):
+                        if self.CONFIG_KEY in secret_config:
+                            vols, vol_mounts, env_variables = self.get_k8s_secrets(secret, secret_config[self.CONFIG_KEY])
+
+                            if vol_mounts:
+                                if 'volumeMounts' not in container:
+                                    container['volumeMounts'] = []
+
+                                container['volumeMounts'].extend(vol_mounts)
+
+                            if vols:
+                                volumes += vols
+
+                            if env_variables:
+                                if 'env' not in container:
+                                    container['env'] = []
+
+                                container['env'].extend(env_variables)
                 elif key == 'working_dir':
                     container['workingDir'] = value
                 else:
                     container[key] = value
+            return container, volumes
 
-            # Translate options:
-            if service.get(self.CONFIG_KEY):
-                for key, value in service[self.CONFIG_KEY].items():
-                    if key == 'deployment':
-                        for deployment_key, deployment_value in value.items():
-                            if deployment_key != 'force':
-                                self.copy_attribute(pod, deployment_key, deployment_value)
-
-            return container, volumes, pod
+        def _update_volumes(existing_volumes, new_volumes):
+            existing_names = {}
+            for vol in existing_volumes:
+                existing_names[vol['name']] = 1
+            for vol in new_volumes:
+                if vol['name'] not in existing_names:
+                    existing_volumes.append(vol)
 
         templates = CommentedSeq()
-        for name, service_config in self._services.items():
+        for name, service_config in iteritems(self._services):
+            containers = []
+            volumes = []
+            pod = {}
+            if service_config.get('containers'):
+                for c in service_config['containers']:
+                    cname = "{}-{}".format(name, c['container_name'])
+                    k8s_container, k8s_volumes, = _service_to_k8s_container(name, c, container_name=cname)
+                    containers.append(k8s_container)
+                    _update_volumes(volumes, k8s_volumes)
+            else:
+                k8s_container, k8s_volumes = _service_to_k8s_container(name, service_config)
+                containers.append(k8s_container)
+                volumes += k8s_volumes
 
-            container, volumes, pod = _service_to_container(name, service_config)
+            if service_config.get(self.CONFIG_KEY):
+                for key, value in iteritems(service_config[self.CONFIG_KEY]):
+                    if key == 'deployment':
+                        for deployment_key, deployment_value in iteritems(value):
+                            if deployment_key != 'force':
+                                self.copy_attribute(pod, deployment_key, deployment_value)
 
             labels = CommentedMap([
                 ('app', self._namespace_name),
@@ -355,17 +421,20 @@ class K8sBaseDeploy(object):
                 template['spec']['template'] = CommentedMap()
                 template['spec']['template']['metadata'] = CommentedMap([('labels', copy.deepcopy(labels))])
                 template['spec']['template']['spec'] = CommentedMap([
-                    ('containers', [container])    # TODO: allow multiple pods in a container
+                    ('containers', containers)
                 ])
                 # When the engine requests a 'stop', set replicas to 0, stopping all containers
                 template['spec']['replicas'] = 1 if not engine_state == 'stop' else 0
-                template['spec']['strategy'] = CommentedMap([('type', default_strategy)])
+                if default_strategy:
+                    template['spec']['strategy'] = {}
+                    for service_key, service_value in iteritems(default_strategy):
+                        self.copy_attribute(template['spec']['strategy'], service_key, service_value)
 
                 if volumes:
                     template['spec']['template']['spec']['volumes'] = volumes
 
                 if pod:
-                    for key, value in pod.items():
+                    for key, value in iteritems(pod):
                         if key == 'securityContext':
                             template['spec']['template']['spec'][key] = value
                         elif key != 'replicas' or (key == 'replicas' and engine_state != 'stop'):
@@ -395,7 +464,7 @@ class K8sBaseDeploy(object):
                 task['tags'] = copy.copy(tags)
             tasks.append(task)
         if engine_state != 'stop':
-            for name, service_config in self._services.items():
+            for name, service_config in iteritems(self._services):
                 # Remove deployment for any services where state is 'absent'
                 if service_config.get(self.CONFIG_KEY, {}).get('state', 'present') == 'absent':
                     task = CommentedMap()
@@ -449,7 +518,7 @@ class K8sBaseDeploy(object):
 
         templates = CommentedSeq()
         if self._volumes:
-            for volname, vol_config in self._volumes.items():
+            for volname, vol_config in iteritems(self._volumes):
                 if self.CONFIG_KEY in vol_config:
                     if vol_config[self.CONFIG_KEY].get('state', 'present') == 'present':
                         volume = _volume_to_pvc(volname, vol_config[self.CONFIG_KEY])
@@ -474,7 +543,7 @@ class K8sBaseDeploy(object):
             tasks.append(task)
         if self._volumes:
             # Remove any volumes where state is 'absent'
-            for volname, vol_config in self._volumes.items():
+            for volname, vol_config in iteritems(self._volumes):
                 if self.CONFIG_KEY in vol_config:
                     if vol_config[self.CONFIG_KEY].get('state', 'present') == 'absent':
                         task = CommentedMap()
@@ -489,6 +558,54 @@ class K8sBaseDeploy(object):
                         if tags:
                             task['tags'] = copy.copy(tags)
                         tasks.append(task)
+        return tasks
+
+    def get_secret_templates(self):
+        def _secret(secret_name, secret):
+            template = CommentedMap()
+            template['force'] = secret.get('force', False)
+            template['apiVersion'] = 'v1'
+            template = CommentedMap()
+            template['apiVersion'] = self.DEFAULT_API_VERSION
+            template['kind'] = "Secret"
+            template['metadata'] = CommentedMap([
+                ('name', secret_name),
+                ('namespace', self._namespace_name)
+            ])
+            template['type'] = 'Opaque'
+            template['data'] = {}
+
+            for key, vault_variable in iteritems(secret):
+                template['data'][key] = "{{ %s | b64encode }}" % vault_variable
+
+            return template
+
+        templates = CommentedSeq()
+        if self._secrets:
+            for secret_name, secret_config in iteritems(self._secrets):
+                secret = _secret(secret_name, secret_config)
+                templates.append(secret)
+
+        return templates
+
+    def get_secret_tasks(self, tags=[]):
+        module_name='k8s_v1_secret'
+        tasks = CommentedSeq()
+
+        for template in self.get_secret_templates():
+            task = CommentedMap()
+            task['name'] = 'Create Secret'
+            task[module_name] = CommentedMap()
+            task[module_name]['state'] = 'present'
+            if self._auth:
+                for key in self._auth:
+                    task[module_name][key] = self._auth[key]
+            task[module_name]['force'] = template.pop('force', False)
+            task[module_name]['resource_definition'] = template
+            if tags:
+                task['tags'] = copy.copy(tags)
+            tasks.append(task)
+
         return tasks
 
     @staticmethod
@@ -626,13 +743,62 @@ class K8sBaseDeploy(object):
         return volumes, volume_mounts
 
     @classmethod
+    def get_k8s_secrets(cls, secret_name, secrets):
+        """ Given an array of Docker secrets return a set of secrets and a set of volumeMounts """
+        volume_mounts = []
+        volumes = []
+        environment_variables = []
+
+        for secret_config in secrets:
+            if 'mount_path' in secret_config:
+                mount_path = secret_config['mount_path']
+                read_only = True
+                volume_name = secret_name
+
+                if 'read_only' in secret_config:
+                    read_only = secret_config['read_only']
+
+                if 'name' in secret_config:
+                    volume_name = secret_config['name']
+
+                secret_volume = dict(secretName=secret_name)
+
+                if 'items' in secret_config:
+                    secret_volume['items'] = secret_config['items']
+
+                volume_mounts.append(dict(
+                    mountPath=mount_path,
+                    name=volume_name,
+                    readOnly=read_only
+                ))
+
+                volumes.append(dict(
+                    name=volume_name,
+                    secret=secret_volume
+                ))
+            elif 'env_variable' in secret_config:
+                secret_key_ref=dict(
+                    secretKeyRef=dict(
+                        name=secret_name,
+                        key=secret_config['key']
+                    )
+                )
+
+                environment_variables.append(dict(
+                    name=secret_config['env_variable'],
+                    valueFrom=secret_key_ref
+                ))
+
+        return volumes, volume_mounts, environment_variables
+
+    @classmethod
     def copy_attribute(cls, target, src_key, src_value):
         """ copy values from src_value to target[src_key], converting src_key and sub keys to camel case """
         src_key_camel = string_utils.snake_case_to_camel(src_key, upper_case_first=False)
         if isinstance(src_value, dict):
             if not target.get(src_key_camel):
                 target[src_key_camel] = {}
-            for key, value in src_value.items():
+            for key, value in iteritems(src_value):
                 camel_key = string_utils.snake_case_to_camel(key, upper_case_first=False)
                 if isinstance(value, dict):
                     target[src_key_camel][camel_key] = {}
@@ -645,7 +811,7 @@ class K8sBaseDeploy(object):
             for element in src_value:
                 if isinstance(element, dict):
                     new_item = {}
-                    for key, value in element.items():
+                    for key, value in iteritems(element):
                         camel_key = string_utils.snake_case_to_camel(key, upper_case_first=False)
                         cls.copy_attribute(new_item, camel_key, value)
                     target[src_key_camel].append(new_item)

@@ -5,19 +5,19 @@ Unit and integration tests live here. When a pull request is submitted, tests ar
 Running tests locally requires cloning the Ansible Container repo, and setting up your environment to run from source. See the [Installation
  Guide](https://docs.ansible.com/ansible-container/installation.html) for assistance.
 
-Test execution is initiated by running the [test/run.sh](./run.sh) script found in your local copy of Ansible Container. For example:
+You will also need the latest Ansible installed from source. See Ansible's [running from source guide](http://docs.ansible.com/ansible/intro_installation.html#running-from-source) for assistance.
+
+Test execution is initiated by running the following: 
 
 ```
+# Set your working directory
 $ cd ansible-container
-$ ./test/run.sh
-```
 
-If the *local-test* image does not exist, the script will create it by running `ansible-container build` within the [test/local project](./local).
-Once the image is available, tests are executed within a container via `ansible-container run`. Subsequent runs of the script will use the existing
-*local-test* image and skip the build step.
+# Start tests
+$ python ./setup.py test 
+```
 
 Test execution occurs exactly the same way on Travis as it does in a local development environment. So if tests run successfully in your local
 environment, they *should* run successfully on Travis.
 
 Thanks for trying out Ansible Container!
-

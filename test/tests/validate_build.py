@@ -68,7 +68,7 @@ def test_image_entrypoint():
     assert built_image_info['Config']['Entrypoint'] == role_meta['entrypoint']
 
 def test_image_ports():
-    assert all([templar.template(port) in built_image_info['Config']['ExposedPorts']
+    assert all([templar.template(port) + '/tcp' in built_image_info['Config']['ExposedPorts']
                 for port in role_meta['ports']])
 
 def test_image_user():

@@ -31,7 +31,7 @@ Install the role
 
 Use the Ansible Galaxy client, which comes bundled with Ansible, to install the role. If you're not familiar with installing roles, start by establishing a local directory where roles will be installed and executed. The following example creates the directory ``roles`` in your home directory, and then adds ``ANSIBLE_ROLES_PATH=~/roles`` to the login script, ``.bashrc``:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Set your home directory as the working directory
     $ cd ~
@@ -48,7 +48,7 @@ Use the Ansible Galaxy client, which comes bundled with Ansible, to install the 
 
 Now open a new terminal window or tab to create a new session and execute the login script, and then check that *ANSIBLE_ROLES_PATH* is defined:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Check the environment for our new variable
     $ env | grep ANSIBLE_ROLES
@@ -57,7 +57,7 @@ Now open a new terminal window or tab to create a new session and execute the lo
 
 To install the role to the new ``~/roles`` directory, run the following:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Install the role
     $ ansible-galaxy install chouseknecht.adb-up-role
@@ -69,7 +69,7 @@ Start by creating a new project directory within your home directory. This direc
 
 Copy the bundled playbook to the new directory as well, and then run it as follows, remembering to add the ``--ask-sudo-pass`` option:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Create a new project directory in your home directory
     $ mkdir ~/adb
@@ -111,7 +111,7 @@ In the following example we'll create a new project, install the Container Enabl
 
 Run the following within the new project directory, ``adb``, that you created to run the role:
 
-.. code-block:: bash
+.. code-block:: console
 
     # Set the DOCKER* variables
     $ source setenv.sh

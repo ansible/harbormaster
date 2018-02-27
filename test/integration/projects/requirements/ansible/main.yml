@@ -1,3 +1,0 @@
-- name: Empty play
-  hosts: all
-  tasks:

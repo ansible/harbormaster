@@ -26,26 +26,22 @@ Use Ansible Container to manage the container lifecycle from development, throug
   Launches the containers specified in the orchestration document, *container.yml*, for testing the built images. The 
   format of *container.yml* is nearly identical to Docker Compose.
 
-* `ansible-container push`
+* `ansible-container deploy`
 
-  Pushes the project's container images to a registry of your choice.
-
-* `ansible-container shipit`
-
-  Generates a playbook and role capable of deploying the project on a supported cloud provider.
+  Pushes the project's container images to a registry of your choice, and generates a playbook capable of deploying the project on a supported cloud provider.
 
 ## Installing
 
 Install using *pip*, the Python package manager:
 
-    $ sudo pip install ansible-container
+    $ sudo pip install ansible-container[docker,openshift]
     
 Or, to install without root privileges, use [virtualenv](https://virtualenv.pypa.io/en/stable/) to first create a 
 Python sandbox:
     
     $ virtualenv ansible-container
     $ source ansible-container/bin/activate
-    $ pip install ansible-container
+    $ pip install ansible-container[docker,openshift]
 
 For more details, prerequisite, and instructions on installing the latest development release, please view our 
 [Installation Guide](https://docs.ansible.com/ansible-container/installation.html).

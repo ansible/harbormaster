@@ -21,12 +21,12 @@ deployment.
 
    installation
    getting_started
+   conductor
    migrating
    registry_auth
    reference/index
    container_yml/index
    roles/index
-   releases
    Roadmap<roadmaps/index>
    community/index
    openshift/index

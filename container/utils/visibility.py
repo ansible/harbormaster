@@ -91,7 +91,6 @@ def alternate_dev_formatter():
     def with_memoized_loggers(logger, call_name, event_dict):
         if logger.getEffectiveLevel() > logging.DEBUG:
             return info_formatter(logger, call_name, event_dict)
-            return standard(logger, call_name, event_dict)
         return debugging(logger, call_name, event_dict)
     return with_memoized_loggers
 

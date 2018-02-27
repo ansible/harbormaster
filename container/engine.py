@@ -32,6 +32,7 @@ class BaseEngine(object):
     CAP_PUSH = False
     CAP_RUN = False
     CAP_VERSION = False
+    CAP_SIM_SECRETS = False
 
     def __init__(self, project_name, services, debug=False, selinux=True, devel=False, **kwargs):
         self.project_name = project_name
@@ -40,14 +41,20 @@ class BaseEngine(object):
         self.devel = devel
         self.selinux = selinux
         self.volumes = kwargs.pop('volume_data', None)
+        self.secrets = kwargs.pop('secrets', None)
 
     @property
     def display_name(self):
         return __name__.split('.')[-2].capitalize()
 
     @property
-    def ansible_args(self):
-        """Additional commandline arguments necessary for ansible-playbook runs."""
+    def ansible_build_args(self):
+        """Additional commandline arguments necessary for ansible-playbook runs during build"""
+        raise NotImplementedError()
+
+    @property
+    def ansible_orchestrate_args(self):
+        """Additional commandline arguments necessary for ansible-playbook runs during orchestrate"""
         raise NotImplementedError()
 
     @property
@@ -98,10 +105,13 @@ class BaseEngine(object):
     def await_conductor_command(self, command, config, base_path, params, save_container=False):
         raise NotImplementedError()
 
-    def service_is_running(self, service):
+    def service_is_running(self, service, container_id=None):
         raise NotImplementedError()
 
-    def service_exit_code(self, service):
+    def service_exit_code(self, service, container_id=None):
+        raise NotImplementedError()
+
+    def start_container(self, container_id):
         raise NotImplementedError()
 
     def stop_container(self, container_id, forcefully=False):
@@ -116,17 +126,38 @@ class BaseEngine(object):
     def delete_container(self, container_id, remove_volumes=False):
         raise NotImplementedError()
 
-    def get_container_name_for_service(self, service_name):
+    def get_image_id_for_container_id(self, container_id):
+        raise NotImplementedError()
+
+    def get_container_id_by_name(self, name):
+        raise NotImplementedError()
+
+    def container_name_for_service(self, service_name):
         raise NotImplementedError()
 
     def get_container_id_for_service(self, service_name):
+        return self.get_container_id_by_name(
+            self.container_name_for_service(service_name)
+        )
+
+    def get_intermediate_containers_for_servie(self, service_name):
         raise NotImplementedError()
 
     def get_image_id_by_fingerprint(self, fingerprint):
         raise NotImplementedError()
 
+    def get_fingerprint_for_image_id(self, image_id):
+        raise NotImplementedError()
+
     def get_image_id_by_tag(self, tag):
         raise NotImplementedError()
+
+    def get_image_labels(self, image_id):
+        raise NotImplementedError
+
+    @conductor_only
+    def pull_image_by_tag(self, image_name):
+        raise NotImplementedError
 
     def get_latest_image_id_for_service(self, service_name):
         raise NotImplementedError()
@@ -139,6 +170,7 @@ class BaseEngine(object):
                              container_id,
                              service_name,
                              fingerprint,
+                             role,
                              metadata,
                              with_name=False):
         raise NotImplementedError()
@@ -165,7 +197,7 @@ class BaseEngine(object):
         raise NotImplementedError()
 
     @host_only
-    def build_conductor_image(self, base_path, base_image, cache=True):
+    def build_conductor_image(self, base_path, base_image, cache=True, environment=[]):
         raise NotImplementedError()
 
     def get_runtime_volume_id(self, mount_point):

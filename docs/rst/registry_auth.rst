@@ -12,13 +12,13 @@ Each time images are pushed to the registry Ansible Container needs to know the 
 repository. This information can be passed using the ``--push-to`` option. For example:
 
 
-.. code-block:: bash
+.. code-block:: console
 
     $ ansible-container push --push-to https://gcr.io/example-project
 
 For convenience, the ``--push-to`` option can also be a registry name defined in ``container.yml``. For example:
 
-.. code-block:: bash
+.. code-block:: yaml
 
     registries:
       google:
@@ -31,7 +31,7 @@ is not provided, Ansible Container will attempt to default it to your registry u
 When a registry is defined in ``container.yml``, the name can be passed using the ``--push-to`` option. For example, to push to the
 *google* registry defined in ``container.yml`` use the following:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ ansible-container push --push-to google
 

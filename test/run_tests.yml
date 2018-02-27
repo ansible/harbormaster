@@ -1,11 +1,120 @@
 ---
-- name: Run Ansible Container tests
+- name: Run Ansible Container integration tests
   hosts: localhost
   connection: local
   gather_facts: false
   any_errors_fatal: true
-  roles:
-    - validate-build-and-import
-    - validate-start-stop-restart
-    - validate-config
+  vars:
+    templates:
+      redhat: &redhat
+        package_update_command: "yum update -y"
+        httpd_install_command: "yum install -y httpd"
+        httpd_conf_src: "redhat/httpd.conf"
+        httpd_conf_dest: "/etc/httpd/conf/httpd.conf"
+        httpd_pageroot: "/var/www/html/"
+        httpd_logdir: "/var/log/httpd"
+        httpd_rundir: "/run/httpd"
+        httpd_pid_file: "/run/httpd/httpd.pid"
+        httpd_bin: "/usr/sbin/httpd"
+        httpd_user: "apache"
+        httpd_run_group: "apache"
+        httpd_lock_dir: "/run/httpd"
+      debian: &debian
+        package_update_command: "apt-get update -y"
+        httpd_install_command: "apt-get install -y apache2"
+        httpd_conf_src: "debian/ports.conf"
+        httpd_conf_dest: "/etc/apache2/ports.conf"
+        httpd_pageroot: "/var/www/html/"
+        httpd_logdir: "/var/log/apache2"
+        httpd_rundir: "/var/run/apache2"
+        httpd_pid_file: "/var/run/apache2/apache2.pid"
+        httpd_bin: "/usr/sbin/apache2"
+        httpd_user: "www-data"
+        httpd_run_group: "www-data"
+        httpd_lock_dir: "/var/run/apache2"
+      alpine: &alpine
+        package_update_command: "apk update"
+        httpd_install_command: "apk add tar apache2"
+        httpd_conf_src: "alpine/httpd.conf"
+        httpd_conf_dest: "/etc/apache2/httpd.conf"
+        httpd_pageroot: "/var/www/localhost/htdocs/"
+        httpd_logdir: "/var/log/httpd"
+        httpd_rundir: "/run/apache2"
+        httpd_pid_file: "/run/apache2/apache2.pid"
+        httpd_bin: "/usr/sbin/httpd"
+        httpd_user: "apache"
+        httpd_run_group: "apache"
+        httpd_lock_dir: "/run/apache2"
+    distros:
+      # Please leave centos:7 as the top distro here.
+      - name: "centos-7"
+        base_image: "centos:7"
+        template: *redhat
+      - name: "rhel-7"
+        base_image: "rhel7:latest"
+        template: *redhat
+      - name: "fedora-27"
+        base_image: "fedora:27"
+        template: *redhat
+      - name: "fedora-26"
+        base_image: "fedora:26"
+        template: *redhat
+      - name: "fedora-25"
+        base_image: "fedora:25"
+        template: *redhat
+      - name: "amazonlinux-2"
+        base_image: "amazonlinux:2"
+        template: *redhat
+      - name: "debian-jessie"
+        base_image: "debian:jessie"
+        template: *debian
+      - name: "debian-stretch"
+        base_image: "debian:stretch"
+        template: *debian
+      - name: "debian-wheezy"
+        base_image: "debian:wheezy"
+        template: *debian
+      - name: "ubuntu-precise"
+        base_image: "ubuntu:precise"
+        template: *debian
+      - name: "ubuntu-trusty"
+        base_image: "ubuntu:trusty"
+        template: *debian
+      - name: "ubuntu-xenial"
+        base_image: "ubuntu:xenial"
+        template: *debian
+      - name: "ubuntu-zesty"
+        base_image: "ubuntu:artful"
+        template: *debian
+      - name: "alpine-34"
+        base_image: "alpine:3.4"
+        template: *alpine
+      - name: "alpine-35"
+        base_image: "alpine:3.5"
+        template: *alpine
+  tasks:
+    - name: Check BASE_DISTRO environment variable
+      debug:
+        msg: "BASE_DISTRO is {{ lookup('env', 'BASE_DISTRO') }}"
+      tags: always
+    - set_fact:
+        BASE_DISTRO: "{{ lookup('env', 'BASE_DISTRO') }}"
+      tags: always
+    - set_fact:
+        filtered: "{{ distros|selectattr('base_image', 'equalto', BASE_DISTRO)|list }}"
+      when: BASE_DISTRO != ""
+      tags: always
+    - name: Validate container lifecycle
+      include_role:
+        name: validate-build-and-import
+      with_items: "{{ filtered|default(distros) }}"
+      # with_items: "{% if lookup('env', 'BASE_DISTRO') %}{{ distros|selectattr('base_image', 'equalto', lookup('env', 'BASE_DISTRO'))|list }}{% else %}{{ distros }}{% endif %}"
+      loop_control:
+        loop_var: "distro"
+      tags: basic
+    - name: "Validate rebuild features (centos:7 only)"
+      when: BASE_DISTRO == "" or BASE_DISTRO == distros[0].base_image
+      include_role:
+        name: validate-rebuild-features
+      tags: rebuild
 

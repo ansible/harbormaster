@@ -10,10 +10,7 @@
 - name: Run built containers detached
   shell: >
     ansible-container --debug --project-path
-    {{ item.1.path|quote }}/test-{{ item.0.name|quote }} run --detached >>task.output 2>&1
-  with_together:
-    - "{{ distros }}"
-    - "{{ tempdirs.results }}"
+    {{ tempdir.path|quote }}/test-{{ distro.name|quote }} run --detached >>task.output 2>&1
   register: output
   ignore_errors: yes
   tags:
@@ -27,11 +24,18 @@
 - include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"
 
 - name: Wait until built containers are running
-  docker_container:
-    name: "test{{ item.name }}_{{ item.name }}_1"
-  with_items: "{{ distros }}"
+  command: "docker inspect --format='{{'{{'}} .State.Status {{'}}'}}' test{{ distro.name|replace('-','') }}_{{ distro.name }}_1"
   register: container_run_status
-  until: container_run_status.ansible_facts.docker_container.State.Status == 'running'
+  until: container_run_status.stdout == 'running'
+  retries: 6
+  delay: 5
+  tags:
+    - restart
+    - run
+
+- name: Note start time
+  command: "docker inspect --format='{{'{{'}} .State.StartedAt {{'}}'}}' test{{ distro.name|replace('-','') }}_{{ distro.name }}_1"
+  register: container_run_start
   tags:
     - restart
     - run
@@ -39,10 +43,7 @@
 - name: Restart containers
   shell: >
     ansible-container --debug --project-path
-    {{ item.1.path|quote }}/test-{{ item.0.name|quote }} restart >>task.output 2>&1
-  with_together:
-    - "{{ distros }}"
-    - "{{ tempdirs.results }}"
+    {{ tempdir.path|quote }}/test-{{ distro.name|quote }} restart >>task.output 2>&1
   register: output
   ignore_errors: yes
   tags:
@@ -51,32 +52,34 @@
 
 - include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"
 
-- name: Get new container start times
-  docker_container:
-    name: "test{{ item.name }}_{{ item.name }}_1"
-  with_items: "{{ distros }}"
+- name: Wait until built containers are running
+  command: "docker inspect --format='{{'{{'}} .State.Status {{'}}'}}' test{{ distro.name|replace('-','') }}_{{ distro.name }}_1"
   register: container_restart_status
-  until: container_restart_status.ansible_facts.docker_container.State.Status == 'running'
+  until: container_restart_status.stdout == 'running'
+  retries: 6
+  delay: 5
   tags:
     - restart
+    - run
+
+- name: Note start time
+  command: "docker inspect --format='{{'{{'}} .State.StartedAt {{'}}'}}' test{{ distro.name|replace('-','') }}_{{ distro.name }}_1"
+  register: container_restart_start
+  tags:
+    - restart
+    - run
 
 - name: Ensure containers were restarted
   assert:
     that:
-      - item.0.ansible_facts.docker_container.State.StartedAt  != item.1.ansible_facts.docker_container.State.StartedAt
-  with_together:
-    - "{{ container_run_status.results }}"
-    - "{{ container_restart_status.results }}"
+      - container_run_start.stdout != container_restart_start.stdout
   tags:
     - restart
 
 - name: Stop containers
   shell: >
     ansible-container --debug --project-path
-    {{ item.1.path|quote }}/test-{{ item.0.name|quote }} stop >>task.output 2>&1
-  with_together:
-    - "{{ distros }}"
-    - "{{ tempdirs.results }}"
+    {{ tempdir.path|quote }}/test-{{ distro.name|quote }} stop >>task.output 2>&1
   register: output
   ignore_errors: yes
   tags:
@@ -89,13 +92,11 @@
 
 - include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"
 
-- name: Ensure containers were stopped
-  docker_container:
-    name: 'test{{ item.name }}_{{ item.name }}_1'
-    state: 'stopped'
-  with_items: "{{ distros }}"
-  register: output
-  failed_when: output.changed
+- name: Wait until built containers are stop
+  command: "docker inspect --format='{{'{{'}} .State.Status {{'}}'}}' test{{ distro.name|replace('-','') }}_{{ distro.name }}_1"
+  register: container_stop_status
+  until: container_stop_status.stdout != 'running'
+  retries: 6
+  delay: 5
   tags:
     - stop
-

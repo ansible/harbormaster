@@ -1,0 +1,123 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: container.yml
+description: Ansible Container container.yml file
+type: object
+properties:
+  version:
+    type: string
+    enum: ["1", "2"]
+  settings:
+    type: object
+    properties:
+      conductor:
+        type: object
+        properties:
+          base:
+            type: string
+          roles_path:
+            type: array
+            items:
+              type: string
+          volumes:
+            type: array
+            items:
+              type: string
+          environment:
+            type:
+              - array
+              - object
+            items:
+              type: string
+              pattern: "^[A-Za-z0-9_]+=.*$"
+            additionalProperties:
+              type: string
+        required:
+          - base
+      conductor_base:
+        type: string
+      project_name:
+        type: string
+      deployment_output_path:
+        type: string
+      k8s_auth:
+        type: object
+        properties:
+          config_file:
+            type: string
+          context:
+            type: string
+          host:
+            type: string
+            format: uri
+          api_key:
+            type: string
+          ssl_ca_cert:
+            type: string
+          cert_file:
+            type: string
+          key_file:
+            type: string
+          verify_ssl:
+            type: boolean
+      k8s_namespace:
+        type: object
+        properties:
+          name:
+            type: string
+          description:
+            type: string
+          display_name:
+            type: string
+      vars_files:
+        type: array
+        items:
+          type: string
+      vault_files:
+        type: array
+        items:
+          type: string
+      vault_password_file:
+        type: string
+    anyOf:
+      - required:
+          - conductor_base
+        not:
+          required:
+          - conductor
+      - required:
+          - conductor
+        not:
+          required:
+          - conductor_base
+  services:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        from:
+          type: string
+        roles:
+          type: array
+          items:
+            type:
+              - string
+              - object
+  volumes:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        docker:
+          type: object
+        k8s:
+          type: object
+  secrets:
+    type: object
+  registries:
+    type: object
+    additionalProperties:
+      type: object
+required:
+ - version
+ - settings
+ - services

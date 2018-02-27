@@ -51,7 +51,7 @@ def test_labels():
 # ROLE METADATA TESTS
 
 def test_command():
-    assert role_meta['command'] == [distro_vars['httpd_bin'], '-DFOREGROUND']
+    assert role_meta['command'] == [distro_vars['template']['httpd_bin'], '-DFOREGROUND']
 
 def test_entrypoint():
     assert role_meta['entrypoint'] == ['/usr/sbin/dumb-init']
@@ -60,7 +60,7 @@ def test_ports():
     assert role_meta['ports'] == ['{{ apache_port }}']
 
 def test_user():
-    assert role_meta['user'] == distro_vars['httpd_user']
+    assert role_meta['user'] == distro_vars['template']['httpd_user']
 
 def test_volumes():
     assert role_meta['volumes'] == ['/vol']
@@ -74,7 +74,7 @@ def test_shell():
 # ROLE TASK TESTS
 
 def test_add_from_url():
-    url = 'https://github.com/Yelp/dumb-init/releases/download/v1.0.2/dumb-init_1.0.2_amd64'
+    url = 'https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.2.0_amd64'
     target = '/usr/sbin/dumb-init'
     assert any(
         [task.get('get_url') == {'url': url, 'dest': target, 'mode': 0o600, 'validate_certs': 'no'}
@@ -84,14 +84,14 @@ def test_add_from_url():
 def test_add_from_tarball():
     assert any(
         [task.get('unarchive') == {'src': 'html.tar.gz',
-                                   'dest': distro_vars['httpd_pageroot']}
+                                   'dest': distro_vars['template']['httpd_pageroot']}
          for task in role_tasks]
     )
 
 def test_add_from_file():
     assert any(
-        [task.get('copy') == {'src': distro_vars['httpd_conf_src'],
-                              'dest': distro_vars['httpd_conf_dest']}
+        [task.get('copy') == {'src': distro_vars['template']['httpd_conf_src'],
+                              'dest': distro_vars['template']['httpd_conf_dest']}
          for task in role_tasks]
     )
 
@@ -111,13 +111,13 @@ def test_run_as_command():
 
 def test_run_as_shell():
     assert any(
-        [task.get('shell') == distro_vars['package_update_command']
+        [task.get('shell') == distro_vars['template']['package_update_command']
          for task in role_tasks]
     )
 
 def test_run_with_newline():
     assert any(
-        [task.get('shell') == distro_vars['httpd_install_command']
+        [task.get('shell') == distro_vars['template']['httpd_install_command']
          for task in role_tasks]
     )
 
