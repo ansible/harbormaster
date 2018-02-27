@@ -20,10 +20,13 @@ import six
 import sys
 import tarfile
 
-try:
-    import httplib as StatusCodes
+try:  # Python 3.5+
+    from http import HTTPStatus as StatusCodes
 except ImportError:
-    import http.client as StatusCodes
+    try:  # Python 3
+        from http import client as StatusCodes
+    except ImportError:  # Python 2
+        import httplib as StatusCodes
 
 import container
 from container import host_only, conductor_only
