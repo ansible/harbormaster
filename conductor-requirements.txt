@@ -1,6 +1,7 @@
 ansible>=2.4,<2.5
 https://github.com/openshift/openshift-restclient-python/archive/master.tar.gz#egg=openshift
 PyYAML>=3.12
+docker>=3.0.0
 docker-compose>=1.14
 requests>=2,<2.16
 ruamel.yaml>=0.15.34
