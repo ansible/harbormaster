@@ -7,7 +7,11 @@ import distutils.log
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
 from setuptools.command.sdist import sdist as SDistCommand
-from pip.req import parse_requirements
+try:
+    from pip._internal.req import parse_requirements
+except ImportError:
+    from pip.req import parse_requirements
+
 import container
 
 class PlaybookAsTests(TestCommand):
