@@ -696,7 +696,8 @@ def _find_base_image_id(engine, service_name, service):
     return image_id
 
 def _intermediate_build_container_name(engine, service_name, image_fingerprint, role_name):
-    return u'%s-%s-%s' % (engine.container_name_for_service(service_name), image_fingerprint[:8], role_name)
+    safe_role_name = re.sub(r"[^a-zA-Z0-9_.-]", "_", role_name);
+    return u'%s-%s-%s' % (engine.container_name_for_service(service_name), image_fingerprint[:8], safe_role_name)
 
 def _run_intermediate_build_container(engine, container_name, cur_image_id, service_name, service,
                                       **kwargs):
