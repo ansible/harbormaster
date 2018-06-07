@@ -7,8 +7,14 @@ import distutils.log
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
 from setuptools.command.sdist import sdist as SDistCommand
-from pip.req import parse_requirements
 import container
+
+try:
+    # pip10
+    from pip._internal.req import parse_requirements
+except ImportError:
+    # pip9
+    from pip.req import parse_requirements
 
 class PlaybookAsTests(TestCommand):
     user_options = [('ansible-args=', None, "Extra ansible arguments")]
