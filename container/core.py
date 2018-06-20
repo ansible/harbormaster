@@ -584,7 +584,8 @@ def run_playbook(playbook, engine, service_map, ansible_options='', local_python
                         service_name, container_id, engine.python_interpreter_path))
                 else:
                     # Use local Python runtime
-                    ofs.write('%s ansible_host="%s"\n' % (service_name, container_id))
+                    # FIXME: make interpreter configurable
+                    ofs.write('%s ansible_host="%s" ansible_python_interpreter="/usr/bin/python3"\n' % (service_name, container_id))
 
 
         set_path_ownership(output_dir, uid, gid)
@@ -661,19 +662,21 @@ def run_playbook(playbook, engine, service_map, ansible_options='', local_python
 
 
 @conductor_only
-def apply_role_to_container(role, container_id, service_name, engine, vars={},
+def apply_role_to_container(role, container_id, service_name, engine, vars=None,
                             local_python=False, ansible_options='',
                             debug=False):
     playbook = generate_playbook_for_role(service_name, vars, role)
     container_metadata = engine.inspect_container(container_id)
-    onbuild = container_metadata['Config']['OnBuild']
+    try:
+        onbuild = container_metadata['Config']['OnBuild']
+    except KeyError:
+        logger.info("no Config or OnBuild")
     # FIXME: Actually do stuff if onbuild is not null
 
     rc = run_playbook(playbook, engine, {service_name: container_id}, ansible_options=ansible_options,
                       local_python=local_python, debug=debug, build=True)
     if rc:
-        logger.error('Error applying role!', playbook=playbook, engine=engine,
-            exit_code=rc)
+        logger.error('Error applying role!', playbook=playbook, engine=engine, exit_code=rc)
     return rc
 
 #### BUILD UTILITY FUNCTIONS ####
@@ -691,7 +694,7 @@ def _find_base_image_id(engine, service_name, service):
         if not image_id:
             raise AnsibleContainerException(
                 "Failed to find image {}. Try `docker image pull {}`".format(
-                    service['from'])
+                    service['from'], service['from'])
             )
     return image_id
 
@@ -785,6 +788,7 @@ def conductorcmd_build(engine_name, project_name, services, cache=True, local_py
             logger.debug('Skipping service %s...', service_name)
             continue
         logger.info(u'Building service...', service=service_name, project=project_name)
+
         cur_image_id = _find_base_image_id(engine, service_name, service)
         artifact_breadcrumbs = []
 
@@ -990,7 +994,7 @@ def conductorcmd_destroy(engine_name, project_name, services, **kwargs):
 
 @conductor_only
 def conductorcmd_deploy(engine_name, project_name, services, **kwargs):
-    uid, gid = kwargs.get('host_user_uid', 1), kwargs.get('host_user_gid', 1)
+    uid, gid = kwargs.get('host_user_uid', 0), kwargs.get('host_user_gid', 0)
 
     engine = load_engine(['DEPLOY'], engine_name, project_name, services, **kwargs)
     logger.info(u'Engine integration loaded. Preparing deploy.',

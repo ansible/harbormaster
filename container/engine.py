@@ -132,7 +132,7 @@ class BaseEngine(object):
     def get_container_id_by_name(self, name):
         raise NotImplementedError()
 
-    def container_name_for_service(self, service_name):
+    def get_container_name_for_service(self, service_name):
         raise NotImplementedError()
 
     def get_container_id_for_service(self, service_name):
@@ -162,7 +162,7 @@ class BaseEngine(object):
     def get_latest_image_id_for_service(self, service_name):
         raise NotImplementedError()
 
-    def get_image_name_for_service(self, service_name):
+    def image_name_for_service(self, service_name):
         raise NotImplementedError()
 
     @conductor_only
@@ -233,3 +233,4 @@ class BaseEngine(object):
         return None
         """
         raise NotImplementedError()
+
