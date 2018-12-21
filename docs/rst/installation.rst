@@ -15,9 +15,7 @@ Prerequisites:
 * `setuptools 20.0.0+ <https://pypi.python.org/pypi/setuptools>`_
 
 Ansible Container relies upon supported container engines for building, running,
-and deploying your project. When you install Ansible Container, you must
-specify which engines you want your installation to support. Currently supported
-engines are:
+and deploying your project. Currently supported engines are:
 
 * ``docker`` - The `Docker Engine <https://docs.docker.com/engine/installation/>`_
 * ``k8s`` - `Kubernetes <https://kubernetes.io/docs/setup/pick-right-solution/>`_, on a
@@ -27,14 +25,11 @@ engines are:
   on a remote service or in a local installation using
   `MiniShift <https://www.openshift.org/minishift/>`_
 
-Specify the engines you wish supported by listing them comma separated in square
-brackets as part of your ``pip install`` command. For example, if you intended to
-use Docker for local container development but deploy your project into Kubernetes,
-you would want to install the ``docker`` and ``k8s`` engines like so:
+The simplest way to install Ansible Container is with the ``pip`` command, such as:
 
 .. code-block:: console
 
-    $ sudo pip install ansible-container[docker,k8s]
+    $ sudo pip install ansible-container
 
 If you do not have root privileges, you'll need to use a ``virtualenv`` to create a Python sandbox:
 
@@ -42,7 +37,7 @@ If you do not have root privileges, you'll need to use a ``virtualenv`` to creat
 
     $ virtualenv venv
     $ source venv/bin/activate
-    $ pip install ansible-container[docker,openshift]
+    $ pip install ansible-container
 
 You'll need to run the ``activate`` script in each shell session prior to invoking ``ansible-container``.
 See `the virtualenv docs <https://virtualenv.pypa.io/en/stable/>`_ for details.
@@ -69,13 +64,12 @@ Clone the repo:
 We recommend that you use a Python Virtualenv to sandbox your installation.
 See `the virtualenv docs <https://virtualenv.pypa.io/en/stable/>`_ for instructions.
 
-Then, again specifying in square-brackets the engines you wish installed, use
-pip to install the cloned code:
+It's again best to use ``pip`` to install the cloned code:
 
 .. code-block:: console
 
     $ cd ansible-container
-    $ pip install -e .[docker,openshift]
+    $ pip install -e .
 
 If you run into the following error, you likely have an older version of setuptools installed:
 
