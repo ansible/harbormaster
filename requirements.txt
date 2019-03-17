@@ -7,3 +7,4 @@ ruamel.yaml>=0.15.34,<=0.15.51
 six>=1.10
 structlog[dev]>=16.1
 jsonschema==2.6.0
+colorama>=0.4.1
