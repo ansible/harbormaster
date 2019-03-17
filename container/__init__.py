@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-__version__ = '0.9.3rc3'
+__version__ = '0.9.3rc4'
 
 import os
 import sys

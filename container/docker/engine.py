@@ -692,7 +692,7 @@ class Engine(BaseEngine, DockerSecretsMixin):
         logger.debug("Exported service container as tarball", container=image_name)
 
         out = self.client.api.import_image_from_data(
-            raw_image.read(),
+            raw_image,
             repository=image_name,
             tag=image_version
         )
