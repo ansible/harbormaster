@@ -8,7 +8,7 @@ env:
   - BASE_DISTRO: fedora:27
   - BASE_DISTRO: fedora:26
   - BASE_DISTRO: fedora:25
-  - BASE_DISTRO: amazonlinux:2
+#  - BASE_DISTRO: amazonlinux:2
   - BASE_DISTRO: debian:jessie
   - BASE_DISTRO: debian:stretch
   - BASE_DISTRO: debian:wheezy
