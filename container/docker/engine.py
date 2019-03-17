@@ -80,7 +80,7 @@ PREBAKED_DISTROS = {
     'fedora:27': ['fedora:latest'],
     'fedora:26': [],
     'fedora:25': [],
-    'amazonlinux:2': ['amazonlinux:2'],
+    #'amazonlinux:2': ['amazonlinux:2'],
     'debian:jessie': ['debian:8', 'debian:latest', 'debian:jessie-slim'],
     'debian:stretch': ['debian:9', 'debian:stretch-slim'],
     'debian:wheezy': ['debian:7', 'debian:wheezy-slim'],
