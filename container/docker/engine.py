@@ -1124,37 +1124,29 @@ class Engine(BaseEngine, DockerSecretsMixin):
             tarball_file = open(tarball_path, 'rb')
             logger.info('Starting Docker build of Ansible Container Conductor image (please be patient)...')
             # FIXME: Error out properly if build of conductor fails.
-            if self.debug:
-                for line in self.client.api.build(fileobj=tarball_file,
-                                                  custom_context=True,
-                                                  tag=tag,
-                                                  rm=True,
-                                                  decode=True,
-                                                  nocache=not cache):
-                    try:
-                        if line.get('status') == 'Downloading':
-                            # skip over lines that give spammy byte-by-byte
-                            # progress of downloads
-                            continue
-                        elif 'errorDetail' in line:
-                            raise exceptions.AnsibleContainerException(
-                                "Error building conductor image: {0}".format(line['errorDetail']['message']))
-                    except ValueError:
-                        pass
-                    except exceptions.AnsibleContainerException:
-                        raise
+            for line in self.client.api.build(fileobj=tarball_file,
+                                              custom_context=True,
+                                              tag=tag,
+                                              rm=True,
+                                              decode=True,
+                                              nocache=not cache):
+                try:
+                    if line.get('status') == 'Downloading':
+                        # skip over lines that give spammy byte-by-byte
+                        # progress of downloads
+                        continue
+                    elif 'errorDetail' in line:
+                        raise exceptions.AnsibleContainerException(
+                            "Error building conductor image: {0}".format(line['errorDetail']['message']))
+                except ValueError:
+                    pass
+                except exceptions.AnsibleContainerException:
+                    raise
 
-                    # this bypasses the fancy colorized logger for things that
-                    # are just STDOUT of a process
-                    plainLogger.debug(text.to_text(line.get('stream', json.dumps(line))).rstrip())
-                return self.get_image_id_by_tag(tag)
-            else:
-                image = self.client.images.build(fileobj=tarball_file,
-                                                 custom_context=True,
-                                                 tag=tag,
-                                                 rm=True,
-                                                 nocache=not cache)
-                return image.id
+                # this bypasses the fancy colorized logger for things that
+                # are just STDOUT of a process
+                plainLogger.debug(text.to_text(line.get('stream', json.dumps(line))).rstrip())
+            return self.get_image_id_by_tag(tag)
 
     def get_runtime_volume_id(self, mount_point):
         try:
