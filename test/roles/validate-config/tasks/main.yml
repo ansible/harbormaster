@@ -51,12 +51,13 @@
 
 - include: includes/show-output.yml output_file=./task.output registered_output="{{ output }}"    
 
+# Expected output:
+# Playbook generated: [{'hosts': u'web', 'roles': [ordereddict([('role', 'test-variables')])], 'vars': {u'debug': 0, u'web_image': u'centos:7', u'foo': u'bar', u'project_path': u'/foo', u'web_ports': [u'8080:80']}}] [container.utils]
 - name: Test build output for container.yml defaults
   assert:
     that:
-      - "'web_image=centos:7' in build_output.stdout" 
+      - "build_output.stdout is search(\"'web_image': u'centos:7'\")"
       - "'8080:80' in build_output.stdout"
-      - "'debug=0' in build_output.stdout" 
-      - "'foo=bar' in build_output.stdout" 
-      - "'project_path=/foo' in build_output.stdout" 
-
+      - "build_output.stdout is search(\"'debug': 0\")"
+      - "build_output.stdout is search(\"'foo': u'bar'\")"
+      - "build_output.stdout is search(\"'project_path': u'/foo'\")"

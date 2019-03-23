@@ -1,4 +1,7 @@
 version: '2'
+settings:
+  conductor:
+    base: "centos:7"
 defaults:
   web_image: "centos:7" 
   web_ports: ['8080:80']

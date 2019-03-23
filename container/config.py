@@ -6,13 +6,12 @@ from .utils.visibility import getLogger
 logger = getLogger(__name__)
 
 from abc import ABCMeta, abstractproperty, abstractmethod
-from io import BytesIO
 import os
 from os import path
 import copy
 import json
 import re
-from six import add_metaclass, iteritems, PY2, string_types, text_type
+from six import add_metaclass, iteritems, PY2, string_types, text_type, StringIO
 
 from collections import Mapping
 from .utils.ordereddict import ordereddict
@@ -371,10 +370,10 @@ class AnsibleContainerConductorConfig(Mapping):
             elif isinstance(value, (list, dict)):
                 # if it's a dimensional structure, it's cheaper just to serialize
                 # it, treat it like a template, and then deserialize it again
-                buffer = BytesIO() # use bytes explicitly, not unicode
-                yaml.round_trip_dump(value, buffer)
+                stream = StringIO()
+                yaml.round_trip_dump(value, stream)
                 processed[key] = yaml.round_trip_load(
-                    templar.template(buffer.getvalue())
+                    templar.template(stream.getvalue())
                 )
             else:
                 # ints, booleans, etc.

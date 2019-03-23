@@ -252,6 +252,16 @@ def generate_playbook_for_role(service_name, vars, role):
     logger.debug('Playbook generated: %s', playbook)
     return playbook
 
+
+def get_dependencies_for_role(role_path):
+    meta_main_path = os.path.join(role_path, 'meta', 'main.yml')
+    if os.path.exists(meta_main_path):
+        meta_main = yaml.safe_load(open(meta_main_path))
+        if meta_main:
+            for dependency in meta_main.get('dependencies', []):
+                yield dependency.get('role', None)
+
+
 @container.conductor_only
 def get_role_fingerprint(role, service_name, config_vars):
     """
@@ -306,14 +316,6 @@ def get_role_fingerprint(role, service_name, config_vars):
                         hash_file(hash_obj, src)
                     else:
                         hash_dir(hash_obj, src)
-
-    def get_dependencies_for_role(role_path):
-        meta_main_path = os.path.join(role_path, 'meta', 'main.yml')
-        if os.path.exists(meta_main_path):
-            meta_main = yaml.safe_load(open(meta_main_path))
-            if meta_main:
-                for dependency in meta_main.get('dependencies', []):
-                    yield dependency.get('role', None)
 
     hash_obj = hashlib.sha256()
     # Account for variables passed to the role by including the invocation string

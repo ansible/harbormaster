@@ -117,4 +117,8 @@
       include_role:
         name: validate-rebuild-features
       tags: rebuild
+    - name: "Validate config"
+      include_role:
+        name: validate-config
+      tags: config
 

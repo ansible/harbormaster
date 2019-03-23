@@ -3,9 +3,11 @@ import os
 import json
 
 import container
-from container.utils import get_config
 from container.config import AnsibleContainerConductorConfig
 from container.exceptions import AnsibleContainerConfigException
+from container.utils import get_dependencies_for_role, get_config
+from ansible.compat.tests.mock import mock_open, patch
+from ansible.module_utils.six.moves import builtins
 from ansible.playbook.role.include import RoleInclude
 
 try:
@@ -31,7 +33,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         container.ENV = 'host'
         container.config.Templar = Templar
         container.config.AnsibleUnsafeText = AnsibleUnsafeText
-        self.config = get_config(self.project_path, vars_files=None, engine_name='docker')
+        self.config = get_config(self.project_path, vars_files=None, engine_name='docker', config_file='container.yml')
 
     def tearDown(self):
         pass
@@ -50,7 +52,7 @@ class TestAnsibleContainerConfig(unittest.TestCase):
         self.assertEqual(self.config.project_name, os.path.basename(self.project_path))
 
     def test_should_have_project_name_equal_cli(self):
-        config = get_config(self.project_path, vars_files=None, engine_name='docker', project_name='foo')
+        config = get_config(self.project_path, vars_files=None, engine_name='docker', project_name='foo', config_file='container.yml')
         self.assertEqual(config.project_name, 'foo')
 
     def test_should_have_project_name_equal_settings(self):
@@ -171,3 +173,8 @@ class TestAnsibleContainerConfig(unittest.TestCase):
     #     self.assertEqual(self.config._config['services']['web']['environment'][2], 'VERSION={0}'.format(__version__))
 
 
+    @patch('os.path.exists', lambda x: True)
+    def test_get_dependencies_for_role(self):
+        with patch.object(builtins, 'open', mock_open(read_data=b'---\n')):
+            for x in get_dependencies_for_role('dummy'):
+                pass
