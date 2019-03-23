@@ -1201,11 +1201,7 @@ class Engine(BaseEngine, DockerSecretsMixin):
 
             self._update_config_file(username, password, email, url, config_path)
 
-        username, password = self._get_registry_auth(url, config_path)
-        if not username:
-            raise exceptions.AnsibleContainerConductorException(
-                u'Please provide login credentials for registry {}.'.format(url))
-        return username, password
+        return self._get_registry_auth(url, config_path)
 
     @staticmethod
     @conductor_only
