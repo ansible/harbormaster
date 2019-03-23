@@ -21,13 +21,16 @@ import tarfile
 
 from ruamel.yaml.comments import CommentedMap
 from six import reraise, iteritems, string_types, PY3
-
 if PY3:
     from functools import reduce
-try:
-    import httplib as StatusCodes
-except ImportError:
+
+try:  # Python 3.5+
     from http import HTTPStatus as StatusCodes
+except ImportError:
+    try:  # Python 3
+        from http import client as StatusCodes
+    except ImportError:  # Python 2
+        import httplib as StatusCodes
 
 import container
 from container import host_only, conductor_only
